@@ -1,0 +1,11 @@
+# 现有依赖
+requests
+openai-whisper
+openai
+srt
+tqdm
+transformers
+torchaudio
+librosa
+# 新增依赖
+opencv-python  # 用于视频帧提取
