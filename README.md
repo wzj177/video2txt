@@ -147,4 +147,3 @@ pytest -q
 ```
 
 ## License
-MIT
