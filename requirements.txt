@@ -9,3 +9,5 @@ torchaudio
 librosa
 # 新增依赖
 opencv-python  # 用于视频帧提取
+matplotlib  # 用于音频可视化
+soundfile  # 用于音频处理

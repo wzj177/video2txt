@@ -59,6 +59,119 @@ def compute_md5(file_path):
         return hash_md5.hexdigest()
 
 
+def is_audio_file(file_path):
+    """检测文件是否为音频文件"""
+    audio_extensions = [".mp3", ".m4a", ".wav", ".aac", ".flac", ".ogg", ".wma"]
+    if file_path.startswith("http://") or file_path.startswith("https://"):
+        return False  # URL暂时不支持音频检测
+    return any(file_path.lower().endswith(ext) for ext in audio_extensions)
+
+
+def generate_audio_waveform(audio_path, output_path, duration=None):
+    """为音频文件生成波形图"""
+    try:
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        if not HAS_LIBROSA:
+            print("⚠️ 需要安装librosa和matplotlib来生成音频波形图")
+            return False
+
+        # 加载音频文件
+        y, sr = librosa.load(audio_path, duration=duration)
+
+        # 创建波形图
+        plt.figure(figsize=(12, 4))
+        time = np.linspace(0, len(y) / sr, len(y))
+        plt.plot(time, y, alpha=0.6)
+        plt.xlabel("时间 (秒)")
+        plt.ylabel("幅度")
+        plt.title("音频波形图")
+        plt.grid(True, alpha=0.3)
+
+        # 保存图像
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close()
+
+        return True
+    except ImportError:
+        print("⚠️ 需要安装matplotlib来生成波形图：pip install matplotlib")
+        return False
+    except Exception as e:
+        print(f"⚠️ 生成波形图失败: {e}")
+        return False
+
+
+def generate_audio_spectrogram(audio_path, output_path, duration=None):
+    """为音频文件生成频谱图"""
+    try:
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        if not HAS_LIBROSA:
+            print("⚠️ 需要安装librosa和matplotlib来生成频谱图")
+            return False
+
+        # 加载音频文件
+        y, sr = librosa.load(audio_path, duration=duration)
+
+        # 计算梅尔频谱图
+        S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128)
+        S_dB = librosa.power_to_db(S, ref=np.max)
+
+        # 创建频谱图
+        plt.figure(figsize=(12, 6))
+        librosa.display.specshow(S_dB, sr=sr, x_axis="time", y_axis="mel")
+        plt.colorbar(format="%+2.0f dB")
+        plt.title("音频频谱图")
+        plt.tight_layout()
+
+        # 保存图像
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close()
+
+        return True
+    except ImportError:
+        print("⚠️ 需要安装matplotlib来生成频谱图：pip install matplotlib")
+        return False
+    except Exception as e:
+        print(f"⚠️ 生成频谱图失败: {e}")
+        return False
+
+
+def create_audio_visualizations(audio_path, frame_dir, verbose=False):
+    """为音频文件创建可视化图像"""
+    os.makedirs(frame_dir, exist_ok=True)
+
+    if verbose:
+        print("🎵 正在为音频文件生成可视化图像...")
+
+    # 生成波形图
+    waveform_path = os.path.join(frame_dir, "waveform.jpg")
+    waveform_success = generate_audio_waveform(audio_path, waveform_path)
+
+    # 生成频谱图
+    spectrogram_path = os.path.join(frame_dir, "spectrogram.jpg")
+    spectrogram_success = generate_audio_spectrogram(audio_path, spectrogram_path)
+
+    # 返回生成的图像列表
+    generated_images = []
+    if waveform_success:
+        generated_images.append(("waveform.jpg", None))
+        if verbose:
+            print("   ✅ 波形图生成完成")
+    if spectrogram_success:
+        generated_images.append(("spectrogram.jpg", None))
+        if verbose:
+            print("   ✅ 频谱图生成完成")
+
+    if not generated_images and verbose:
+        print("   ⚠️ 未能生成音频可视化图像")
+
+    return generated_images, "waveform.jpg" if waveform_success else None
+
+
 def extract_frame_at(video_path, time_seconds, output_path):
     """在指定时间点提取视频帧 - 优化版本，提高图片质量"""
     import cv2
@@ -73,8 +186,29 @@ def extract_frame_at(video_path, time_seconds, output_path):
     return ret
 
 
+def calculate_optimal_frame_interval(video_duration, target_frames=15):
+    """
+    根据视频时长计算最优关键帧间隔
+
+    Args:
+        video_duration: 视频时长（秒）
+        target_frames: 目标关键帧数量
+
+    Returns:
+        optimal_interval: 最优间隔（秒）
+    """
+    if video_duration <= 300:  # 5分钟内短视频
+        return max(15, video_duration // target_frames)
+    elif video_duration <= 1800:  # 30分钟内中等视频
+        return max(30, video_duration // target_frames)
+    elif video_duration <= 3600:  # 1小时内长视频
+        return max(45, video_duration // target_frames)
+    else:  # 超长视频
+        return max(60, video_duration // 20)  # 最多20个关键帧
+
+
 def extract_frames_from_subtitles(
-    video_path, subtitles, frame_output_dir, verbose=False, min_interval=30
+    video_path, subtitles, frame_output_dir, verbose=False, min_interval=None
 ):
     """根据字幕时间点批量提取关键帧 - 优化版智能选择封面帧和后续关键帧"""
     os.makedirs(frame_output_dir, exist_ok=True)
@@ -85,9 +219,14 @@ def extract_frames_from_subtitles(
     # 计算视频总时长
     video_duration = subtitles[-1].start.total_seconds() if subtitles else 0
 
+    # 动态计算最优间隔
+    if min_interval is None:
+        min_interval = calculate_optimal_frame_interval(video_duration)
+
     if verbose:
         print(f"🖼️  开始智能提取关键帧到: {frame_output_dir}")
-        print(f"   视频时长: {video_duration/60:.1f}分钟，最小间隔: {min_interval}秒")
+        print(f"   视频时长: {video_duration/60:.1f}分钟，动态间隔: {min_interval}秒")
+        print(f"   预计关键帧数量: {int(video_duration // min_interval) + 1}")
 
     selected_frames = []
     last_frame_time = None
@@ -359,6 +498,7 @@ def parse_args():
     parser.add_argument("--credibility", action="store_true", help="生成可信度分析")
     parser.add_argument("--structure", action="store_true", help="生成内容结构分析")
     parser.add_argument("--value_rating", action="store_true", help="生成内容价值评分")
+    parser.add_argument("--flashcards", action="store_true", help="生成学习闪卡")
     return parser.parse_args()
 
 
@@ -1685,8 +1825,8 @@ def generate_xhs_note(
     full_text,
     model,
     frame_dir=None,
-    video_md5=None,
-    video_theme=None,
+    file_md5=None,
+    content_theme=None,
     mind_map_content=None,
     cover_frame=None,
 ):
@@ -1710,7 +1850,7 @@ def generate_xhs_note(
 ## 📌 智能图片分配策略
 - 总共有 {total_frames} 张有效关键帧可用
 - {cover_info}
-- 图片路径格式：![](../../uploads/{video_md5}/frames/时间戳.jpg)
+- 图片路径格式：![](../../uploads/{file_md5}/frames/时间戳.jpg)
 - 可用帧文件：{', '.join(sorted(valid_frames)[:8])}...
 
 ### 图片分配规则：
@@ -1726,7 +1866,7 @@ def generate_xhs_note(
 4. **封面使用**：在文章开头使用封面帧营造良好的第一印象
 
 ### 示例格式：
-![](../../uploads/{video_md5}/frames/{cover_frame if cover_frame else "00_30.jpg"})
+![](../../uploads/{file_md5}/frames/{cover_frame if cover_frame else "00_30.jpg"})
 """
 
     # 构建基于思维导图的结构指导
@@ -1746,20 +1886,21 @@ def generate_xhs_note(
 4. **逻辑连贯**：每个章节内部保持逻辑连贯，形成完整的知识块
 """
 
-    # 视频主题上下文
+    # 内容主题上下文
     theme_context = ""
-    if video_theme:
+    if content_theme:
         theme_context = f"""
 
-## 🎯 视频主题上下文
-{video_theme}
+## 🎯 内容主题上下文
+{content_theme}
 
-请基于以上视频特征调整内容风格和表达方式。
+请基于以上内容特征调整内容风格和表达方式。
 """
 
     prompt = f"""
 # 角色设定
 你是一位资深的教育内容专家，擅长将教学视频转化为结构化、高价值的知识卡片。
+
 
 # 核心任务
 基于提供的思维导图结构，生成与之完全对应的内容卡片，确保结构一致性和内容完整性。
@@ -1775,12 +1916,15 @@ def generate_xhs_note(
 
 ## 文体规范
 - **开篇**：用「# 标题」概括视频核心价值
+- **摘要**：用「# 摘要」概括视频核心内容
 - **章节**：用「## 章节名」对应思维导图一级要点
 - **内容**：
   - 每个章节包含**核心概念**、**方法技巧**、**应用案例**
   - 重要概念用**粗体**强调
   - 关键步骤用数字列表
   - 适当使用▪️符号突出要点
+- **总结** 用「# 总结」总结整个视频表达的中心思想或主旨
+- **思考** 用「# 思考」总结视频中值得思考的内容并提出问题让用户思考
 
 {image_strategy}
 
@@ -1799,6 +1943,7 @@ def generate_xhs_note(
 3. 图片分配合理，视觉效果佳
 4. 总结部分体现整体学习价值
 
+
 请直接输出完整内容，不要解释说明。
 """.strip()
 
@@ -1806,21 +1951,21 @@ def generate_xhs_note(
 
 
 def generate_markmap(
-    client, timed_text, model, frame_dir=None, video_md5=None, video_theme=None
+    client, timed_text, model, frame_dir=None, file_md5=None, content_theme=None
 ):
     # 检测是否为长视频
     text_length = len(timed_text)
     is_long_video = text_length > 10000
 
-    # 视频主题上下文
+    # 内容主题上下文
     theme_context = ""
-    if video_theme:
+    if content_theme:
         theme_context = f"""
 
-## 🎯 视频主题上下文
-{video_theme}
+## 🎯 内容主题上下文
+{content_theme}
 
-请基于以上视频特征优化思维导图结构，确保体现该类型内容的特点。
+请基于以上内容特征优化思维导图结构，确保体现该类型内容的特点。
 """
 
     # STEP 1: 提取结构化大纲
@@ -2041,6 +2186,214 @@ def rate_content_value(client, full_text, model):
     return generate(client, prompt, model)
 
 
+def generate_flashcards(client, full_text, model, mind_map_content=None):
+    """生成学习闪卡"""
+    # 构建上下文信息
+    context_info = ""
+    if mind_map_content:
+        context_info = f"""
+## 思维导图结构参考
+以下是内容的思维导图结构，可用于提取关键概念：
+
+{mind_map_content[:1000]}
+"""
+
+    prompt = f"""
+# 任务
+你是一位专业的学习设计师，擅长从教学内容中提取关键概念制作高质量学习闪卡。
+
+{context_info}
+
+# 闪卡设计原则
+1. **概念清晰**：每张卡片只包含一个核心概念
+2. **问答精准**：问题明确，答案简短但完整  
+3. **难度递进**：从基础概念到应用理解
+4. **实用导向**：优先选择可应用的知识点
+5. **记忆友好**：利于长期记忆和理解
+
+# 闪卡类型
+- **概念卡**：基础概念定义
+- **应用卡**：方法和技巧应用
+- **对比卡**：相似概念的区别
+- **流程卡**：步骤和流程记忆
+- **案例卡**：具体案例理解
+
+# 输出格式
+生成15-25张闪卡，每张卡片格式如下：
+
+## 闪卡 01 - [卡片类型]
+**正面**: [问题或概念名称]
+**背面**: [详细解答或定义]
+**标签**: #概念 #基础 #应用
+
+## 闪卡 02 - [卡片类型]  
+**正面**: [问题或概念名称]
+**背面**: [详细解答或定义]
+**标签**: #概念 #进阶 #案例
+
+# 特殊格式说明
+- 对于复杂概念，背面可以使用要点列表
+- 重要术语使用**粗体**标注
+- 必要时可以包含简短例子
+
+# 源内容
+{full_text[:20000]}
+
+请生成高质量的学习闪卡：
+"""
+    return generate(client, prompt, model, max_tokens=4096)
+
+
+def export_anki_format(flashcards_content, output_path):
+    """将闪卡导出为Anki格式"""
+    try:
+        import re
+
+        # 解析闪卡内容
+        cards = []
+        pattern = r"## 闪卡 \d+ - (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
+        matches = re.findall(pattern, flashcards_content, re.DOTALL)
+
+        if not matches:
+            print("⚠️ 无法解析闪卡格式")
+            return False
+
+        # 生成Anki导入格式（CSV）
+        anki_content = []
+        for card_type, front, back, tags in matches:
+            # 清理内容
+            front = front.strip().replace("\n", "<br>")
+            back = back.strip().replace("\n", "<br>")
+            tags = tags.replace("#", "").replace(" ", "_")
+
+            # Anki格式：正面\t背面\t标签
+            anki_content.append(f"{front}\t{back}\t{tags}")
+
+        # 写入文件
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("Front\tBack\tTags\n")  # 头部
+            f.write("\n".join(anki_content))
+
+        return True
+    except Exception as e:
+        print(f"⚠️ Anki格式导出失败: {e}")
+        return False
+
+
+def export_xmind_format(markdown_content, output_path):
+    """将Markdown思维导图转换为XMind兼容的FreeMind格式"""
+    try:
+        import xml.etree.ElementTree as ET
+        import re
+
+        # 解析Markdown格式的思维导图
+        lines = markdown_content.strip().split("\n")
+
+        # 创建根节点
+        root = ET.Element("map")
+        root.set("version", "1.0.1")
+
+        # 找到主题行
+        main_title = "思维导图"
+        for line in lines:
+            if line.startswith("# "):
+                main_title = line[2:].strip()
+                break
+
+        # 创建中心节点
+        node_map = ET.SubElement(root, "node")
+        node_map.set("ID", "root")
+        node_map.set("TEXT", main_title)
+
+        # 解析层级结构
+        current_parents = [node_map]  # 当前父节点栈
+        node_id = 1
+
+        for line in lines:
+            line = line.rstrip()
+            if not line or line.startswith("#"):
+                continue
+
+            # 计算缩进级别
+            indent_level = 0
+            stripped_line = line.lstrip()
+            if stripped_line.startswith("-"):
+                # 计算前导空格数量
+                for char in line:
+                    if char == " ":
+                        indent_level += 1
+                    else:
+                        break
+                indent_level = indent_level // 2  # 每2个空格为一级
+
+                # 提取文本内容
+                text = stripped_line[1:].strip()
+
+                # 提取时间戳（如果有）
+                timestamp_match = re.search(r"`(\d{2}:\d{2})`", text)
+                if timestamp_match:
+                    text = text.replace(timestamp_match.group(), "").strip()
+                    timestamp = timestamp_match.group(1)
+                else:
+                    timestamp = None
+
+                if text:  # 只处理非空文本
+                    # 调整父节点栈
+                    target_level = indent_level + 1  # 相对于根节点的级别
+                    if target_level > len(current_parents):
+                        # 需要保持当前最后一个节点作为父节点
+                        pass
+                    else:
+                        # 回退到合适的父节点
+                        current_parents = current_parents[:target_level]
+
+                    # 创建新节点
+                    if current_parents:
+                        parent_node = current_parents[-1]
+                        new_node = ET.SubElement(parent_node, "node")
+                        new_node.set("ID", f"node_{node_id}")
+                        new_node.set("TEXT", text)
+
+                        # 添加时间戳注释
+                        if timestamp:
+                            note = ET.SubElement(new_node, "richcontent")
+                            note.set("TYPE", "NOTE")
+                            html = ET.SubElement(note, "html")
+                            body = ET.SubElement(html, "body")
+                            p = ET.SubElement(body, "p")
+                            p.text = f"时间: {timestamp}"
+
+                        # 将新节点加入父节点栈
+                        current_parents.append(new_node)
+                        node_id += 1
+
+        # 生成XML字符串
+        xml_str = ET.tostring(root, encoding="unicode", method="xml")
+
+        # 格式化XML
+        try:
+            import xml.dom.minidom
+
+            dom = xml.dom.minidom.parseString(xml_str)
+            formatted_xml = dom.toprettyxml(indent="  ", encoding=None)
+            # 移除空行
+            formatted_xml = "\n".join(
+                [line for line in formatted_xml.split("\n") if line.strip()]
+            )
+        except:
+            formatted_xml = xml_str
+
+        # 写入文件
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+            f.write(formatted_xml)
+
+        return True
+    except Exception as e:
+        print(f"⚠️ XMind格式导出失败: {e}")
+        return False
+
+
 def main():
     args = parse_args()
 
@@ -2049,66 +2402,95 @@ def main():
         sys.exit(1)
 
     client = OpenAI(api_key=args.api_key, base_url=args.api_base)
-    video_file = args.input
+    input_file = args.input
 
-    # 计算视频文件MD5
+    # 检测输入文件类型
+    is_audio = is_audio_file(input_file)
+    file_type = "音频" if is_audio else "视频"
+
+    # 计算输入文件MD5
     if args.verbose:
-        print("🔍 计算视频文件MD5...")
-    video_md5 = compute_md5(video_file)
+        print(f"🔍 计算{file_type}文件MD5...")
+    file_md5 = compute_md5(input_file)
     if args.verbose:
-        print(f"📊 视频MD5: {video_md5}")
+        print(f"📊 {file_type}MD5: {file_md5}")
 
     # 创建新的目录结构
     uploads_dir = "uploads"
     output_dir = "outputs" if args.output_dir else "outputs"
 
-    video_cache_dir = os.path.join(uploads_dir, video_md5)
-    video_output_dir = os.path.join(output_dir, video_md5)
-    frame_dir = os.path.join(video_cache_dir, "frames")
+    file_cache_dir = os.path.join(uploads_dir, file_md5)
+    file_output_dir = os.path.join(output_dir, file_md5)
+    frame_dir = os.path.join(file_cache_dir, "frames")
 
-    os.makedirs(video_cache_dir, exist_ok=True)
-    os.makedirs(video_output_dir, exist_ok=True)
+    os.makedirs(file_cache_dir, exist_ok=True)
+    os.makedirs(file_output_dir, exist_ok=True)
     os.makedirs(frame_dir, exist_ok=True)
 
     # 缓存文件路径
-    cached_audio = os.path.join(video_cache_dir, f"{video_md5}.mp3")
-    cached_srt = os.path.join(video_cache_dir, f"{video_md5}.srt")
-    cached_video = os.path.join(video_cache_dir, f"{video_md5}.mp4")
+    cached_audio = os.path.join(file_cache_dir, f"{file_md5}.mp3")
+    cached_srt = os.path.join(file_cache_dir, f"{file_md5}.srt")
+    cached_video = (
+        os.path.join(file_cache_dir, f"{file_md5}.mp4") if not is_audio else None
+    )
 
     # 输出文件路径
-    xhs_file = os.path.join(video_output_dir, f"内容卡片.md")
-    mind_file = os.path.join(video_output_dir, f"思维导图.md")
-    key_moments_file = os.path.join(video_output_dir, f"关键时刻标记.md")
-    credibility_file = os.path.join(video_output_dir, f"可信度分析.md")
-    structure_file = os.path.join(video_output_dir, f"内容结构分析.md")
-    value_file = os.path.join(video_output_dir, f"内容价值评分.md")
+    xhs_file = os.path.join(file_output_dir, f"内容卡片.md")
+    mind_file = os.path.join(file_output_dir, f"思维导图.md")
+    xmind_file = os.path.join(file_output_dir, f"思维导图.mm")
+    key_moments_file = os.path.join(file_output_dir, f"关键时刻标记.md")
+    credibility_file = os.path.join(file_output_dir, f"可信度分析.md")
+    structure_file = os.path.join(file_output_dir, f"内容结构分析.md")
+    value_file = os.path.join(file_output_dir, f"内容价值评分.md")
+    flashcards_file = os.path.join(file_output_dir, f"学习闪卡.md")
+    anki_file = os.path.join(file_output_dir, f"学习闪卡-Anki格式.txt")
 
     try:
         start_time = time.time()
         # 定义进度条
         progress_bar = tqdm(total=100, desc="处理进度", unit="%")
 
-        # Step 1: 检查音频缓存，如果不存在则转换
-        if not os.path.exists(cached_audio):
-            if args.verbose:
-                print("🎵 音频缓存不存在，开始转换...")
-            actual_video_file = video_to_audio(video_file, cached_audio, args.verbose)
-            # 同时复制原视频到缓存目录（用于后续截帧）
-            if not os.path.exists(cached_video) and os.path.exists(actual_video_file):
-                shutil.copy2(actual_video_file, cached_video)
-        else:
-            if args.verbose:
-                print("✅ 使用缓存的音频文件")
-            # 缓存存在时，需要确定用于截帧的视频文件
-            if video_file.startswith("http://") or video_file.startswith("https://"):
-                if "bili" in video_file:
-                    actual_video_file = get_temp_video_path(video_file)
-                    if not os.path.exists(actual_video_file):
-                        actual_video_file = download_bilibili_url_video(video_file)
-                else:
-                    actual_video_file = video_file
+        # Step 1: 处理音频文件
+        if is_audio:
+            # 对于音频文件，直接复制到缓存目录
+            if not os.path.exists(cached_audio):
+                if args.verbose:
+                    print("🎵 复制音频文件到缓存...")
+                shutil.copy2(input_file, cached_audio)
             else:
-                actual_video_file = video_file
+                if args.verbose:
+                    print("✅ 使用缓存的音频文件")
+            actual_video_file = None  # 音频文件没有视频
+        else:
+            # 对于视频文件，检查音频缓存，如果不存在则转换
+            if not os.path.exists(cached_audio):
+                if args.verbose:
+                    print("🎵 音频缓存不存在，开始转换...")
+                actual_video_file = video_to_audio(
+                    input_file, cached_audio, args.verbose
+                )
+                # 同时复制原视频到缓存目录（用于后续截帧）
+                if (
+                    cached_video
+                    and not os.path.exists(cached_video)
+                    and os.path.exists(actual_video_file)
+                ):
+                    shutil.copy2(actual_video_file, cached_video)
+            else:
+                if args.verbose:
+                    print("✅ 使用缓存的音频文件")
+                # 缓存存在时，需要确定用于截帧的视频文件
+                if input_file.startswith("http://") or input_file.startswith(
+                    "https://"
+                ):
+                    if "bili" in input_file:
+                        actual_video_file = get_temp_video_path(input_file)
+                        if not os.path.exists(actual_video_file):
+                            actual_video_file = download_bilibili_url_video(input_file)
+                    else:
+                        actual_video_file = input_file
+                else:
+                    actual_video_file = input_file
         progress_bar.update(20)
 
         # Step 2: 检查字幕缓存，如果不存在则转录
@@ -2170,35 +2552,65 @@ def main():
 
         progress_bar.update(40)
 
-        # Step 3: 提取关键帧（基于字幕时间点）
-        if args.verbose:
-            print("🖼️  提取视频关键帧...")
+        # Step 3: 提取关键帧或生成音频可视化
+        if is_audio:
+            if args.verbose:
+                print("🎵 生成音频可视化图像...")
 
-        # 检查是否已有帧文件，如果没有则提取
-        existing_frames = [f for f in os.listdir(frame_dir) if f.endswith(".jpg")]
-        cover_frame = None
+            # 检查是否已有可视化图像
+            existing_visualizations = [
+                f for f in os.listdir(frame_dir) if f.endswith(".jpg")
+            ]
 
-        if not existing_frames:
-            # 确定用于提取帧的视频文件
-            frame_source_video = (
-                cached_video if os.path.exists(cached_video) else actual_video_file
-            )
-            frame_files, cover_frame = extract_frames_from_subtitles(
-                frame_source_video,
-                subtitles,
-                frame_dir,
-                args.verbose,
-            )
+            if not existing_visualizations:
+                frame_files, cover_frame = create_audio_visualizations(
+                    cached_audio, frame_dir, args.verbose
+                )
+            else:
+                if args.verbose:
+                    print(
+                        f"✅ 使用已存在的 {len(existing_visualizations)} 个可视化图像"
+                    )
+                frame_files = [(f, None) for f in existing_visualizations]
+                # 优先使用波形图作为封面
+                cover_frame = (
+                    "waveform.jpg"
+                    if "waveform.jpg" in existing_visualizations
+                    else existing_visualizations[0]
+                )
+                if args.verbose:
+                    print(f"   🎯 音频封面图: {cover_frame}")
         else:
             if args.verbose:
-                print(f"✅ 使用已存在的 {len(existing_frames)} 个关键帧")
-            frame_files = [(f, None) for f in existing_frames]
-            # 智能推测封面帧：排除00_00，选择最早的有效帧
-            valid_frames = [f for f in existing_frames if not f.startswith("00_00")]
-            if valid_frames:
-                cover_frame = sorted(valid_frames)[0]
+                print("🖼️  提取视频关键帧...")
+
+            # 检查是否已有帧文件，如果没有则提取
+            existing_frames = [f for f in os.listdir(frame_dir) if f.endswith(".jpg")]
+            cover_frame = None
+
+            if not existing_frames:
+                # 确定用于提取帧的视频文件
+                frame_source_video = (
+                    cached_video
+                    if cached_video and os.path.exists(cached_video)
+                    else actual_video_file
+                )
+                frame_files, cover_frame = extract_frames_from_subtitles(
+                    frame_source_video,
+                    subtitles,
+                    frame_dir,
+                    args.verbose,
+                )
+            else:
                 if args.verbose:
-                    print(f"   🎯 推测封面帧: {cover_frame}")
+                    print(f"✅ 使用已存在的 {len(existing_frames)} 个关键帧")
+                frame_files = [(f, None) for f in existing_frames]
+                # 智能推测封面帧：排除00_00，选择最早的有效帧
+                valid_frames = [f for f in existing_frames if not f.startswith("00_00")]
+                if valid_frames:
+                    cover_frame = sorted(valid_frames)[0]
+                    if args.verbose:
+                        print(f"   🎯 推测封面帧: {cover_frame}")
 
         progress_bar.update(60)
 
@@ -2211,12 +2623,12 @@ def main():
             ]
         )
 
-        # Step 4: 分析视频主题和类型（为后续生成提供上下文）
+        # Step 4: 分析内容主题和类型（为后续生成提供上下文）
         if args.verbose:
-            print("🎯 正在分析视频主题和类型...")
-        video_theme = get_video_theme_and_type(client, full_text, args.gpt_model)
+            print(f"🎯 正在分析{file_type}主题和类型...")
+        content_theme = get_video_theme_and_type(client, full_text, args.gpt_model)
         if args.verbose:
-            print("✅ 视频主题分析完成")
+            print(f"✅ {file_type}主题分析完成")
 
         # Step 5: 调用 LLM 生成内容
         generated_count = 0
@@ -2229,10 +2641,15 @@ def main():
             if args.verbose:
                 print("🧠 正在生成思维导图...")
             mind_map_content = generate_markmap(
-                client, timed_text, args.gpt_model, frame_dir, video_md5, video_theme
+                client, timed_text, args.gpt_model, frame_dir, file_md5, content_theme
             )
             Path(mind_file).write_text(mind_map_content, encoding="utf-8")
             print(f"🧠 思维导图: {mind_file}")
+
+            # 导出XMind兼容格式
+            if export_xmind_format(mind_map_content, xmind_file):
+                print(f"🎯 XMind格式: {xmind_file}")
+
             generated_count += 1
 
         # 基于思维导图生成内容卡片
@@ -2244,8 +2661,8 @@ def main():
                 full_text,
                 args.gpt_model,
                 frame_dir,
-                video_md5,
-                video_theme,
+                file_md5,
+                content_theme,
                 mind_map_content,
                 cover_frame,
             )
@@ -2286,6 +2703,21 @@ def main():
             print(f"⭐ 价值评分: {value_file}")
             generated_count += 1
 
+        if args.flashcards:
+            if args.verbose:
+                print("🎴 正在生成学习闪卡...")
+            flashcards = generate_flashcards(
+                client, full_text, args.gpt_model, mind_map_content
+            )
+            Path(flashcards_file).write_text(flashcards, encoding="utf-8")
+            print(f"🎴 学习闪卡: {flashcards_file}")
+
+            # 导出Anki格式
+            if export_anki_format(flashcards, anki_file):
+                print(f"📱 Anki格式: {anki_file}")
+
+            generated_count += 1
+
         # ✅ 计算总耗时
         end_time = time.time()
         total_seconds = int(end_time - start_time)
@@ -2298,9 +2730,9 @@ def main():
 
         # 🎉 输出最终完成信息（统一收尾）
         print("\n" + "🎉" * 10)
-        print("处理完成！")
-        print(f"📂 缓存目录: {video_cache_dir}")
-        print(f"📂 输出目录: {video_output_dir}")
+        print(f"{file_type}处理完成！")
+        print(f"📂 缓存目录: {file_cache_dir}")
+        print(f"📂 输出目录: {file_output_dir}")
         if minutes > 0:
             print(f"⏱️  总耗时: {minutes}分{seconds}秒")
         else:
