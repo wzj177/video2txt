@@ -1,0 +1,32 @@
+# 实时会议记录系统配置
+
+# 音频设置
+sample_rate: 16000
+chunk_size: 1024
+channels: 1
+
+# 模型设置
+whisper_model: "base"  # tiny, base, small, medium, large
+whisper_device: "cpu"
+whisper_compute_type: "int8"
+
+# 语言设置
+primary_language: "zh"  # zh, en, ja, ko, auto
+target_languages:
+  - "en"
+  - "ja"
+  - "ko"
+
+# 输出设置
+output_dir: "meeting_records"
+realtime_display: true
+save_audio: true
+
+# 高级功能
+enable_speaker_diarization: false  # 需要pyannote.audio
+enable_translation: false  # 需要transformers
+enable_summarization: false  # 需要Ollama
+
+# Ollama设置
+ollama_model: "qwen:1.8b"  # 或其他已安装的模型
+ollama_url: "http://localhost:11434"

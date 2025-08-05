@@ -11,3 +11,10 @@ librosa
 opencv-python  # 用于视频帧提取
 matplotlib  # 用于音频可视化
 soundfile  # 用于音频处理
+
+# 实时会议记录依赖 - 新功能
+pyaudio  # 实时音频捕获
+faster-whisper  # CPU优化的Whisper
+pyannote.audio  # 说话人分离
+torch  # PyTorch支持
+numpy  # 数组处理

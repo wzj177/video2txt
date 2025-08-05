@@ -2249,14 +2249,50 @@ def export_anki_format(flashcards_content, output_path):
     try:
         import re
 
-        # 解析闪卡内容
+        # 解析闪卡内容 - 支持多种格式
         cards = []
-        pattern = r"## 闪卡 \d+ - (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
-        matches = re.findall(pattern, flashcards_content, re.DOTALL)
+
+        # 尝试标准格式
+        pattern1 = r"## 闪卡 \d+ - (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
+        matches = re.findall(pattern1, flashcards_content, re.DOTALL)
+
+        # 如果标准格式不匹配，尝试其他常见格式
+        if not matches:
+            # 尝试不带序号的格式
+            pattern2 = r"## 闪卡.*?- (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
+            matches = re.findall(pattern2, flashcards_content, re.DOTALL)
 
         if not matches:
-            print("⚠️ 无法解析闪卡格式")
-            return False
+            # 尝试更宽松的格式匹配
+            pattern3 = r"##.*?闪卡.*?\n.*?正面.*?[:：]\s*(.+?)\n.*?背面.*?[:：]\s*(.+?)(?:\n.*?标签.*?[:：]\s*(.+?))?(?=\n\n|\n##|\Z)"
+            matches = re.findall(pattern3, flashcards_content, re.DOTALL)
+            # 为这种格式补充card_type和tags
+            matches = [
+                (
+                    "通用卡",
+                    match[0],
+                    match[1],
+                    match[2] if len(match) > 2 and match[2] else "#基础",
+                )
+                for match in matches
+            ]
+
+        if not matches:
+            print("⚠️ 无法解析闪卡格式，尝试简单问答格式...")
+            # 尝试最简单的Q&A格式
+            qa_pattern = r"(?:Q|问题|Question)[:：]\s*(.+?)\n(?:A|答案|Answer)[:：]\s*(.+?)(?=\n(?:Q|问题|Question)|\Z)"
+            qa_matches = re.findall(
+                qa_pattern, flashcards_content, re.DOTALL | re.IGNORECASE
+            )
+            if qa_matches:
+                matches = [
+                    ("问答卡", q.strip(), a.strip(), "#基础") for q, a in qa_matches
+                ]
+            else:
+                print("⚠️ 无法解析任何闪卡格式")
+                # 输出一部分内容用于调试
+                print(f"📝 闪卡内容预览（前500字符）:\n{flashcards_content[:500]}")
+                return False
 
         # 生成Anki导入格式（CSV）
         anki_content = []
@@ -2725,7 +2761,10 @@ def main():
         seconds = total_seconds % 60
 
         # 确保进度条完成
-        progress_bar.update(100)
+        # 当前已经更新了120% (20+40+60)，还需要80%完成
+        remaining = 100 - progress_bar.n if progress_bar.n < 100 else 0
+        if remaining > 0:
+            progress_bar.update(remaining)
         progress_bar.close()
 
         # 🎉 输出最终完成信息（统一收尾）
