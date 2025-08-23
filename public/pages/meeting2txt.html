@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI听世界 - 实时会议记录</title>
+    <link rel="stylesheet" href="/assets/css/common.css">
+    <link rel="stylesheet" href="/assets/css/icons.css">
+    <style>
+        :root {
+            --primary-color: #00B26A;
+            --secondary-color: #00A1D6;
+            --primary-light: #26d17c;
+            --secondary-light: #40c7f0;
+            --success-color: #52c41a;
+            --warning-color: #faad14;
+            --error-color: #ff4d4f;
+            --info-color: #1890ff;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-primary: #262626;
+            --text-secondary: #595959;
+            --text-tertiary: #8c8c8c;
+            --border-light: #f0f0f0;
+            --shadow-light: 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-medium: 0 4px 16px rgba(0,0,0,0.12);
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-xxl: 48px;
+            --radius-small: 4px;
+            --radius-medium: 8px;
+            --radius-large: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .meeting-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, 
+                rgba(0, 178, 106, 0.03) 0%, 
+                rgba(0, 161, 214, 0.03) 100%);
+        }
+
+        .header {
+            background: var(--card-bg);
+            box-shadow: var(--shadow-light);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 0 var(--spacing-lg);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: var(--spacing-lg);
+        }
+
+        .nav-item {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-medium);
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-weight: 500;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .meeting-controls {
+            background: var(--card-bg);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-light);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .control-section {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+            display: block;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 178, 106, 0.1);
+        }
+
+        .record-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .record-button.inactive {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .record-button.active {
+            background: linear-gradient(135deg, var(--error-color), #ff7875);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .record-button:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-medium);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 77, 79, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0); }
+        }
+
+        .meeting-status {
+            text-align: center;
+            margin: var(--spacing-lg) 0;
+        }
+
+        .status-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-medium);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-indicator.recording {
+            background: rgba(255, 77, 79, 0.1);
+            color: var(--error-color);
+        }
+
+        .status-indicator.stopped {
+            background: rgba(140, 140, 140, 0.1);
+            color: var(--text-tertiary);
+        }
+
+        .timer {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .meeting-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        .content-panel {
+            background: var(--card-bg);
+            border-radius: var(--radius-large);
+            box-shadow: var(--shadow-light);
+        }
+
+        .panel-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: between;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .panel-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-medium);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-color);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-light);
+        }
+
+        .panel-content {
+            padding: var(--spacing-lg);
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        .transcript-item {
+            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-md);
+            border-left: 3px solid var(--primary-color);
+            background: rgba(0, 178, 106, 0.05);
+            border-radius: 0 var(--radius-medium) var(--radius-medium) 0;
+        }
+
+        .transcript-time {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .transcript-text {
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .summary-section {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .summary-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .summary-content {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .keyword-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+        }
+
+        .keyword-tag {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: var(--radius-small);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xxl);
+            color: var(--text-tertiary);
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto var(--spacing-md);
+            color: var(--text-tertiary);
+        }
+
+        .volume-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin: var(--spacing-md) 0;
+        }
+
+        .volume-bars {
+            display: flex;
+            gap: 2px;
+            align-items: end;
+        }
+
+        .volume-bar {
+            width: 4px;
+            background: var(--border-light);
+            border-radius: 2px;
+            transition: all 0.1s ease;
+        }
+
+        .volume-bar.active {
+            background: var(--primary-color);
+        }
+
+        .volume-bar:nth-child(1) { height: 8px; }
+        .volume-bar:nth-child(2) { height: 12px; }
+        .volume-bar:nth-child(3) { height: 16px; }
+        .volume-bar:nth-child(4) { height: 20px; }
+        .volume-bar:nth-child(5) { height: 24px; }
+        .volume-bar:nth-child(6) { height: 20px; }
+        .volume-bar:nth-child(7) { height: 16px; }
+        .volume-bar:nth-child(8) { height: 12px; }
+
+        .participants-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .participant-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .participant-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .participant-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .participant-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .participant-status {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .speaking-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: speak-pulse 1s infinite;
+        }
+
+        @keyframes speak-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .icon.icon-sm {
+            width: 14px;
+            height: 14px;
+        }
+
+        .icon.icon-md {
+            width: 18px;
+            height: 18px;
+        }
+
+        .icon.icon-lg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .icon-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .meeting-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .form-group {
+                min-width: auto;
+            }
+            
+            .main-content {
+                padding: var(--spacing-lg) var(--spacing-md);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="meeting-container">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <a href="./" class="logo">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        AI听世界
+                    </a>
+                    <nav class="nav-menu">
+                        <a href="/dashboard" class="nav-item">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                            </svg>
+                            仪表盘
+                        </a>
+                        <a href="/video2txt" class="nav-item">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+                            </svg>
+                            音视频转文本
+                        </a>
+                        <a href="/meeting2txt" class="nav-item active">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            实时会议记录
+                        </a>
+                        <a href="/settings" class="nav-item">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+                            </svg>
+                            设置
+                        </a>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="main-content">
+            <div class="page-title">
+                <svg class="icon icon-lg" viewBox="0 0 24 24">
+                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                实时会议记录
+            </div>
+
+            <!-- 会议控制面板 -->
+            <div class="meeting-controls fade-in">
+                <div class="control-section">
+                    <div class="section-title">
+                        <svg class="icon icon-md" viewBox="0 0 24 24">
+                            <path d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+                        </svg>
+                        会议设置
+                    </div>
+                    <div class="control-row">
+                        <div class="form-group">
+                            <label class="form-label">会议名称</label>
+                            <input type="text" v-model="meetingConfig.name" class="form-input" placeholder="请输入会议名称">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">语言模式</label>
+                            <select v-model="meetingConfig.language" class="form-select">
+                                <option value="auto">自动检测</option>
+                                <option value="zh">中文</option>
+                                <option value="en">英语</option>
+                                <option value="dialect">方言</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">音频设备</label>
+                            <select v-model="meetingConfig.audioDevice" class="form-select">
+                                <option value="default">默认麦克风</option>
+                                <option value="usb">USB麦克风</option>
+                                <option value="bluetooth">蓝牙耳机</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 录制控制 -->
+                <div class="meeting-status">
+                    <div class="status-info">
+                        <div class="status-indicator" :class="recordingStatus">
+                            <svg v-if="recordingStatus === 'recording'" class="icon icon-sm" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" fill="currentColor"/>
+                            </svg>
+                            <svg v-else class="icon icon-sm" viewBox="0 0 24 24">
+                                <rect x="6" y="6" width="12" height="12" fill="currentColor"/>
+                            </svg>
+                            {{ getRecordingStatusText() }}
+                        </div>
+                        <div class="timer">{{ formatTime(recordingTime) }}</div>
+                    </div>
+
+                    <button class="record-button" 
+                            :class="recordingStatus" 
+                            @click="toggleRecording">
+                        <svg v-if="recordingStatus === 'stopped'" class="icon" style="width: 32px; height: 32px;" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" fill="currentColor"/>
+                        </svg>
+                        <svg v-else class="icon" style="width: 32px; height: 32px;" viewBox="0 0 24 24">
+                            <rect x="6" y="6" width="12" height="12" fill="currentColor"/>
+                        </svg>
+                        <span style="margin-left: 8px;">
+                            {{ recordingStatus === 'stopped' ? '开始录制' : '停止录制' }}
+                        </span>
+                    </button>
+
+                    <!-- 音量指示器 -->
+                    <div class="volume-indicator">
+                        <span style="font-size: 12px; color: var(--text-tertiary);">音量:</span>
+                        <div class="volume-bars">
+                            <div v-for="i in 8" :key="i" 
+                                 class="volume-bar" 
+                                 :class="{active: volumeLevel >= i}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 会议内容 -->
+            <div class="meeting-content">
+                <!-- 实时转录 -->
+                <div class="content-panel fade-in">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <svg class="icon icon-md" viewBox="0 0 24 24">
+                                <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+                            </svg>
+                            实时转录
+                        </div>
+                        <div class="panel-actions">
+                            <button class="btn btn-secondary" @click="clearTranscript">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                </svg>
+                                清除
+                            </button>
+                            <button class="btn btn-primary" @click="exportTranscript">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
+                                </svg>
+                                导出
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div v-if="transcripts.length === 0" class="empty-state">
+                            <svg class="empty-icon" viewBox="0 0 24 24">
+                                <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+                            </svg>
+                            <div>开始录制以查看实时转录内容</div>
+                        </div>
+                        <div v-else>
+                            <div v-for="(item, index) in transcripts" :key="index" class="transcript-item">
+                                <div class="transcript-time">{{ item.time }}</div>
+                                <div class="transcript-text">{{ item.text }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 会议总结 -->
+                <div class="content-panel fade-in">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <svg class="icon icon-md" viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
+                            </svg>
+                            会议总结
+                        </div>
+                        <div class="panel-actions">
+                            <button class="btn btn-secondary" @click="generateSummary" :disabled="transcripts.length === 0">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                            </svg>
+                                生成总结
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div v-if="!summary.content" class="empty-state">
+                            <svg class="empty-icon" viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
+                            </svg>
+                            <div>会议结束后将自动生成总结</div>
+                        </div>
+                        <div v-else>
+                            <div class="summary-section">
+                                <div class="summary-title">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                    </svg>
+                                    会议概要
+                                </div>
+                                <div class="summary-content">{{ summary.content }}</div>
+                            </div>
+
+                            <div class="summary-section">
+                                <div class="summary-title">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                                    </svg>
+                                    关键要点
+                                </div>
+                                <div class="summary-content">
+                                    <ul style="padding-left: 20px;">
+                                        <li v-for="point in summary.keyPoints" :key="point">{{ point }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="summary-section">
+                                <div class="summary-title">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zM15.5 11H8v2h7.5v-2z"/>
+                                    </svg>
+                                    关键词
+                                </div>
+                                <div class="keyword-tags">
+                                    <span v-for="keyword in summary.keywords" :key="keyword" class="keyword-tag">
+                                        {{ keyword }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 参与者列表 -->
+            <div class="content-panel fade-in" style="margin-top: var(--spacing-lg);">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <svg class="icon icon-md" viewBox="0 0 24 24">
+                            <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A2.996 2.996 0 0117.06 6H16.94c-.95 0-1.85.54-2.27 1.4L12.73 12H6v3h6v5h2v-5h4v5h2zm-7.5-10.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10.5s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm2 16v-7H9V9c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v6h1.5v7h4z"/>
+                        </svg>
+                        参与者 ({{ participants.length }})
+                    </div>
+                    <div class="panel-actions">
+                        <button class="btn btn-secondary" @click="addParticipant">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            添加
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div v-if="participants.length === 0" class="empty-state">
+                        <svg class="empty-icon" viewBox="0 0 24 24">
+                            <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A2.996 2.996 0 0117.06 6H16.94c-.95 0-1.85.54-2.27 1.4L12.73 12H6v3h6v5h2v-5h4v5h2zm-7.5-10.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10.5s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm2 16v-7H9V9c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v6h1.5v7h4z"/>
+                        </svg>
+                        <div>暂无参与者信息</div>
+                    </div>
+                    <div v-else class="participants-list">
+                        <div v-for="participant in participants" :key="participant.id" class="participant-item">
+                            <div class="participant-info">
+                                <div class="participant-avatar">{{ participant.name.charAt(0) }}</div>
+                                <div>
+                                    <div class="participant-name">{{ participant.name }}</div>
+                                    <div class="participant-status">{{ participant.status }}</div>
+                                </div>
+                            </div>
+                            <div v-if="participant.speaking" class="speaking-indicator"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/assets/js/vue.global.js"></script>
+    <script type="module">
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    recordingStatus: 'stopped', // recording, stopped
+                    recordingTime: 0,
+                    volumeLevel: 0,
+                    meetingConfig: {
+                        name: '',
+                        language: 'auto',
+                        audioDevice: 'default'
+                    },
+                    transcripts: [],
+                    summary: {
+                        content: '',
+                        keyPoints: [],
+                        keywords: []
+                    },
+                    participants: [
+                        {
+                            id: 1,
+                            name: '张三',
+                            status: '在线',
+                            speaking: false
+                        },
+                        {
+                            id: 2,
+                            name: '李四',
+                            status: '在线',
+                            speaking: true
+                        }
+                    ],
+                    recordingTimer: null,
+                    volumeTimer: null
+                }
+            },
+
+            mounted() {
+                this.simulateVolumeLevel();
+            },
+
+            beforeUnmount() {
+                this.stopRecording();
+                if (this.volumeTimer) {
+                    clearInterval(this.volumeTimer);
+                }
+            },
+
+            methods: {
+                toggleRecording() {
+                    if (this.recordingStatus === 'stopped') {
+                        this.startRecording();
+                    } else {
+                        this.stopRecording();
+                    }
+                },
+
+                startRecording() {
+                    if (!this.meetingConfig.name.trim()) {
+                        alert('请输入会议名称');
+                        return;
+                    }
+
+                    this.recordingStatus = 'recording';
+                    this.recordingTime = 0;
+                    
+                    // 开始计时
+                    this.recordingTimer = setInterval(() => {
+                        this.recordingTime++;
+                        
+                        // 模拟实时转录
+                        if (this.recordingTime % 10 === 0) {
+                            this.addMockTranscript();
+                        }
+                    }, 1000);
+
+                    console.log('开始录制会议...');
+                },
+
+                stopRecording() {
+                    this.recordingStatus = 'stopped';
+                    
+                    if (this.recordingTimer) {
+                        clearInterval(this.recordingTimer);
+                        this.recordingTimer = null;
+                    }
+
+                    // 自动生成总结
+                    if (this.transcripts.length > 0) {
+                        this.generateSummary();
+                    }
+
+                    console.log('停止录制会议');
+                },
+
+                addMockTranscript() {
+                    const mockTexts = [
+                        '大家好，欢迎参加今天的产品讨论会议。',
+                        '我们今天主要讨论新版本的功能特性。',
+                        '关于用户体验方面，我们需要重点关注界面的简洁性。',
+                        '技术实现上，我建议采用模块化的架构设计。',
+                        '项目时间线需要再次确认，确保按时交付。',
+                        '我们还需要考虑性能优化的问题。',
+                        '用户反馈显示加载速度需要提升。',
+                        '测试环节要覆盖各种边界情况。'
+                    ];
+
+                    const randomText = mockTexts[Math.floor(Math.random() * mockTexts.length)];
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString();
+
+                    this.transcripts.push({
+                        time: timeStr,
+                        text: randomText
+                    });
+
+                    // 保持最多50条记录
+                    if (this.transcripts.length > 50) {
+                        this.transcripts.shift();
+                    }
+
+                    // 模拟参与者发言状态
+                    this.participants.forEach(p => p.speaking = false);
+                    if (this.participants.length > 0) {
+                        const randomParticipant = this.participants[Math.floor(Math.random() * this.participants.length)];
+                        randomParticipant.speaking = true;
+                    }
+                },
+
+                generateSummary() {
+                    if (this.transcripts.length === 0) return;
+
+                    // 模拟生成会议总结
+                    this.summary = {
+                        content: '本次会议主要讨论了新产品版本的开发计划和技术方案。团队就用户体验优化、技术架构选择、项目时间安排等关键议题进行了深入交流。',
+                        keyPoints: [
+                            '确定采用模块化架构设计',
+                            '优先解决性能和加载速度问题',
+                            '加强用户体验测试',
+                            '按时交付项目里程碑'
+                        ],
+                        keywords: ['产品开发', '用户体验', '技术架构', '性能优化', '项目管理']
+                    };
+                },
+
+                clearTranscript() {
+                    if (confirm('确定要清除所有转录内容吗？')) {
+                        this.transcripts = [];
+                    }
+                },
+
+                exportTranscript() {
+                    if (this.transcripts.length === 0) {
+                        alert('暂无转录内容可导出');
+                        return;
+                    }
+
+                    // 生成导出内容
+                    let content = `会议记录 - ${this.meetingConfig.name}\n`;
+                    content += `时间：${new Date().toLocaleString()}\n`;
+                    content += `语言：${this.meetingConfig.language}\n\n`;
+                    content += '=== 转录内容 ===\n';
+                    
+                    this.transcripts.forEach(item => {
+                        content += `[${item.time}] ${item.text}\n`;
+                    });
+
+                    // 创建下载
+                    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `会议记录_${this.meetingConfig.name}_${new Date().toISOString().slice(0, 10)}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                },
+
+                addParticipant() {
+                    const name = prompt('请输入参与者姓名：');
+                    if (name && name.trim()) {
+                        this.participants.push({
+                            id: Date.now(),
+                            name: name.trim(),
+                            status: '在线',
+                            speaking: false
+                        });
+                    }
+                },
+
+                simulateVolumeLevel() {
+                    this.volumeTimer = setInterval(() => {
+                        if (this.recordingStatus === 'recording') {
+                            // 模拟音量变化
+                            this.volumeLevel = Math.floor(Math.random() * 8) + 1;
+                        } else {
+                            this.volumeLevel = 0;
+                        }
+                    }, 200);
+                },
+
+                getRecordingStatusText() {
+                    return this.recordingStatus === 'recording' ? '录制中' : '已停止';
+                },
+
+                formatTime(seconds) {
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    const secs = seconds % 60;
+                    
+                    if (hours > 0) {
+                        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    } else {
+                        return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

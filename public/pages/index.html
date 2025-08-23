@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI听世界 - 欢迎</title>
+    <link rel="stylesheet" href="/assets/css/common.css">
+    <link rel="stylesheet" href="/assets/css/icons.css">
+    <style>
+        /* 开场动画容器 */
+        .intro-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            background: linear-gradient(135deg, 
+                #1e3c72 0%, 
+                #2a5298 30%,
+                #87CEEB 60%, 
+                #B0E0E6 100%);
+            overflow: hidden;
+            transition: all 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .intro-animation.fade-out {
+            opacity: 0;
+            visibility: hidden;
+            transform: scale(1.1);
+            filter: blur(10px);
+        }
+
+        .intro-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .intro-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 3;
+            color: white;
+            opacity: 0;
+            animation: introContentShow 2.5s ease-out 0.8s forwards;
+        }
+
+        .intro-title {
+            font-size: 52px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 15px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(135deg, #ffffff, #07c160, #1890ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: titleFloat 4s ease-in-out infinite;
+            position: relative;
+        }
+
+        .intro-title::before {
+            content: '🛩️ AI听世界';
+            position: absolute;
+            top: 0;
+            left: 0;
+            color: rgba(255, 255, 255, 0.1);
+            text-shadow: none;
+            transform: translate(3px, 3px);
+            z-index: -1;
+        }
+
+        .intro-subtitle {
+            font-size: 22px;
+            font-weight: 300;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
+            margin-bottom: 30px;
+            opacity: 0.95;
+            animation: subtitleGlow 3s ease-in-out infinite alternate;
+        }
+
+        .intro-progress-container {
+            width: 280px;
+            margin: 30px auto;
+        }
+
+        .intro-progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .intro-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, 
+                #07c160 0%, 
+                #1890ff 50%, 
+                #fb7299 100%);
+            border-radius: 3px;
+            width: 0%;
+            animation: progressFill 4.5s ease-out forwards;
+            box-shadow: 0 0 15px rgba(7, 193, 96, 0.6);
+        }
+
+        .intro-progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+        }
+
+        .skip-btn {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(15px);
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 4;
+        }
+
+        .skip-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 主要内容容器 */
+        .welcome-container {
+            position: relative;
+            width: 100vw;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            background: linear-gradient(135deg, 
+                rgba(7, 193, 96, 0.08) 0%, 
+                rgba(24, 144, 255, 0.06) 30%, 
+                rgba(251, 114, 153, 0.05) 60%, 
+                rgba(7, 193, 96, 0.08) 100%);
+            padding: var(--spacing-lg) 0;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(40px);
+            transition: all 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .welcome-container.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .canvas-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 1200px;
+            width: 95%;
+            padding: var(--spacing-lg);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            align-items: center;
+        }
+
+        .main-section {
+            flex: 0 0 auto;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1.2s ease-out 0.3s forwards;
+        }
+
+        .feature-section {
+            flex: 0 0 auto;
+            width: 100%;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1.2s ease-out 0.8s forwards;
+        }
+
+        .welcome-title {
+            font-size: 56px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color), var(--info-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: var(--spacing-md);
+            margin-top: 0;
+            animation: titleGlow 4s ease-in-out infinite;
+            text-shadow: 0 0 30px rgba(7, 193, 96, 0.3);
+        }
+
+        .welcome-subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+            font-weight: 300;
+        }
+
+        .welcome-description {
+            font-size: 16px;
+            color: var(--text-tertiary);
+            line-height: 1.8;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .welcome-buttons {
+            display: flex;
+            gap: var(--spacing-lg);
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .welcome-btn {
+            padding: var(--spacing-lg) var(--spacing-xxl);
+            border: none;
+            border-radius: var(--radius-xl);
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            min-width: 200px;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .welcome-btn:hover::before {
+            left: 100%;
+        }
+
+        .welcome-btn.primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 178, 106, 0.3);
+        }
+
+        .welcome-btn.primary:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 12px 40px rgba(7, 193, 96, 0.5);
+        }
+
+        .welcome-btn.secondary {
+            background: linear-gradient(135deg, var(--secondary-color), var(--secondary-light));
+            color: white;
+            box-shadow: 0 6px 25px rgba(251, 114, 153, 0.4);
+        }
+
+        .welcome-btn.secondary:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 12px 40px rgba(251, 114, 153, 0.5);
+        }
+
+        .welcome-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .feature-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-lg);
+            margin: 0;
+            width: 100%;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg);
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideUp 0.8s ease forwards;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--info-color));
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .feature-card:hover::before {
+            transform: translateX(0);
+        }
+
+        .feature-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .feature-card:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto var(--spacing-lg);
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .feature-icon::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color), var(--info-color));
+            border-radius: 50%;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .feature-card:hover .feature-icon::after {
+            opacity: 1;
+        }
+
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1) rotate(10deg);
+        }
+
+        .feature-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .feature-desc {
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-content {
+            background: white;
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-large);
+            text-align: center;
+            max-width: 300px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 178, 106, 0.3);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-md);
+        }
+
+        /* 动画关键帧 */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes titleGlow {
+            0%, 100% {
+                filter: drop-shadow(0 0 10px rgba(7, 193, 96, 0.4));
+                transform: scale(1);
+            }
+            50% {
+                filter: drop-shadow(0 0 30px rgba(7, 193, 96, 0.8)) drop-shadow(0 0 50px rgba(251, 114, 153, 0.4));
+                transform: scale(1.02);
+            }
+        }
+
+        @keyframes introContentShow {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -70%);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        @keyframes titleFloat {
+            0%, 100% {
+                transform: translateY(0px);
+                filter: drop-shadow(0 0 20px rgba(7, 193, 96, 0.6));
+            }
+            50% {
+                transform: translateY(-10px);
+                filter: drop-shadow(0 0 40px rgba(7, 193, 96, 1)) drop-shadow(0 0 60px rgba(24, 144, 255, 0.8));
+            }
+        }
+
+        @keyframes subtitleGlow {
+            0% {
+                text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
+            }
+            100% {
+                text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 255, 255, 0.3);
+            }
+        }
+
+        @keyframes progressFill {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        @keyframes fadeInUp {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .intro-title {
+                font-size: 36px;
+            }
+            
+            .intro-subtitle {
+                font-size: 18px;
+            }
+            
+            .intro-progress-container {
+                width: 220px;
+            }
+            
+            .skip-btn {
+                bottom: 25px;
+                right: 25px;
+                padding: 10px 18px;
+                font-size: 13px;
+            }
+            
+            .welcome-title {
+                font-size: 42px;
+            }
+            
+            .welcome-subtitle {
+                font-size: 18px;
+            }
+            
+            .welcome-buttons {
+                flex-direction: column;
+                align-items: center;
+                gap: var(--spacing-md);
+            }
+            
+            .feature-cards {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-lg);
+                margin-top: var(--spacing-lg);
+                margin-bottom: var(--spacing-lg);
+            }
+
+            .feature-card {
+                min-height: 240px;
+                padding: var(--spacing-lg);
+            }
+
+            .welcome-content {
+                max-width: 95%;
+                padding: var(--spacing-md);
+                margin: var(--spacing-md) auto;
+                min-height: auto;
+            }
+
+            .welcome-btn {
+                min-width: 180px;
+                font-size: 16px;
+                padding: var(--spacing-md) var(--spacing-lg);
+            }
+            
+            .welcome-container {
+                padding: var(--spacing-md) 0;
+                overflow-y: auto;
+            }
+            
+            .feature-icon {
+                width: 56px;
+                height: 56px;
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- SVG图标定义 -->
+    <svg class="svg-icons" style="display: none;">
+        <defs>
+            <!-- 仪表盘图标 -->
+            <symbol id="icon-dashboard" viewBox="0 0 24 24">
+                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+            </symbol>
+            
+            <!-- 视频图标 -->
+            <symbol id="icon-video" viewBox="0 0 24 24">
+                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4zM14 13h-3v3H9v-3H6v-2h3V8h2v3h3v2z"/>
+            </symbol>
+            
+            <!-- 音频图标 -->
+            <symbol id="icon-audio" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+            </symbol>
+            
+            <!-- 会议图标 -->
+            <symbol id="icon-meeting" viewBox="0 0 24 24">
+                <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A2.99 2.99 0 0 0 17.15 7H14.5c-.8 0-1.54.37-2.01.99l-.49.74c-.34.51-.21 1.19.3 1.53.51.34 1.19.21 1.53-.3L14.5 8.5h2.65L19 16v6h1zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm2 16v-7H9v-2c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v2h1.5v7h4z"/>
+            </symbol>
+            
+            <!-- AI图标 -->
+            <symbol id="icon-ai" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </symbol>
+        </defs>
+    </svg>
+
+    <div id="app">
+        <!-- 3D云层穿越开场动画 -->
+        <div class="intro-animation" ref="introAnimation" v-show="showIntro">
+            <canvas ref="introCanvas" class="intro-canvas"></canvas>
+            <div class="intro-content">
+                <h1 class="intro-title">🛩️ AI听世界</h1>
+                <p class="intro-subtitle">飞向智慧彼岸，探索无限可能</p>
+                <div class="intro-progress-container">
+                    <div class="intro-progress">
+                        <div class="intro-progress-bar"></div>
+                    </div>
+                    <div class="intro-progress-text">正在初始化系统...</div>
+                </div>
+            </div>
+            <button class="skip-btn" @click="skipIntro">
+                跳过动画 →
+            </button>
+        </div>
+        
+        <!-- 主要欢迎页面 -->
+        <div class="welcome-container" :class="{ 'show': !showIntro }">
+            <!-- 背景粒子动画 -->
+            <canvas ref="canvas" class="canvas-bg"></canvas>
+            
+            <!-- 欢迎内容 -->
+            <div class="welcome-content">
+                <div class="main-section">
+                    <h1 class="welcome-title">AI听世界</h1>
+                    <p class="welcome-subtitle">同学你好，欢迎来到AI听世界</p>
+                    <p class="welcome-description">
+                        智能音视频处理平台，让每一次听讲都变成知识的收获<br>
+                        支持音视频转文本、实时会议记录、AI智能分析、学习资料生成
+                    </p>
+                    
+                    <div class="welcome-buttons">
+                        <button 
+                            class="welcome-btn primary" 
+                            @click="enterDashboard"
+                            :disabled="loading"
+                        >
+                            <svg class="icon icon-xl"><use href="#icon-dashboard"></use></svg>
+                            <span>进入仪表盘</span>
+                        </button>
+                        
+                        <button 
+                            class="welcome-btn secondary" 
+                            @click="quickStart"
+                            :disabled="loading"
+                        >
+                            <svg class="icon icon-xl"><use href="#icon-video"></use></svg>
+                            <span>快速开始</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 功能特性卡片 -->
+                <div class="feature-section">
+                    <div class="feature-cards">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <svg class="icon icon-xxl"><use href="#icon-audio"></use></svg>
+                            </div>
+                            <h3 class="feature-title">音视频转文本</h3>
+                            <p class="feature-desc">高精度语音识别，支持多语言和方言，智能分段标记</p>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-icon" style="background: linear-gradient(135deg, var(--secondary-color), var(--secondary-light));">
+                                <svg class="icon icon-xxl"><use href="#icon-meeting"></use></svg>
+                            </div>
+                            <h3 class="feature-title">实时会议记录</h3>
+                            <p class="feature-desc">实时语音捕获，智能会议纪要生成，支持多人对话识别</p>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-icon" style="background: linear-gradient(135deg, var(--info-color), #40a9ff);">
+                                <svg class="icon icon-xxl"><use href="#icon-ai"></use></svg>
+                            </div>
+                            <h3 class="feature-title">AI智能分析</h3>
+                            <p class="feature-desc">内容智能摘要，关键信息提取，学习要点标记</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 加载动画 -->
+            <div v-show="loading" class="loading-overlay">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div>{{ loadingText }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue 3 和相关库 -->
+    <script src="/assets/js/vue.global.js"></script>
+    <script src="/assets/js/axios/axios.min.js"></script>
+    <script src="/assets/js/http.js"></script>
+    
+    <script>
+        // 增强版3D云层穿越动画类
+        class Enhanced3DCloudAnimation {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.clouds = [];
+                this.particles = [];
+                this.lightRays = [];
+                this.stars = [];
+                this.startTime = null;
+                this.duration = 4500; // 4.5秒
+                this.completed = false;
+                this.cameraZ = 0;
+                this.cameraSpeed = 2;
+
+                this.resize();
+                this.createClouds();
+                this.createParticles();
+                this.createLightRays();
+                this.createStars();
+                requestAnimationFrame(this.animate.bind(this));
+
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            createClouds() {
+                this.clouds = [];
+                const cloudCount = Math.floor(this.canvas.width / 150) + 8;
+                
+                for (let i = 0; i < cloudCount; i++) {
+                    this.clouds.push({
+                        x: (Math.random() - 0.5) * this.canvas.width * 3,
+                        y: (Math.random() - 0.5) * this.canvas.height * 2,
+                        z: Math.random() * 2000 + 200,
+                        size: Math.random() * 200 + 150,
+                        speedZ: Math.random() * 3 + 1,
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: (Math.random() - 0.5) * 0.02,
+                        puffs: this.createPuffs(),
+                        opacity: Math.random() * 0.4 + 0.6,
+                        layer: Math.random() > 0.3 ? 'normal' : 'dense'
+                    });
+                }
+            }
+
+            createPuffs() {
+                const puffs = [];
+                const puffCount = Math.floor(Math.random() * 10) + 6;
+                for (let i = 0; i < puffCount; i++) {
+                    puffs.push({
+                        offsetX: (Math.random() - 0.5) * 2.5,
+                        offsetY: (Math.random() - 0.5) * 1.2,
+                        radius: Math.random() * 0.8 + 0.5,
+                        phase: Math.random() * Math.PI * 2
+                    });
+                }
+                return puffs;
+            }
+
+            createParticles() {
+                this.particles = [];
+                for (let i = 0; i < 80; i++) {
+                    this.particles.push({
+                        x: (Math.random() - 0.5) * this.canvas.width * 4,
+                        y: (Math.random() - 0.5) * this.canvas.height * 4,
+                        z: Math.random() * 3000,
+                        size: Math.random() * 4 + 1,
+                        speedZ: Math.random() * 4 + 2,
+                        opacity: Math.random() * 0.8 + 0.2,
+                        twinkle: Math.random() * Math.PI * 2,
+                        twinkleSpeed: Math.random() * 0.1 + 0.05
+                    });
+                }
+            }
+
+            createLightRays() {
+                this.lightRays = [];
+                for (let i = 0; i < 5; i++) {
+                    this.lightRays.push({
+                        angle: (Math.PI * 2 / 5) * i,
+                        length: Math.max(this.canvas.width, this.canvas.height) * 1.5,
+                        opacity: Math.random() * 0.3 + 0.1,
+                        pulse: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+
+            createStars() {
+                this.stars = [];
+                for (let i = 0; i < 100; i++) {
+                    this.stars.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        size: Math.random() * 2 + 0.5,
+                        opacity: Math.random() * 0.8 + 0.2,
+                        twinkle: Math.random() * Math.PI * 2,
+                        twinkleSpeed: Math.random() * 0.05 + 0.02
+                    });
+                }
+            }
+
+            drawSky(progress) {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                
+                // 动态渐变背景
+                const gradient = this.ctx.createRadialGradient(
+                    centerX, centerY, 0,
+                    centerX, centerY, Math.max(this.canvas.width, this.canvas.height)
+                );
+                
+                const lightness = 0.15 + progress * 0.6;
+                gradient.addColorStop(0, `hsl(210, 70%, ${lightness * 120}%)`);
+                gradient.addColorStop(0.4, `hsl(200, 60%, ${lightness * 80}%)`);
+                gradient.addColorStop(0.8, `hsl(190, 50%, ${lightness * 60}%)`);
+                gradient.addColorStop(1, `hsl(180, 40%, ${lightness * 40}%)`);
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            drawStars() {
+                this.stars.forEach(star => {
+                    star.twinkle += star.twinkleSpeed;
+                    const twinkleOpacity = star.opacity * (0.3 + 0.7 * Math.sin(star.twinkle));
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = twinkleOpacity;
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                });
+            }
+
+            drawLightRays(progress) {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                
+                this.lightRays.forEach(ray => {
+                    ray.pulse += 0.03;
+                    const pulseOpacity = ray.opacity * (0.5 + 0.5 * Math.sin(ray.pulse)) * progress;
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = pulseOpacity;
+                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.shadowBlur = 20;
+                    this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(centerX, centerY);
+                    this.ctx.lineTo(
+                        centerX + Math.cos(ray.angle) * ray.length,
+                        centerY + Math.sin(ray.angle) * ray.length
+                    );
+                    this.ctx.stroke();
+                    this.ctx.restore();
+                });
+            }
+
+            drawParticles() {
+                this.particles.forEach(particle => {
+                    // 更新3D位置
+                    particle.z -= particle.speedZ + this.cameraSpeed;
+                    particle.twinkle += particle.twinkleSpeed;
+                    
+                    // 重置超出边界的粒子
+                    if (particle.z <= 0) {
+                        particle.z = 3000;
+                        particle.x = (Math.random() - 0.5) * this.canvas.width * 4;
+                        particle.y = (Math.random() - 0.5) * this.canvas.height * 4;
+                    }
+                    
+                    // 3D投影到2D
+                    const scale = 300 / particle.z;
+                    const x2d = this.canvas.width / 2 + particle.x * scale;
+                    const y2d = this.canvas.height / 2 + particle.y * scale;
+                    const size2d = particle.size * scale;
+                    
+                    if (x2d > -50 && x2d < this.canvas.width + 50 && 
+                        y2d > -50 && y2d < this.canvas.height + 50) {
+                        
+                        const twinkleOpacity = particle.opacity * (0.4 + 0.6 * Math.sin(particle.twinkle));
+                        const depthOpacity = Math.min(1, particle.z / 1000);
+                        
+                        this.ctx.save();
+                        this.ctx.globalAlpha = twinkleOpacity * depthOpacity;
+                        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                        this.ctx.shadowBlur = size2d * 2;
+                        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+                        this.ctx.beginPath();
+                        this.ctx.arc(x2d, y2d, Math.max(size2d, 0.5), 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.restore();
+                    }
+                });
+            }
+
+            drawCloud(cloud, progress) {
+                // 更新云朵3D位置
+                cloud.z -= cloud.speedZ + this.cameraSpeed;
+                cloud.rotation += cloud.rotationSpeed;
+                
+                // 重置超出边界的云朵
+                if (cloud.z <= 0) {
+                    cloud.z = 2000;
+                    cloud.x = (Math.random() - 0.5) * this.canvas.width * 3;
+                    cloud.y = (Math.random() - 0.5) * this.canvas.height * 2;
+                }
+                
+                // 3D投影到2D
+                const scale = 300 / cloud.z;
+                const x2d = this.canvas.width / 2 + cloud.x * scale;
+                const y2d = this.canvas.height / 2 + cloud.y * scale;
+                const size2d = cloud.size * scale;
+                
+                if (x2d > -size2d && x2d < this.canvas.width + size2d && 
+                    y2d > -size2d && y2d < this.canvas.height + size2d) {
+                    
+                    this.ctx.save();
+                    
+                    // 深度透明度和图层效果
+                    const depthOpacity = Math.min(1, cloud.z / 800);
+                    const layerOpacity = cloud.layer === 'dense' ? cloud.opacity * 0.9 : cloud.opacity * 0.7;
+                    this.ctx.globalAlpha = layerOpacity * depthOpacity;
+                    
+                    // 应用旋转
+                    this.ctx.translate(x2d, y2d);
+                    this.ctx.rotate(cloud.rotation);
+                    
+                    cloud.puffs.forEach(puff => {
+                        puff.phase += 0.02;
+                        const puffX = puff.offsetX * size2d + Math.sin(puff.phase) * size2d * 0.1;
+                        const puffY = puff.offsetY * size2d + Math.cos(puff.phase) * size2d * 0.05;
+                        const puffRadius = size2d * puff.radius * 0.8;
+
+                        const gradient = this.ctx.createRadialGradient(
+                            puffX, puffY, 0,
+                            puffX, puffY, puffRadius
+                        );
+                        
+                        if (cloud.layer === 'dense') {
+                            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+                            gradient.addColorStop(0.6, 'rgba(240, 248, 255, 0.8)');
+                            gradient.addColorStop(1, 'rgba(200, 220, 255, 0)');
+                        } else {
+                            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+                            gradient.addColorStop(0.5, 'rgba(240, 248, 255, 0.6)');
+                            gradient.addColorStop(1, 'rgba(220, 235, 255, 0)');
+                        }
+
+                        this.ctx.fillStyle = gradient;
+                        this.ctx.beginPath();
+                        this.ctx.arc(puffX, puffY, puffRadius, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    });
+
+                    this.ctx.restore();
+                }
+            }
+
+            animate(timestamp) {
+                if (!this.startTime) {
+                    this.startTime = timestamp;
+                }
+                const elapsed = timestamp - this.startTime;
+                const progress = Math.min(elapsed / this.duration, 1);
+
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 更新相机位置
+                this.cameraZ += this.cameraSpeed;
+                
+                // 绘制各层效果
+                this.drawSky(progress);
+                this.drawStars();
+                this.drawLightRays(progress);
+                this.drawParticles();
+                
+                // 绘制云朵（按深度排序）
+                this.clouds.sort((a, b) => b.z - a.z);
+                this.clouds.forEach(cloud => {
+                    this.drawCloud(cloud, progress);
+                });
+
+                if (elapsed >= this.duration && !this.completed) {
+                    this.completed = true;
+                    window.dispatchEvent(new CustomEvent('cloudJourneyComplete'));
+                }
+
+                if (!this.completed) {
+                    requestAnimationFrame(this.animate.bind(this));
+                }
+            }
+        }
+
+        // 优化的背景粒子动画
+        class EnhancedParticleAnimation {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.waves = [];
+                this.time = 0;
+                
+                this.resize();
+                this.createParticles();
+                this.createWaves();
+                this.animate();
+                
+                window.addEventListener('resize', () => this.resize());
+            }
+            
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            
+            createParticles() {
+                this.particles = [];
+                const particleCount = Math.min(80, Math.floor(this.canvas.width / 25));
+                
+                for (let i = 0; i < particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        size: Math.random() * 3 + 1,
+                        speedX: (Math.random() - 0.5) * 0.5,
+                        speedY: (Math.random() - 0.5) * 0.5,
+                        opacity: Math.random() * 0.4 + 0.1,
+                        color: ['rgba(7, 193, 96, 0.4)', 'rgba(24, 144, 255, 0.3)', 'rgba(251, 114, 153, 0.3)'][Math.floor(Math.random() * 3)],
+                        pulse: Math.random() * Math.PI * 2,
+                        pulseSpeed: Math.random() * 0.02 + 0.01
+                    });
+                }
+            }
+
+            createWaves() {
+                this.waves = [];
+                for (let i = 0; i < 3; i++) {
+                    this.waves.push({
+                        amplitude: Math.random() * 50 + 30,
+                        frequency: Math.random() * 0.02 + 0.01,
+                        phase: Math.random() * Math.PI * 2,
+                        speed: Math.random() * 0.005 + 0.002,
+                        opacity: Math.random() * 0.1 + 0.05
+                    });
+                }
+            }
+            
+            drawWaves() {
+                this.waves.forEach(wave => {
+                    wave.phase += wave.speed;
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = wave.opacity;
+                    this.ctx.strokeStyle = 'rgba(7, 193, 96, 0.2)';
+                    this.ctx.lineWidth = 2;
+                    
+                    this.ctx.beginPath();
+                    for (let x = 0; x < this.canvas.width; x += 5) {
+                        const y = this.canvas.height / 2 + 
+                                 Math.sin(x * wave.frequency + wave.phase) * wave.amplitude +
+                                 Math.sin(this.time * 0.001) * 20;
+                        if (x === 0) {
+                            this.ctx.moveTo(x, y);
+                        } else {
+                            this.ctx.lineTo(x, y);
+                        }
+                    }
+                    this.ctx.stroke();
+                    this.ctx.restore();
+                });
+            }
+            
+            animate() {
+                this.time += 1;
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制波浪
+                this.drawWaves();
+                
+                // 绘制粒子
+                this.particles.forEach(particle => {
+                    particle.x += particle.speedX;
+                    particle.y += particle.speedY;
+                    particle.pulse += particle.pulseSpeed;
+                    
+                    // 边界循环
+                    if (particle.x < 0) particle.x = this.canvas.width;
+                    if (particle.x > this.canvas.width) particle.x = 0;
+                    if (particle.y < 0) particle.y = this.canvas.height;
+                    if (particle.y > this.canvas.height) particle.y = 0;
+                    
+                    // 脉冲效果
+                    const pulseOpacity = particle.opacity * (0.5 + 0.5 * Math.sin(particle.pulse));
+                    const pulseSize = particle.size * (0.8 + 0.4 * Math.sin(particle.pulse));
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = pulseOpacity;
+                    this.ctx.fillStyle = particle.color;
+                    this.ctx.shadowBlur = pulseSize * 2;
+                    this.ctx.shadowColor = particle.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, pulseSize, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                });
+                
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        
+        // Vue3应用
+        const { createApp, ref, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                // 响应式数据
+                const loading = ref(false);
+                const loadingText = ref('正在初始化系统...');
+                const canvas = ref(null);
+                const introCanvas = ref(null);
+                const introAnimation = ref(null);
+                const showIntro = ref(true);
+                
+                let animationInstance = null;
+                let introTimer = null;
+                
+                // 跳过开场动画
+                const skipIntro = () => {
+                    if (introTimer) {
+                        clearTimeout(introTimer);
+                    }
+                    endIntroAnimation();
+                };
+                
+                // 结束开场动画
+                const endIntroAnimation = () => {
+                    showIntro.value = false;
+                    
+                    // 延迟启动背景粒子动画
+                    setTimeout(() => {
+                        if (canvas.value) {
+                            new EnhancedParticleAnimation(canvas.value);
+                        }
+                    }, 400);
+                };
+                
+                // 方法
+                const enterDashboard = async () => {
+                    loading.value = true;
+                    loadingText.value = '正在加载仪表板...';
+                    
+                    try {
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        window.location.href = '/dashboard';
+                    } catch (error) {
+                        console.error('进入仪表板失败:', error);
+                        loading.value = false;
+                    }
+                };
+                
+                const quickStart = () => {
+                    window.location.href = '/video2txt';
+                };
+                
+                // 开场动画管理
+                const startIntroAnimation = () => {
+                    // 启动增强版3D云层穿越动画
+                    if (introCanvas.value) {
+                        animationInstance = new Enhanced3DCloudAnimation(introCanvas.value);
+                    }
+                    
+                    // 设置自动结束定时器（5秒后自动结束）
+                    introTimer = setTimeout(() => {
+                        endIntroAnimation();
+                    }, 5000);
+                    
+                    // 监听云层穿越完成事件
+                    window.addEventListener('cloudJourneyComplete', () => {
+                        // 云层动画完成后等待0.8秒再结束
+                        setTimeout(() => {
+                            if (showIntro.value) {
+                                endIntroAnimation();
+                            }
+                        }, 800);
+                    });
+                };
+                
+                // 初始化
+                onMounted(() => {
+                    startIntroAnimation();
+                });
+                
+                return {
+                    loading,
+                    loadingText,
+                    canvas,
+                    introCanvas,
+                    introAnimation,
+                    showIntro,
+                    skipIntro,
+                    enterDashboard,
+                    quickStart
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

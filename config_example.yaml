@@ -1,0 +1,231 @@
+# AI音视频处理平台配置文件
+# 集成迭代1和2的所有优化功能
+
+# ASR模型配置
+asr:
+  # 默认模型选择
+  default_model: "sensevoice"  # sensevoice, whisper-base, whisper-medium, etc.
+  
+  # SenseVoice配置（中文优化）
+  sensevoice:
+    model_name: "iic/SenseVoiceSmall"
+    device: "auto"  # auto, cuda, mps, cpu
+    vad_model: "iic/speech_fsmn_vad_zh-cn-16k-common-pytorch"
+    punc_model: "iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch"
+    enable_vad: true
+    enable_punc: true
+    enable_dialect_detection: true
+    confidence_threshold: 0.7
+  
+  # Whisper配置
+  whisper:
+    device: "auto"
+    compute_type: "int8"  # int8, float16, float32
+    cpu_threads: 4
+    num_workers: 1
+
+# 批处理配置
+batch_processing:
+  # 输出设置
+  output_root: "data/outputs"
+  output_formats: ["json", "markdown", "srt"]
+  
+  # 音频处理
+  sample_rate: 16000
+  chunk_seconds: 30.0
+  chunk_overlap: 2.0
+  enable_smart_chunking: true
+  silence_threshold: 0.01
+  
+  # 学习材料生成（迭代1核心功能）
+  learning_materials:
+    enable_flashcards: false
+    enable_mindmap: true
+    enable_audio_visualization: true
+    flashcard_count_range: [15, 25]
+    flashcard_types:
+      - "concept"      # 概念卡
+      - "application"  # 应用卡
+      - "comparison"   # 对比卡
+      - "process"      # 流程卡
+      - "case"         # 案例卡
+  
+  # 视频处理（迭代1优化）
+  video_processing:
+    enable_frame_extraction: true
+    frame_extraction_mode: "dynamic"  # dynamic, fixed, smart
+    target_frames: 15
+    frame_quality_threshold: 0.1
+    similarity_threshold: 0.8
+
+# AI分析配置
+ai_analysis:
+  enable_ai_analysis: false
+  default_backend: "openai"  # openai, ollama, dashscope
+  
+  # OpenAI配置
+  openai:
+    model: "gpt-4o-mini"
+    api_key: ""  # 从环境变量OPENAI_API_KEY读取
+    api_base: ""  # 可选，自定义API端点
+    temperature: 0.3
+    max_tokens: 2000
+  
+  # Ollama配置（本地AI）
+  ollama:
+    model: "qwen:1.8b"
+    base_url: "http://localhost:11434"
+    temperature: 0.3
+    
+  # 阿里云通义千问配置
+  dashscope:
+    model: "qwen-plus"
+    api_key: ""  # 从环境变量DASHSCOPE_API_KEY读取
+    api_base: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+# 方言检测配置（SenseVoice特色功能）
+dialect_detection:
+  enable: true
+  supported_dialects:
+    cantonese:
+      name: "粤语"
+      keywords: ["冇", "佢", "咁", "嘅", "喺", "咗", "嚟", "咪", "唔", "乜"]
+      weight: 2.0
+    minnan:
+      name: "闽南语"
+      keywords: ["阮", "恁", "伊", "咱", "袂", "毋", "佇", "共", "予", "乎"]
+      weight: 1.8
+    sichuan:
+      name: "四川话"
+      keywords: ["巴适", "安逸", "摆龙门阵", "雄起", "瓜娃子", "锤子", "哦豁"]
+      weight: 1.5
+    northeast:
+      name: "东北话"
+      keywords: ["嘎哈", "咋整", "老铁", "贼", "埋汰", "磨叽", "唠嗑"]
+      weight: 1.3
+    shanghai:
+      name: "上海话"
+      keywords: ["侬", "阿拉", "勿要", "交关", "老早", "蛮好", "白相"]
+      weight: 1.2
+    hakka:
+      name: "客家话"
+      keywords: ["涯", "汝", "佢", "恁", "毋", "係", "个", "仔", "妹", "哥"]
+      weight: 1.0
+
+# 性能优化配置
+performance:
+  # 内存管理
+  max_memory_gb: 4
+  gc_threshold: 0.8
+  
+  # CPU优化
+  cpu_threshold: 80.0
+  max_workers: 4
+  
+  # 缓存设置
+  enable_cache: true
+  cache_dir: "cache"
+  cache_max_size: 1000  # 最大缓存条目数
+
+# 日志配置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: ""  # 空字符串表示不写入文件，只输出到控制台
+  max_file_size: "10MB"
+  backup_count: 5
+
+# 输出文件配置
+output_files:
+  # 转录文件
+  transcriptions:
+    format: "jsonl"
+    include_metadata: true
+    include_confidence: true
+  
+  # 字幕文件
+  subtitles:
+    format: "srt"
+    max_line_length: 50
+    max_lines_per_subtitle: 2
+  
+  # 学习材料
+  flashcards:
+    format: "csv"  # csv, json, anki
+    encoding: "utf-8"
+    include_difficulty: true
+  
+  mindmap:
+    format: "freemind"  # freemind, xmind, markdown
+    encoding: "utf-8"
+  
+  # 可视化
+  visualizations:
+    waveform:
+      format: "png"
+      dpi: 150
+      figsize: [12, 4]
+    spectrogram:
+      format: "png"
+      dpi: 150
+      figsize: [12, 6]
+
+# 高级功能配置
+advanced_features:
+  # 智能分析
+  content_analysis:
+    enable_key_moments: false
+    enable_structure_analysis: false
+    enable_value_rating: false
+    enable_insights: false
+  
+  # 多语言支持
+  multilingual:
+    enable_translation: false
+    target_languages: ["en", "ja", "ko"]
+    translation_backend: "helsinki"  # helsinki, google, baidu
+  
+  # 说话人分离
+  speaker_diarization:
+    enable: false
+    min_speakers: 1
+    max_speakers: 10
+    confidence_threshold: 0.7
+
+# 集成配置
+integrations:
+  # 学习工具集成
+  learning_tools:
+    anki:
+      enable: false
+      deck_name: "AI学习卡片"
+    xmind:
+      enable: false
+      template: "default"
+  
+  # 云存储集成
+  cloud_storage:
+    enable: false
+    provider: ""  # s3, oss, cos
+    bucket: ""
+    access_key: ""
+    secret_key: ""
+
+# 实验性功能
+experimental:
+  # GPU加速
+  gpu_acceleration:
+    enable: false
+    device_id: 0
+  
+  # 实时处理
+  realtime_processing:
+    enable: false
+    buffer_size: 1024
+    latency_target: 2.0  # 秒
+  
+  # 高级AI功能
+  advanced_ai:
+    enable_reasoning: false
+    enable_multimodal: false
+    enable_code_generation: false

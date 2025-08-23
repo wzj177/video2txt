@@ -1,20 +1,109 @@
-# 现有依赖
-requests
-openai-whisper
-openai
-srt
-tqdm
-transformers
-torchaudio
-librosa
-# 新增依赖
-opencv-python  # 用于视频帧提取
-matplotlib  # 用于音频可视化
-soundfile  # 用于音频处理
+# AI音视频处理平台 - 完整依赖列表
+# 集成迭代1和2的所有优化功能
 
-# 实时会议记录依赖 - 新功能
-pyaudio  # 实时音频捕获
-faster-whisper  # CPU优化的Whisper
-pyannote.audio  # 说话人分离
-torch  # PyTorch支持
-numpy  # 数组处理
+# 核心依赖
+numpy>=1.21.0
+torch>=1.12.0
+torchaudio>=0.12.0
+
+# 音频处理
+librosa>=0.9.0
+soundfile>=0.10.0
+pyaudio>=0.2.11
+
+# 语音识别
+openai-whisper>=20231117
+faster-whisper>=0.9.0
+
+# SenseVoice和FunASR (阿里达摩院)
+funasr>=1.0.0
+modelscope>=1.9.0
+
+# 机器学习和深度学习
+transformers>=4.21.0
+datasets>=2.0.0
+accelerate>=0.20.0
+
+# 说话人分离
+pyannote.audio>=3.0.0
+
+# 计算机视觉（视频处理）
+opencv-python>=4.5.0
+
+# 数据可视化
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# 文本处理和NLP
+nltk>=3.7
+jieba>=0.42.1
+langdetect>=1.0.9
+
+# API客户端
+openai>=1.0.0
+requests>=2.28.0
+httpx>=0.24.0
+
+# 配置和数据处理
+pyyaml>=6.0
+toml>=0.10.2
+python-dotenv>=0.19.0
+
+# 文件处理
+pathlib2>=2.3.6
+chardet>=5.0.0
+
+# 系统监控
+psutil>=5.8.0
+
+# 并发处理
+asyncio-throttle>=1.0.2
+
+# 数据格式
+pandas>=1.3.0
+jsonlines>=3.0.0
+
+# 时间处理
+python-dateutil>=2.8.0
+
+# 加密和哈希
+cryptography>=3.4.0
+
+# 网络请求
+aiohttp>=3.8.0
+
+# 日志处理
+loguru>=0.6.0
+
+# 进度条
+tqdm>=4.64.0
+rich>=12.0.0
+
+# 测试框架
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+
+# 代码质量
+flake8>=4.0.0
+black>=22.0.0
+
+# 可选依赖 - GPU加速
+# torch-audio  # 如果需要GPU加速
+# torchaudio   # 如果需要GPU加速
+
+# 可选依赖 - 高级功能
+# gradio>=3.0.0        # 如果需要Web界面
+# streamlit>=1.20.0    # 如果需要Web应用
+# fastapi>=0.95.0      # 如果需要API服务
+# uvicorn>=0.20.0      # 如果需要API服务
+
+# 平台特定依赖
+# Windows
+# pywin32>=227         # Windows系统集成
+
+# macOS
+# pyobjc>=8.0          # macOS系统集成
+
+# Linux
+# python3-dev          # 系统包，需要apt安装
+# portaudio19-dev      # 系统包，需要apt安装

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI听世界 - 仪表盘</title>
+    <link rel="stylesheet" href="/assets/css/common.css">
+    <link rel="stylesheet" href="/assets/css/icons.css">
+    <style>
+        /* Dashboard 专用样式 */
+        :root {
+            --primary-color: #00B26A;
+            --secondary-color: #00A1D6;
+            --primary-light: #26d17c;
+            --secondary-light: #40c7f0;
+            --success-color: #52c41a;
+            --warning-color: #faad14;
+            --error-color: #ff4d4f;
+            --info-color: #1890ff;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-primary: #262626;
+            --text-secondary: #595959;
+            --text-tertiary: #8c8c8c;
+            --border-light: #f0f0f0;
+            --shadow-light: 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-medium: 0 4px 16px rgba(0,0,0,0.12);
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-xxl: 48px;
+            --radius-small: 4px;
+            --radius-medium: 8px;
+            --radius-large: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .dashboard-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, 
+                rgba(0, 178, 106, 0.03) 0%, 
+                rgba(0, 161, 214, 0.03) 100%);
+        }
+
+        .header {
+            background: var(--card-bg);
+            box-shadow: var(--shadow-light);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 0 var(--spacing-lg);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: var(--spacing-lg);
+        }
+
+        .nav-item {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-medium);
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-weight: 500;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xxl);
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-light);
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .stat-card.video {
+            border-left-color: var(--primary-color);
+        }
+
+        .stat-card.meeting {
+            border-left-color: var(--secondary-color);
+        }
+
+        .stat-card.system {
+            border-left-color: var(--info-color);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .stat-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .stat-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .stat-icon.video {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        }
+
+        .stat-icon.meeting {
+            background: linear-gradient(135deg, var(--secondary-color), var(--secondary-light));
+        }
+
+        .stat-icon.system {
+            background: linear-gradient(135deg, var(--info-color), #40a9ff);
+        }
+
+        .stat-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .stat-metric {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+
+        .system-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+
+        .system-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm);
+            background: var(--border-light);
+            border-radius: var(--radius-medium);
+        }
+
+        .system-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .system-value {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border-light);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: var(--spacing-xs);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .status-badge {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-small);
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-badge.running {
+            background: rgba(24, 144, 255, 0.1);
+            color: var(--info-color);
+        }
+
+        .status-badge.completed {
+            background: rgba(82, 196, 26, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-badge.failed {
+            background: rgba(255, 77, 79, 0.1);
+            color: var(--error-color);
+        }
+
+        .status-badge.pending {
+            background: rgba(250, 173, 20, 0.1);
+            color: var(--warning-color);
+        }
+
+        .refresh-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .icon.icon-sm {
+            width: 14px;
+            height: 14px;
+        }
+
+        .icon.icon-md {
+            width: 18px;
+            height: 18px;
+        }
+
+        .icon.icon-lg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .icon-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .fade-in {
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                height: auto;
+                padding: var(--spacing-md) 0;
+            }
+            
+            .nav-menu {
+                overflow-x: auto;
+                width: 100%;
+                padding: var(--spacing-sm) 0;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-content {
+                padding: var(--spacing-lg) var(--spacing-md);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="dashboard-container">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <a href="./" class="logo">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        AI听世界
+                    </a>
+                    <nav class="nav-menu">
+                        <a href="/dashboard" class="nav-item active">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                            </svg>
+                            仪表盘
+                        </a>
+                        <a href="/video2txt" class="nav-item">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+                            </svg>
+                            音视频转文本
+                        </a>
+                        <a href="/meeting2txt" class="nav-item">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            实时会议记录
+                        </a>
+                        <a href="/settings" class="nav-item">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+                            </svg>
+                            设置
+                        </a>
+                    </nav>
+                </div>
+                <div class="header-right">
+                    <div class="refresh-indicator">
+                        <svg class="icon icon-sm icon-spin" v-if="isRefreshing" viewBox="0 0 24 24">
+                            <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                        </svg>
+                        <svg class="icon icon-sm" v-else viewBox="0 0 24 24">
+                            <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                        </svg>
+                        {{ lastUpdate }}
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="main-content">
+            <div class="page-title">
+                <svg class="icon icon-lg" viewBox="0 0 24 24">
+                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                </svg>
+                仪表盘总览
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="stats-grid" v-if="!loading">
+                <!-- 音视频处理模块统计 -->
+                <div class="stat-card video fade-in">
+                    <div class="stat-header">
+                        <div class="stat-title">
+                            <div class="stat-icon video">
+                                <svg class="icon icon-md" viewBox="0 0 24 24">
+                                    <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+                                </svg>
+                            </div>
+                            音视频处理模块
+                        </div>
+                        <span class="status-badge running" v-if="videoStats.running > 0">
+                            {{ videoStats.running }} 进行中
+                        </span>
+                    </div>
+                    <div class="stat-metrics">
+                        <div class="stat-metric">
+                            <span class="stat-value">{{ videoStats.total }}</span>
+                            <div class="stat-label">总任务</div>
+                        </div>
+                        <div class="stat-metric">
+                            <span class="stat-value">{{ videoStats.completed }}</span>
+                            <div class="stat-label">已完成</div>
+                        </div>
+                        <div class="stat-metric">
+                            <span class="stat-value">{{ videoStats.failed }}</span>
+                            <div class="stat-label">失败</div>
+                        </div>
+                        <div class="stat-metric">
+                            <span class="stat-value">{{ videoStats.audioCount }}</span>
+                            <div class="stat-label">音频处理</div>
+                        </div>
+                        <div class="stat-metric">
+                            <span class="stat-value">{{ videoStats.videoCount }}</span>
+                            <div class="stat-label">视频处理</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 实时会议处理模块统计 -->
+                <div class="stat-card meeting fade-in" style="animation-delay: 0.1s;">
+                    <div class="stat-header">
+                        <div class="stat-title">
+                            <div class="stat-icon meeting">
+                                <svg class="icon icon-md" viewBox="0 0 24 24">
+                                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            实时会议处理模块
+                        </div>
+                        <span class="status-badge running" v-if="meetingStats.running > 0">
+                            {{ meetingStats.running }} 进行中
+                        </span>
+                    </div>
+                    <div class="stat-metrics">
+                        <div class="stat-metric">
+                            <span class="stat-value">{{ meetingStats.total }}</span>
+                            <div class="stat-label">总任务</div>
+                        </div>
+                        <div class="stat-metric">
+                            <span class="stat-value">{{ meetingStats.completed }}</span>
+                            <div class="stat-label">已完成</div>
+                        </div>
+                        <div class="stat-metric">
+                            <span class="stat-value">{{ meetingStats.failed }}</span>
+                            <div class="stat-label">失败</div>
+                        </div>
+                        <div class="stat-metric">
+                            <span class="stat-value">{{ meetingStats.pending }}</span>
+                            <div class="stat-label">等待中</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 系统信息模块 -->
+                <div class="stat-card system fade-in" style="animation-delay: 0.2s;">
+                    <div class="stat-header">
+                        <div class="stat-title">
+                            <div class="stat-icon system">
+                                <svg class="icon icon-md" viewBox="0 0 24 24">
+                                    <path d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/>
+                                </svg>
+                            </div>
+                            系统信息
+                        </div>
+                        <span class="status-badge completed">正常运行</span>
+                    </div>
+                    <div class="system-details">
+                        <div class="system-item">
+                            <div class="system-label">操作系统</div>
+                            <div class="system-value">{{ systemInfo.os }}</div>
+                        </div>
+                        <div class="system-item">
+                            <div class="system-label">CPU ({{ systemInfo.cpu_count }}核)</div>
+                            <div class="system-value">{{ Math.round(systemInfo.cpu_usage) }}%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" :style="{width: systemInfo.cpu_usage + '%'}"></div>
+                            </div>
+                        </div>
+                        <div class="system-item">
+                            <div class="system-label">内存使用率</div>
+                            <div class="system-value">{{ Math.round(systemInfo.memory_usage) }}%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" :style="{width: systemInfo.memory_usage + '%'}"></div>
+                            </div>
+                        </div>
+                        <div class="system-item" v-if="systemInfo.gpu">
+                            <div class="system-label">GPU</div>
+                            <div class="system-value">{{ systemInfo.gpu_name || '已连接' }}</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" :style="{width: systemInfo.gpu_usage + '%'}"></div>
+                            </div>
+                        </div>
+                        <div class="system-item" v-else>
+                            <div class="system-label">GPU</div>
+                            <div class="system-value">未检测到</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 加载状态 -->
+            <div class="loading" v-if="loading">
+                <svg class="icon icon-lg icon-spin" viewBox="0 0 24 24">
+                    <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                </svg>
+                <span>正在加载数据...</span>
+            </div>
+        </main>
+    </div>
+
+    <script src="../assets/js/vue.global.js"></script>
+    <script src="../assets/js/axios/axios.min.js"></script>
+    <script src="../assets/js/http.js"></script>
+    <script type="module">
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    loading: true,
+                    isRefreshing: false,
+                    lastUpdate: '',
+                    videoStats: {
+                        total: 0,
+                        running: 0,
+                        completed: 0,
+                        failed: 0,
+                        pending: 0,
+                        audioCount: 0,
+                        videoCount: 0
+                    },
+                    meetingStats: {
+                        total: 0,
+                        running: 0,
+                        completed: 0,
+                        failed: 0,
+                        pending: 0
+                    },
+                    systemInfo: {
+                        os: '',
+                        platform: '',
+                        cpu_count: 0,
+                        cpu_usage: 0,
+                        memory_usage: 0,
+                        gpu: false,
+                        gpu_name: '',
+                        gpu_usage: 0
+                    }
+                }
+            },
+            
+            async mounted() {
+                await this.loadAllData();
+                
+                // 每5秒刷新系统信息
+                setInterval(() => {
+                    this.refreshSystemInfo();
+                }, 5000);
+                
+                // 每30秒刷新任务统计
+                setInterval(() => {
+                    this.refreshTaskStats();
+                }, 30000);
+            },
+            
+            methods: {
+                async loadAllData() {
+                    this.loading = true;
+                    try {
+                        await Promise.all([
+                            this.loadVideoStats(),
+                            this.loadMeetingStats(),
+                            this.loadSystemInfo()
+                        ]);
+                        this.updateLastUpdate();
+                    } catch (error) {
+                        console.error('加载数据失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async loadVideoStats() {
+                    try {
+                        const response = await http.get('/api/tasks/video/stats');
+                        if (response.success) {
+                            this.videoStats = response.data;
+                        }
+                    } catch (error) {
+                        console.error('获取视频统计失败:', error);
+                    }
+                },
+                
+                async loadMeetingStats() {
+                    try {
+                        const response = await http.get('/api/tasks/meeting/stats');
+                        if (response.success) {
+                            this.meetingStats = response.data;
+                        }
+                    } catch (error) {
+                        console.error('获取会议统计失败:', error);
+                    }
+                },
+                
+                async loadSystemInfo() {
+                    try {
+                        const response = await http.get('/api/system/info');
+                        if (response.success) {
+                            this.systemInfo = response.data;
+                        }
+                    } catch (error) {
+                        console.error('获取系统信息失败:', error);
+                    }
+                },
+                
+                async refreshSystemInfo() {
+                    if (this.isRefreshing) return;
+                    
+                    this.isRefreshing = true;
+                    try {
+                        await this.loadSystemInfo();
+                        this.updateLastUpdate();
+                    } finally {
+                        this.isRefreshing = false;
+                    }
+                },
+                
+                async refreshTaskStats() {
+                    try {
+                        await Promise.all([
+                            this.loadVideoStats(),
+                            this.loadMeetingStats()
+                        ]);
+                        this.updateLastUpdate();
+                    } catch (error) {
+                        console.error('刷新任务统计失败:', error);
+                    }
+                },
+                
+                updateLastUpdate() {
+                    const now = new Date();
+                    this.lastUpdate = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
