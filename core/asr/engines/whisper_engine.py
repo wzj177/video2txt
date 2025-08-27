@@ -20,10 +20,29 @@ class WhisperEngine(BaseVoiceEngine):
         """初始化Whisper"""
         try:
             import whisper
+            import ssl
 
             logger.info(f"🎤 初始化Whisper - 模型: {self.config.whisper_model}")
 
-            self.model = whisper.load_model(self.config.whisper_model)
+            # 创建不验证SSL证书的上下文
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            # 临时禁用SSL验证
+            import urllib.request
+
+            original_https_handler = urllib.request.HTTPSHandler
+
+            try:
+                # 使用不验证SSL的handler
+                urllib.request.HTTPSHandler = lambda: urllib.request.HTTPSHandler(
+                    context=ssl_context
+                )
+                self.model = whisper.load_model(self.config.whisper_model)
+            finally:
+                # 恢复原始handler
+                urllib.request.HTTPSHandler = original_https_handler
 
             self.initialized = True
             logger.info("✅ Whisper初始化成功")
@@ -34,7 +53,24 @@ class WhisperEngine(BaseVoiceEngine):
             return False
         except Exception as e:
             logger.error(f"❌ Whisper初始化失败: {e}")
-            return False
+            # 尝试离线模式
+            try:
+                import whisper
+                import os
+
+                # 设置环境变量强制离线模式
+                os.environ["WHISPER_CACHE"] = os.path.expanduser("~/.cache/whisper")
+
+                # 尝试从本地缓存加载
+                self.model = whisper.load_model(
+                    self.config.whisper_model, download_root=os.environ["WHISPER_CACHE"]
+                )
+                self.initialized = True
+                logger.info("✅ Whisper从本地缓存初始化成功")
+                return True
+            except Exception as offline_e:
+                logger.error(f"❌ Whisper离线初始化也失败: {offline_e}")
+                return False
 
     def recognize_file(self, audio_path: str, language: str = "auto") -> Dict[str, Any]:
         """使用Whisper转录"""

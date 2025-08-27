@@ -106,39 +106,67 @@ class VoiceRecognitionCore:
 
         logger.info(f"🔧 首次使用，正在加载 {target_engine} 引擎...")
 
-        # 智能引擎选择策略
+        # 智能引擎选择策略 - 优先使用更稳定的引擎
         if target_engine == "auto":
-            engines_to_try = ["dolphin", "sensevoice", "faster_whisper", "whisper"]
+            # 按稳定性和成功率排序：whisper > faster_whisper > sensevoice > dolphin
+            engines_to_try = ["whisper", "faster_whisper", "sensevoice", "dolphin"]
         else:
             engines_to_try = [target_engine] + [
                 e
-                for e in ["dolphin", "sensevoice", "faster_whisper", "whisper"]
+                for e in ["whisper", "faster_whisper", "sensevoice", "dolphin"]
                 if e != target_engine
             ]
 
+        successful_engines = []
+        failed_engines = []
+
         for engine_name in engines_to_try:
             try:
+                logger.info(f"🔄 尝试加载引擎: {engine_name}")
+
                 if engine_name not in self.engines:
                     engine = self._create_engine(engine_name)
                     if engine:
                         self.engines[engine_name] = engine
+                    else:
+                        failed_engines.append((engine_name, "引擎创建失败"))
+                        continue
 
                 engine = self.engines[engine_name]
                 if not engine.initialized:
                     if engine.initialize():
+                        successful_engines.append(engine_name)
                         if not self.current_engine:
                             self.current_engine = engine
                             logger.info(f"✅ 引擎加载成功: {engine_name}")
                         return True
+                    else:
+                        failed_engines.append((engine_name, "初始化失败"))
                 else:
+                    successful_engines.append(engine_name)
                     if not self.current_engine:
                         self.current_engine = engine
+                        logger.info(f"✅ 引擎已加载: {engine_name}")
                     return True
 
             except Exception as e:
+                failed_engines.append((engine_name, str(e)))
                 logger.warning(f"⚠️ 引擎 {engine_name} 加载失败: {e}")
 
+        # 记录失败详情
+        if failed_engines:
+            logger.error("❌ 引擎加载失败详情:")
+            for engine_name, error in failed_engines:
+                logger.error(f"  - {engine_name}: {error}")
+
+        # 提供解决方案建议
         logger.error("❌ 没有可用的语音识别引擎")
+        logger.info("💡 解决方案建议:")
+        logger.info("  1. 安装基础Whisper: pip install openai-whisper")
+        logger.info("  2. 检查网络连接，确保可以下载模型")
+        logger.info("  3. 如果网络有问题，可手动下载模型到 ~/.cache/whisper/")
+        logger.info("  4. 检查系统是否支持CUDA（GPU加速）")
+
         return False
 
     def _create_engine(self, engine_name: str) -> Optional[BaseVoiceEngine]:
@@ -161,12 +189,28 @@ class VoiceRecognitionCore:
         """识别音频文件"""
         if not self.initialized:
             logger.error("❌ 语音识别核心未初始化")
-            return None
+            return {
+                "text": "",
+                "error": "语音识别核心未初始化",
+                "success": False,
+                "processing_time": 0.0,
+            }
 
         # 延迟加载引擎
         if not self._ensure_engine_loaded():
             logger.error("❌ 无法加载语音识别引擎")
-            return None
+            return {
+                "text": "",
+                "error": "无法加载任何语音识别引擎，请检查网络连接或安装相关依赖",
+                "success": False,
+                "processing_time": 0.0,
+                "suggestions": [
+                    "pip install openai-whisper",
+                    "检查网络连接",
+                    "手动下载模型到 ~/.cache/whisper/",
+                    "检查CUDA支持",
+                ],
+            }
 
         try:
             logger.info(f"🎤 开始识别: {Path(audio_path).name}")

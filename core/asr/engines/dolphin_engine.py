@@ -17,14 +17,36 @@ logger = logging.getLogger(__name__)
 class DolphinEngine(BaseVoiceEngine):
     """Dolphin引擎实现"""
 
-    def __init__(self, config: Dict[str, Any] = None):
-        super().__init__(config or {})
+    def __init__(self, config=None):
+        # 处理VoiceEngineConfig对象或字典
+        if config is not None:
+            if hasattr(config, "__dict__"):
+                # VoiceEngineConfig对象，转换为字典
+                config_dict = {
+                    "model_size": getattr(config, "whisper_model", "small"),
+                    "device": getattr(config, "device", "auto"),
+                    "language": getattr(config, "language", "auto"),
+                }
+                super().__init__(config_dict)
+            else:
+                # 已经是字典
+                super().__init__(config)
+        else:
+            super().__init__({})
+
         self.model = None
         self.model_path = "/data/models/dolphin"  # 默认模型路径
 
         # 支持的模型尺寸
         self.supported_sizes = ["base", "small", "medium", "large"]
-        self.model_size = config.get("model_size", "small") if config else "small"
+
+        # 获取模型尺寸配置
+        if hasattr(config, "whisper_model"):
+            self.model_size = config.whisper_model
+        elif config and isinstance(config, dict):
+            self.model_size = config.get("model_size", "small")
+        else:
+            self.model_size = "small"
 
         # 验证模型尺寸
         if self.model_size not in self.supported_sizes:

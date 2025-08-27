@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI听世界 - 任务详情</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/common.css">
+    <link rel="stylesheet" href="/assets/css/icons.css">
+    <link href="/assets/js/layui/css/layui.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00B26A;
+            --secondary-color: #00A1D6;
+            --success-color: #52c41a;
+            --warning-color: #faad14;
+            --error-color: #ff4d4f;
+            --info-color: #1890ff;
+            --text-primary: #262626;
+            --text-secondary: #595959;
+            --text-tertiary: #8c8c8c;
+            --border-light: #f0f0f0;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --radius-medium: 8px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+        }
+
+        .task-detail-container {
+            padding: var(--spacing-lg);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .task-header {
+            background: var(--card-bg);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .task-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .task-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .meta-label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            font-weight: 500;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .task-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .task-status.pending {
+            background: rgba(250, 173, 20, 0.1);
+            color: var(--warning-color);
+        }
+
+        .task-status.running {
+            background: rgba(24, 144, 255, 0.1);
+            color: var(--info-color);
+        }
+
+        .task-status.completed {
+            background: rgba(82, 196, 26, 0.1);
+            color: var(--success-color);
+        }
+
+        .task-status.failed {
+            background: rgba(255, 77, 79, 0.1);
+            color: var(--error-color);
+        }
+
+        .task-results {
+            background: var(--card-bg);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .result-section {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .result-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .result-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .download-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .download-btn:hover {
+            background: #00a050;
+        }
+
+        .result-content {
+            background: var(--bg-color);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: var(--spacing-md);
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            background: var(--bg-color);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .file-item:hover {
+            border-color: var(--primary-color);
+            background: rgba(0, 178, 106, 0.05);
+        }
+
+        .file-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--primary-color);
+        }
+
+        .file-name {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+            color: var(--text-tertiary);
+        }
+
+        .loading .layui-icon {
+            font-size: 24px;
+            margin-right: var(--spacing-sm);
+        }
+
+        .error {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--error-color);
+        }
+
+        .error .layui-icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .progress-section {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border-light);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            transition: width 0.3s ease;
+        }
+
+        .current-step {
+            font-size: 14px;
+            color: var(--info-color);
+            font-weight: 500;
+        }
+
+        .error-section {
+            margin-top: var(--spacing-md);
+        }
+
+        .error-message {
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-md);
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            border-radius: var(--radius-medium);
+            color: var(--error-color);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .error-message i {
+            margin-right: var(--spacing-sm);
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" class="task-detail-container">
+        <!-- 加载中 -->
+        <div v-if="loading" class="loading">
+            <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i>
+            加载任务详情中...
+        </div>
+
+        <!-- 错误状态 -->
+        <div v-else-if="error" class="error">
+            <i class="layui-icon layui-icon-face-cry"></i>
+            <h3>加载失败</h3>
+            <p>{{ error }}</p>
+            <button class="layui-btn layui-btn-primary" @click="loadTask">重试</button>
+        </div>
+
+        <!-- 任务详情 -->
+        <div v-else-if="task" class="task-content">
+            <!-- 任务头部信息 -->
+            <div class="task-header">
+                <h1 class="task-title">{{ getTaskTitle(task) }}</h1>
+                <div class="task-meta">
+                    <div class="meta-item">
+                        <div class="meta-label">任务状态</div>
+                        <div class="meta-value">
+                            <span class="task-status" :class="task.status">{{ getStatusText(task.status) }}</span>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">任务类型</div>
+                        <div class="meta-value">{{ getTaskType(task) }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">创建时间</div>
+                        <div class="meta-value">{{ formatDate(task.created_at) }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">完成时间</div>
+                        <div class="meta-value">{{ formatDate(task.updated_at) }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">识别语言</div>
+                        <div class="meta-value">{{ task.config?.language || 'auto' }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">识别模型</div>
+                        <div class="meta-value">{{ task.config?.model || 'auto' }}</div>
+                    </div>
+                </div>
+
+                <!-- 处理进度 -->
+                <div v-if="task.status === 'running'" class="progress-section">
+                    <div class="progress-bar">
+                        <div class="progress-fill" :style="{width: (task.progress || 0) + '%'}"></div>
+                    </div>
+                    <div class="current-step">{{ task.current_step || '处理中...' }}</div>
+                </div>
+
+                <!-- 失败信息 -->
+                <div v-if="task.status === 'failed'" class="error-section">
+                    <div class="error-message">
+                        <i class="layui-icon layui-icon-close-fill"></i>
+                        <span>{{ task.current_step || task.error_message || '处理失败' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 处理结果 -->
+            <div v-if="Object.keys(task.results).length > 0" class="task-results">
+                <!-- 转录结果 -->
+                <div v-if="task.results.transcript" class="result-section">
+                    <div class="result-header">
+                        <div class="result-title">转录文本</div>
+                        <button class="download-btn" @click="downloadTranscript">下载</button>
+                    </div>
+                    <div class="result-content">{{ task.results.transcript }}</div>
+                </div>
+
+                <!-- 内容摘要 -->
+                <div v-if="task.results.summary" class="result-section">
+                    <div class="result-header">
+                        <div class="result-title">内容摘要</div>
+                        <button class="download-btn" @click="downloadSummary">下载</button>
+                    </div>
+                    <div class="result-content">{{ task.results.summary }}</div>
+                </div>
+
+                <!-- 思维导图 -->
+                <div v-if="task.results.mindmap" class="result-section">
+                    <div class="result-header">
+                        <div class="result-title">思维导图</div>
+                        <button class="download-btn" @click="downloadMindmap">下载</button>
+                    </div>
+                    <div class="result-content">{{ task.results.mindmap }}</div>
+                </div>
+
+                <!-- 学习闪卡 -->
+                <div v-if="task.results.flashcards" class="result-section">
+                    <div class="result-header">
+                        <div class="result-title">学习闪卡</div>
+                        <button class="download-btn" @click="downloadFlashcards">下载</button>
+                    </div>
+                    <div class="result-content">{{ task.results.flashcards }}</div>
+                </div>
+
+                <!-- 输出文件 -->
+                <div v-if="task.results.files && task.results.files.length" class="result-section">
+                    <div class="result-header">
+                        <div class="result-title">输出文件</div>
+                        <button class="download-btn" @click="downloadAll">下载全部</button>
+                    </div>
+                    <div class="file-list">
+                        <div v-for="file in task.results.files" 
+                             :key="file.name" 
+                             class="file-item"
+                             @click="downloadFile(file)">
+                            <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                            </svg>
+                            <span class="file-name">{{ file.name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 未完成状态 -->
+            <div v-else class="task-results">
+                <div class="result-section">
+                    <div class="result-header">
+                        <div class="result-title">处理状态</div>
+                    </div>
+                    <div class="result-content">
+                        {{ task.status === 'pending' ? '任务等待中...' : 
+                           task.status === 'running' ? '任务处理中...' : 
+                           task.status === 'failed' ? '任务处理失败' : '未知状态' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/js/vue.global.js"></script>
+    <script src="/assets/js/axios/axios.min.js"></script>
+    <script src="/assets/js/layui/layui.js"></script>
+    <script src="/assets/js/http.js"></script>
+    <script type="module">
+        const { createApp } = Vue;
+        
+        layui.use(['layer'], () => {
+            const layer = layui.layer;
+            
+            createApp({
+                data() {
+                    return {
+                        task: null,
+                        loading: true,
+                        error: null,
+                        taskId: null
+                    }
+                },
+
+                async mounted() {
+                    // 从URL获取任务ID
+                    const urlParams = new URLSearchParams(window.location.search);
+                    this.taskId = urlParams.get('task_id');
+                    
+                    if (!this.taskId) {
+                        this.error = '缺少任务ID参数';
+                        this.loading = false;
+                        return;
+                    }
+                    
+                    await this.loadTask();
+                },
+
+                beforeUnmount() {
+                },
+
+                methods: {
+                    // 加载任务详情
+                    async loadTask() {
+                        try {
+                            this.loading = true;
+                            this.error = null;
+                            
+                            const response = await http.get(`/api/tasks/video/${this.taskId}`);
+                            this.task = response;
+                            this.loading = false;
+                        } catch (error) {
+                            console.error('加载任务详情失败:', error);
+                            this.error = error.message || '加载任务详情失败';
+                            this.loading = false;
+                        }
+                    },
+
+                    // 安全获取任务标题
+                    getTaskTitle(task) {
+                        if (!task) return '未知任务';
+                        if (task.input?.filename) return task.input.filename;
+                        if (task.input?.url) return task.input.url;
+                        return task.id || '未知任务';
+                    },
+
+                    // 安全获取任务类型
+                    getTaskType(task) {
+                        if (!task) return '未知';
+                        return task.type === 'video' ? '视频' : '音频';
+                    },
+
+                    // 获取状态文本
+                    getStatusText(status) {
+                        const statusMap = {
+                            pending: '等待中',
+                            running: '处理中',
+                            completed: '已完成',
+                            failed: '失败'
+                        };
+                        return statusMap[status] || status;
+                    },
+
+                    // 格式化日期
+                    formatDate(dateString) {
+                        if (!dateString) return '';
+                        const date = new Date(dateString);
+                        return date.toLocaleString('zh-CN');
+                    },
+
+                    // 下载转录文本
+                    downloadTranscript() {
+                        if (this.task?.results?.transcript) {
+                            const blob = new Blob([this.task.results.transcript], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_transcript.txt`);
+                        }
+                    },
+
+                    // 下载摘要
+                    downloadSummary() {
+                        if (this.task?.results?.summary) {
+                            const blob = new Blob([this.task.results.summary], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_summary.txt`);
+                        }
+                    },
+
+                    // 下载思维导图
+                    downloadMindmap() {
+                        if (this.task?.results?.mindmap) {
+                            const blob = new Blob([this.task.results.mindmap], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_mindmap.txt`);
+                        }
+                    },
+
+                    // 下载闪卡
+                    downloadFlashcards() {
+                        if (this.task?.results?.flashcards) {
+                            const blob = new Blob([this.task.results.flashcards], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_flashcards.txt`);
+                        }
+                    },
+
+                    // 下载单个文件
+                    async downloadFile(file) {
+                        try {
+                            await http.download(`/api/tasks/video/${this.task.id}/files/${file.name}`, file.name);
+                        } catch (error) {
+                            layer.msg('下载文件失败', {icon: 2});
+                        }
+                    },
+
+                    // 下载全部文件
+                    async downloadAll() {
+                        try {
+                            await http.download(`/api/tasks/video/${this.task.id}/download`, `${this.task.id}_all.zip`);
+                        } catch (error) {
+                            layer.msg('下载全部文件失败', {icon: 2});
+                        }
+                    },
+
+                    // 下载Blob
+                    downloadBlob(blob, filename) {
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        
+                        layer.msg('下载成功', {icon: 1});
+                    }
+                }
+            }).mount('#app');
+        });
+    </script>
+</body>
+
+</html>

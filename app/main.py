@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -95,6 +96,12 @@ app.mount(
     StaticFiles(directory=str(PROJECT_ROOT / "public" / "assets")),
     name="assets",
 )
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse(str(PROJECT_ROOT / "public" / "favicon.ico"))
+
 
 # 注册路由
 app.include_router(pages_router)

@@ -253,6 +253,18 @@ async def create_video_task(
                 buffer.write(chunk)
                 file_size += len(chunk)
 
+        # 步骤1: 基本验证（快速）
+        await validate_media_file_basic(str(temp_file_path), file.filename)
+
+        # 步骤2: 完整验证（必要，确保文件可用）
+        validation_result = await validate_media_file_full(
+            str(temp_file_path), file.filename
+        )
+        if not validation_result["valid"]:
+            # 验证失败，删除临时文件并返回错误
+            temp_file_path.unlink(missing_ok=True)
+            raise HTTPException(status_code=400, detail=validation_result["error"])
+
         # 构建文件数据
         file_data = {
             "filename": file.filename,
@@ -260,9 +272,10 @@ async def create_video_task(
             "content_type": file.content_type,
             "type": "file",
             "file_path": str(temp_file_path),
+            "validation_info": validation_result["info"],  # 传递验证信息，避免重复验证
         }
 
-        # 处理文件
+        # 处理文件（验证通过后才创建任务）
         result = await video_service.process_file(file_data, config)
     else:
         # 处理URL或本地文件路径
@@ -279,23 +292,15 @@ async def create_video_task(
             if not file_path.is_file():
                 raise HTTPException(status_code=400, detail=f"路径不是文件: {url}")
 
-            # 验证文件类型
-            allowed_extensions = {
-                ".mp4",
-                ".avi",
-                ".mov",
-                ".mkv",
-                ".mp3",
-                ".wav",
-                ".m4a",
-                ".flac",
-            }
-            file_extension = file_path.suffix.lower()
-            if file_extension not in allowed_extensions:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"不支持的文件类型: {file_extension}。支持的类型: {', '.join(allowed_extensions)}",
-                )
+            # 步骤1: 基本验证（快速）
+            await validate_media_file_basic(str(file_path), file_path.name)
+
+            # 步骤2: 完整验证（必要，确保文件可用）
+            validation_result = await validate_media_file_full(
+                str(file_path), file_path.name
+            )
+            if not validation_result["valid"]:
+                raise HTTPException(status_code=400, detail=validation_result["error"])
 
             # 构建文件数据
             file_data = {
@@ -304,9 +309,12 @@ async def create_video_task(
                 "content_type": "application/octet-stream",
                 "type": "local_file",
                 "file_path": str(file_path.absolute()),
+                "validation_info": validation_result[
+                    "info"
+                ],  # 传递验证信息，避免重复验证
             }
 
-            # 处理本地文件
+            # 处理本地文件（验证通过后才创建任务）
             result = await video_service.process_file(file_data, config)
         else:
             # 网络URL
@@ -379,3 +387,134 @@ async def delete_video_task(task_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail="删除任务失败")
 
     return create_success_response(None, "任务删除成功")
+
+
+async def validate_media_file_basic(file_path: str, filename: str) -> None:
+    """基本文件验证（快速，同步执行）"""
+    from pathlib import Path
+
+    # 检查文件是否存在
+    if not Path(file_path).exists():
+        raise HTTPException(status_code=400, detail=f"文件不存在: {filename}")
+
+    # 检查文件大小
+    file_size = Path(file_path).stat().st_size
+    if file_size == 0:
+        raise HTTPException(status_code=400, detail=f"文件为空: {filename}")
+
+    # 检查文件大小限制（例如500MB）
+    max_size = 500 * 1024 * 1024  # 500MB
+    if file_size > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail=f"文件过大: {filename} ({file_size / 1024 / 1024:.1f}MB)。最大支持 {max_size / 1024 / 1024}MB",
+        )
+
+    # 检查文件扩展名
+    file_extension = Path(filename).suffix.lower()
+    video_extensions = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
+    audio_extensions = {".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg", ".wma"}
+
+    if (
+        file_extension not in video_extensions
+        and file_extension not in audio_extensions
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"不支持的文件格式: {file_extension}。支持的格式: {', '.join(video_extensions | audio_extensions)}",
+        )
+
+
+async def validate_media_file_full(file_path: str, filename: str) -> dict:
+    """完整的媒体文件验证（耗时，异步执行）- 返回验证结果而不抛出异常"""
+    from pathlib import Path
+    import subprocess
+    import json
+
+    try:
+        # 使用ffprobe验证文件格式和内容
+        cmd = [
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            file_path,
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+        if result.returncode != 0:
+            return {
+                "valid": False,
+                "error": f"文件格式无效或损坏: {filename}。FFprobe错误: {result.stderr}",
+            }
+
+        # 解析文件信息
+        try:
+            probe_data = json.loads(result.stdout)
+            format_info = probe_data.get("format", {})
+            streams = probe_data.get("streams", [])
+
+            if not streams:
+                return {"valid": False, "error": f"文件不包含有效的媒体流: {filename}"}
+
+            # 检查是否有音频流（用于语音识别）
+            audio_streams = [s for s in streams if s.get("codec_type") == "audio"]
+            video_streams = [s for s in streams if s.get("codec_type") == "video"]
+
+            if not audio_streams:
+                if video_streams:
+                    return {
+                        "valid": False,
+                        "error": f"视频文件 '{filename}' 不包含音频流，无法进行语音识别。请上传包含音频的视频文件或音频文件。",
+                    }
+                else:
+                    return {
+                        "valid": False,
+                        "error": f"文件 '{filename}' 不包含音频内容，无法进行语音识别。",
+                    }
+
+            # 检查音频流质量
+            if audio_streams:
+                audio_info = audio_streams[0]
+                duration = float(format_info.get("duration", 0))
+
+                if duration > 0 and duration < 0.1:  # 少于0.1秒
+                    return {
+                        "valid": False,
+                        "error": f"音频文件太短 (时长: {duration:.2f}秒)，无法进行有效的语音识别。",
+                    }
+
+                # 检查采样率
+                sample_rate = audio_info.get("sample_rate")
+                if sample_rate and int(sample_rate) < 8000:
+                    return {
+                        "valid": False,
+                        "error": f"音频采样率过低 ({sample_rate}Hz)，建议使用8kHz以上的音频文件。",
+                    }
+
+            # 验证通过，返回文件信息
+            return {
+                "valid": True,
+                "info": {
+                    "duration": format_info.get("duration", "unknown"),
+                    "format": format_info.get("format_name", "unknown"),
+                    "audio_streams": len(audio_streams),
+                    "video_streams": len(video_streams),
+                    "audio_info": audio_streams[0] if audio_streams else None,
+                },
+            }
+
+        except json.JSONDecodeError:
+            return {"valid": False, "error": f"无法解析文件信息: {filename}"}
+
+    except subprocess.TimeoutExpired:
+        return {
+            "valid": False,
+            "error": f"文件验证超时: {filename}。文件可能过大或损坏。",
+        }
+    except Exception as e:
+        return {"valid": False, "error": f"文件验证失败: {str(e)}"}

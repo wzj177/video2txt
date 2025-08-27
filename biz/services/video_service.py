@@ -102,7 +102,7 @@ class VideoService:
         """异步处理文件"""
         temp_audio_path = None
         try:
-            # 更新任务状态
+            # 文件已经在API层验证过，直接开始处理
             await task_service.update_task(
                 "video",
                 task_id,
@@ -143,7 +143,13 @@ class VideoService:
                 "video", task_id, {"progress": 75, "current_step": "生成摘要..."}
             )
 
-            summary = await self._generate_summary(transcript, config)
+            # 提取文本用于生成摘要
+            transcript_text_for_summary = (
+                transcript.get("text", "")
+                if isinstance(transcript, dict)
+                else str(transcript)
+            )
+            summary = await self._generate_summary(transcript_text_for_summary, config)
 
             await asyncio.sleep(1)
 
@@ -301,7 +307,11 @@ class VideoService:
             return f"摘要生成失败: {str(e)}"
 
     async def _generate_output_files(
-        self, task_id: str, transcript: str, summary: str, config: Dict[str, Any]
+        self,
+        task_id: str,
+        transcript: Dict[str, Any],
+        summary: str,
+        config: Dict[str, Any],
     ) -> List[Dict[str, str]]:
         """生成输出文件"""
         try:
@@ -312,10 +322,17 @@ class VideoService:
             files = []
             output_types = config.get("output_types", ["transcript"])
 
+            # 提取文本内容
+            transcript_text = (
+                transcript.get("text", "")
+                if isinstance(transcript, dict)
+                else str(transcript)
+            )
+
             # 生成转录文件
             if "transcript" in output_types:
                 transcript_file = output_dir / "transcript.txt"
-                transcript_file.write_text(transcript, encoding="utf-8")
+                transcript_file.write_text(transcript_text, encoding="utf-8")
                 files.append(
                     {
                         "name": "transcript.txt",
@@ -335,7 +352,7 @@ class VideoService:
             # 生成字幕文件
             if "subtitle" in output_types:
                 subtitle_file = output_dir / "subtitle.srt"
-                subtitle_content = self._generate_subtitle(transcript)
+                subtitle_content = self._generate_subtitle(transcript_text)
                 subtitle_file.write_text(subtitle_content, encoding="utf-8")
                 files.append(
                     {
@@ -348,7 +365,7 @@ class VideoService:
             # 生成记忆卡片
             if "flashcards" in output_types:
                 flashcards_file = output_dir / "flashcards.json"
-                flashcards = self._generate_flashcards(transcript)
+                flashcards = self._generate_flashcards(transcript_text)
                 flashcards_file.write_text(
                     json.dumps(flashcards, ensure_ascii=False, indent=2),
                     encoding="utf-8",
@@ -456,9 +473,30 @@ class VideoService:
             result = voice_core.recognize_file(audio_path, language)
 
             if result:
-                logger.info(f"✅ 识别成功 - 文本长度: {len(result.get('text', ''))}")
-                logger.info(f"   处理时间: {result.get('processing_time', 0):.2f}秒")
-                return result
+                # 检查是否有错误信息
+                if result.get("error"):
+                    error_msg = result.get("error", "未知错误")
+                    suggestions = result.get("suggestions", [])
+                    logger.error(f"❌ 语音识别失败: {error_msg}")
+                    if suggestions:
+                        logger.info("💡 解决方案建议:")
+                        for suggestion in suggestions:
+                            logger.info(f"  - {suggestion}")
+                    raise Exception(f"语音识别失败: {error_msg}")
+
+                # 检查是否有有效的文本内容
+                text_content = result.get("text", "").strip()
+                if text_content:
+                    logger.info(f"✅ 识别成功 - 文本长度: {len(text_content)}")
+                    logger.info(
+                        f"   处理时间: {result.get('processing_time', 0):.2f}秒"
+                    )
+                    return result
+                else:
+                    logger.warning(
+                        "⚠️ 语音识别返回空文本，可能是音频质量问题或模型加载失败"
+                    )
+                    raise Exception("语音识别返回空文本内容")
             else:
                 raise Exception("语音识别返回空结果")
 
@@ -473,10 +511,23 @@ class VideoService:
         """从视频中提取音频"""
         try:
             import logging
+            import subprocess
 
             logger = logging.getLogger(__name__)
 
             logger.info(f"🎬 从视频提取音频: {Path(video_path).name}")
+
+            # 首先检查视频文件是否存在
+            if not Path(video_path).exists():
+                raise Exception(f"视频文件不存在: {video_path}")
+
+            # 检查视频是否包含音频流
+            audio_stream_info = await self._check_audio_stream(video_path)
+            if not audio_stream_info["has_audio"]:
+                raise Exception(
+                    f"视频文件不包含音频流，无法进行语音识别。"
+                    f"视频信息: {audio_stream_info['info']}"
+                )
 
             # 创建音频输出路径
             audio_filename = f"{task_id}_audio.wav"
@@ -484,8 +535,6 @@ class VideoService:
             audio_path.parent.mkdir(parents=True, exist_ok=True)
 
             # 使用ffmpeg提取音频
-            import subprocess
-
             cmd = [
                 "ffmpeg",
                 "-i",
@@ -498,17 +547,38 @@ class VideoService:
                 "-ac",
                 "1",  # 单声道
                 "-y",  # 覆盖输出文件
+                "-loglevel",
+                "error",  # 减少日志输出
                 str(audio_path),
             ]
 
+            logger.info(f"🔧 执行FFmpeg命令: {' '.join(cmd)}")
             result = subprocess.run(cmd, capture_output=True, text=True)
 
-            if result.returncode == 0 and audio_path.exists():
-                logger.info(f"✅ 音频提取成功: {audio_path}")
+            if (
+                result.returncode == 0
+                and audio_path.exists()
+                and audio_path.stat().st_size > 0
+            ):
+                logger.info(
+                    f"✅ 音频提取成功: {audio_path} (大小: {audio_path.stat().st_size} bytes)"
+                )
                 return str(audio_path)
             else:
-                logger.error(f"❌ FFmpeg错误: {result.stderr}")
-                raise Exception(f"音频提取失败: {result.stderr}")
+                error_msg = result.stderr if result.stderr else "未知错误"
+                logger.error(
+                    f"❌ FFmpeg错误 (返回码: {result.returncode}): {error_msg}"
+                )
+
+                # 检查是否是权限问题
+                if "Permission denied" in error_msg:
+                    raise Exception(f"权限不足，无法写入音频文件: {audio_path}")
+
+                # 检查是否是磁盘空间问题
+                if "No space left on device" in error_msg:
+                    raise Exception("磁盘空间不足，无法保存音频文件")
+
+                raise Exception(f"音频提取失败: {error_msg}")
 
         except Exception as e:
             import logging
@@ -516,6 +586,105 @@ class VideoService:
             logger = logging.getLogger(__name__)
             logger.error(f"❌ 音频提取失败: {e}")
             raise
+
+    async def _check_audio_stream(self, video_path: str) -> dict:
+        """检查视频文件是否包含音频流"""
+        try:
+            import subprocess
+            import json
+
+            # 使用ffprobe检查音频流
+            cmd = [
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
+                "-show_streams",
+                "-select_streams",
+                "a",  # 只选择音频流
+                video_path,
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            if result.returncode == 0:
+                try:
+                    probe_data = json.loads(result.stdout)
+                    audio_streams = probe_data.get("streams", [])
+
+                    if audio_streams:
+                        # 有音频流
+                        stream_info = audio_streams[0]  # 取第一个音频流
+                        return {
+                            "has_audio": True,
+                            "info": {
+                                "codec": stream_info.get("codec_name", "unknown"),
+                                "duration": stream_info.get("duration", "unknown"),
+                                "sample_rate": stream_info.get(
+                                    "sample_rate", "unknown"
+                                ),
+                                "channels": stream_info.get("channels", "unknown"),
+                            },
+                        }
+                    else:
+                        # 没有音频流，获取视频基本信息
+                        return await self._get_video_basic_info(video_path)
+
+                except json.JSONDecodeError:
+                    return {"has_audio": False, "info": "无法解析视频文件信息"}
+            else:
+                return {"has_audio": False, "info": f"ffprobe检查失败: {result.stderr}"}
+
+        except Exception as e:
+            return {"has_audio": False, "info": f"检查音频流时发生错误: {str(e)}"}
+
+    async def _get_video_basic_info(self, video_path: str) -> dict:
+        """获取视频基本信息（当没有音频流时）"""
+        try:
+            import subprocess
+            import json
+
+            cmd = [
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
+                "-show_format",
+                "-show_streams",
+                video_path,
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            if result.returncode == 0:
+                try:
+                    probe_data = json.loads(result.stdout)
+                    format_info = probe_data.get("format", {})
+                    streams = probe_data.get("streams", [])
+
+                    video_streams = [
+                        s for s in streams if s.get("codec_type") == "video"
+                    ]
+
+                    return {
+                        "has_audio": False,
+                        "info": {
+                            "format": format_info.get("format_name", "unknown"),
+                            "duration": format_info.get("duration", "unknown"),
+                            "video_streams": len(video_streams),
+                            "audio_streams": 0,
+                            "message": "此视频文件仅包含视频流，没有音频内容",
+                        },
+                    }
+                except json.JSONDecodeError:
+                    pass
+
+        except Exception:
+            pass
+
+        return {"has_audio": False, "info": "此视频文件没有音频内容"}
 
 
 # 全局视频服务实例

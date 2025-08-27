@@ -55,6 +55,16 @@ async def video2txt():
         return HTMLResponse("<h1>AI听世界 - 视频转文字页面未找到</h1>", status_code=404)
 
 
+@pages_router.get("/task_detail", response_class=HTMLResponse)
+async def task_detail(task_id: str):
+    """任务详情页面"""
+    task_detail_file = PUBLIC_DIR / "pages" / "task_detail.html"
+    if task_detail_file.exists():
+        return FileResponse(task_detail_file)
+    else:
+        return HTMLResponse("<h1>AI听世界 - 任务详情页面未找到</h1>", status_code=404)
+
+
 @pages_router.get("/meeting2txt", response_class=HTMLResponse)
 async def meeting2txt():
     """会议转文字页面"""

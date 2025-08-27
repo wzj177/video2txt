@@ -6,674 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI听世界 - 实时会议记录</title>
     <link rel="icon" href="/favicon.ico">
+    <link href="/assets/js/layui/css/layui.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/common.css">
     <link rel="stylesheet" href="/assets/css/icons.css">
-    <style>
-        :root {
-            --primary-color: #00B26A;
-            --secondary-color: #00A1D6;
-            --primary-light: #26d17c;
-            --secondary-light: #40c7f0;
-            --success-color: #52c41a;
-            --warning-color: #faad14;
-            --error-color: #ff4d4f;
-            --info-color: #1890ff;
-            --bg-color: #f5f5f5;
-            --card-bg: #ffffff;
-            --text-primary: #262626;
-            --text-secondary: #595959;
-            --text-tertiary: #8c8c8c;
-            --border-light: #f0f0f0;
-            --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.06);
-            --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
-            --spacing-xs: 4px;
-            --spacing-sm: 8px;
-            --spacing-md: 16px;
-            --spacing-lg: 24px;
-            --spacing-xl: 32px;
-            --spacing-xxl: 48px;
-            --radius-small: 4px;
-            --radius-medium: 8px;
-            --radius-large: 12px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-color);
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
-
-        .meeting-container {
-            min-height: 100vh;
-            background: linear-gradient(135deg,
-                    rgba(0, 178, 106, 0.03) 0%,
-                    rgba(0, 161, 214, 0.03) 100%);
-        }
-
-        .header {
-            background: var(--card-bg);
-            box-shadow: var(--shadow-light);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            padding: 0 var(--spacing-lg);
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 64px;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-lg);
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            font-size: 20px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-decoration: none;
-        }
-
-        .nav-menu {
-            display: flex;
-            gap: var(--spacing-lg);
-        }
-
-        .nav-item {
-            padding: var(--spacing-sm) var(--spacing-md);
-            border-radius: var(--radius-medium);
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-            font-weight: 500;
-        }
-
-        .nav-item:hover,
-        .nav-item.active {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-        }
-
-        .main-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: var(--spacing-xl) var(--spacing-lg);
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: var(--spacing-lg);
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-lg);
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .meeting-controls {
-            background: var(--card-bg);
-            border-radius: var(--radius-large);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-light);
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .control-section {
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-md);
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .control-row {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-lg);
-            flex-wrap: wrap;
-        }
-
-        .form-group {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .form-label {
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-sm);
-            display: block;
-        }
-
-        .form-input,
-        .form-select {
-            width: 100%;
-            padding: var(--spacing-sm) var(--spacing-md);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-medium);
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-
-        .form-input:focus,
-        .form-select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(0, 178, 106, 0.1);
-        }
-
-        .record-button {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .record-button.inactive {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-        }
-
-        .record-button.active {
-            background: linear-gradient(135deg, var(--error-color), #ff7875);
-            color: white;
-            animation: pulse 2s infinite;
-        }
-
-        .record-button:hover {
-            transform: scale(1.05);
-            box-shadow: var(--shadow-medium);
-        }
-
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.4);
-            }
-
-            70% {
-                box-shadow: 0 0 0 10px rgba(255, 77, 79, 0);
-            }
-
-            100% {
-                box-shadow: 0 0 0 0 rgba(255, 77, 79, 0);
-            }
-        }
-
-        .meeting-status {
-            text-align: center;
-            margin: var(--spacing-lg) 0;
-        }
-
-        .status-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-md);
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            padding: var(--spacing-xs) var(--spacing-md);
-            border-radius: var(--radius-medium);
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .status-indicator.recording {
-            background: rgba(255, 77, 79, 0.1);
-            color: var(--error-color);
-        }
-
-        .status-indicator.stopped {
-            background: rgba(140, 140, 140, 0.1);
-            color: var(--text-tertiary);
-        }
-
-        .timer {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .meeting-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--spacing-lg);
-        }
-
-        .content-panel {
-            background: var(--card-bg);
-            border-radius: var(--radius-large);
-            box-shadow: var(--shadow-light);
-        }
-
-        .panel-header {
-            padding: var(--spacing-lg);
-            border-bottom: 1px solid var(--border-light);
-            display: flex;
-            align-items: center;
-            justify-content: between;
-        }
-
-        .panel-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .panel-actions {
-            display: flex;
-            gap: var(--spacing-sm);
-        }
-
-        .btn {
-            padding: var(--spacing-sm) var(--spacing-md);
-            border: none;
-            border-radius: var(--radius-medium);
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-            font-size: 14px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-        }
-
-        .btn-secondary {
-            background: var(--bg-color);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-light);
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-light);
-        }
-
-        .panel-content {
-            padding: var(--spacing-lg);
-            height: 400px;
-            overflow-y: auto;
-        }
-
-        .transcript-item {
-            margin-bottom: var(--spacing-md);
-            padding: var(--spacing-md);
-            border-left: 3px solid var(--primary-color);
-            background: rgba(0, 178, 106, 0.05);
-            border-radius: 0 var(--radius-medium) var(--radius-medium) 0;
-        }
-
-        .transcript-time {
-            font-size: 12px;
-            color: var(--text-tertiary);
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .transcript-text {
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
-
-        .summary-section {
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .summary-title {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-sm);
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .summary-content {
-            color: var(--text-secondary);
-            line-height: 1.6;
-            margin-bottom: var(--spacing-md);
-        }
-
-        .keyword-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-sm);
-        }
-
-        .keyword-tag {
-            padding: var(--spacing-xs) var(--spacing-sm);
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: var(--radius-small);
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: var(--spacing-xxl);
-            color: var(--text-tertiary);
-        }
-
-        .empty-icon {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto var(--spacing-md);
-            color: var(--text-tertiary);
-        }
-
-        .volume-indicator {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            margin: var(--spacing-md) 0;
-        }
-
-        .volume-bars {
-            display: flex;
-            gap: 2px;
-            align-items: end;
-        }
-
-        .volume-bar {
-            width: 4px;
-            background: var(--border-light);
-            border-radius: 2px;
-            transition: all 0.1s ease;
-        }
-
-        .volume-bar.active {
-            background: var(--primary-color);
-        }
-
-        .volume-bar:nth-child(1) {
-            height: 8px;
-        }
-
-        .volume-bar:nth-child(2) {
-            height: 12px;
-        }
-
-        .volume-bar:nth-child(3) {
-            height: 16px;
-        }
-
-        .volume-bar:nth-child(4) {
-            height: 20px;
-        }
-
-        .volume-bar:nth-child(5) {
-            height: 24px;
-        }
-
-        .volume-bar:nth-child(6) {
-            height: 20px;
-        }
-
-        .volume-bar:nth-child(7) {
-            height: 16px;
-        }
-
-        .volume-bar:nth-child(8) {
-            height: 12px;
-        }
-
-        .participants-list {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .participant-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: var(--spacing-sm) 0;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .participant-info {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .participant-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .participant-name {
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .participant-status {
-            font-size: 12px;
-            color: var(--text-tertiary);
-        }
-
-        .speaking-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--success-color);
-            animation: speak-pulse 1s infinite;
-        }
-
-        @keyframes speak-pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.3;
-            }
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .status-dot.success {
-            background: var(--success-color);
-        }
-
-        .status-dot.warning {
-            background: var(--warning-color);
-        }
-
-        .status-dot.error {
-            background: var(--error-color);
-        }
-
-        .permission-help-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .permission-help-content {
-            background: var(--card-bg);
-            border-radius: var(--radius-large);
-            padding: var(--spacing-xl);
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            margin: var(--spacing-lg);
-        }
-
-        .help-section {
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .help-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-sm);
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .help-content {
-            color: var(--text-secondary);
-            line-height: 1.6;
-            margin-bottom: var(--spacing-md);
-        }
-
-        .help-list {
-            padding-left: var(--spacing-lg);
-            color: var(--text-secondary);
-        }
-
-        .help-list li {
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .icon {
-            width: 16px;
-            height: 16px;
-            fill: currentColor;
-        }
-
-        .icon.icon-sm {
-            width: 14px;
-            height: 14px;
-        }
-
-        .icon.icon-md {
-            width: 18px;
-            height: 18px;
-        }
-
-        .icon.icon-lg {
-            width: 20px;
-            height: 20px;
-        }
-
-        .icon-spin {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .fade-in {
-            opacity: 0;
-            animation: fadeInUp 0.6s ease forwards;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .meeting-content {
-                grid-template-columns: 1fr;
-            }
-
-            .control-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .form-group {
-                min-width: auto;
-            }
-
-            .main-content {
-                padding: var(--spacing-lg) var(--spacing-md);
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -1136,559 +471,570 @@
     </div>
 
     <script src="/assets/js/vue.global.js"></script>
+    <script src="/assets/js/axios/axios.min.js"></script>
+    <script src="/assets/js/layui/layui.js"></script>
+    <script src="/assets/js/http.js"></script>
     <script type="module">
         const { createApp } = Vue;
 
-        createApp({
-            data() {
-                return {
-                    monitoringStatus: 'stopped', // monitoring, stopped
-                    monitoringTime: 0,
-                    volumeLevel: 0,
-                    meetingConfig: {
-                        meetingApp: 'auto',
-                        sourceLanguage: 'auto',
-                        targetLanguage: 'none',
-                        engine: 'sensevoice',
-                        audioDevice: 'auto'
-                    },
-                    transcripts: [],
-                    summary: {
-                        content: '',
-                        keyPoints: [],
-                        keywords: []
-                    },
-                    participants: [],
-                    monitoringTimer: null,
-                    volumeTimer: null,
-                    eventSource: null,
-                    currentTaskId: null,
-                    // 新增的数据
-                    audioPermissions: {
-                        microphone: null,
-                        system_audio: null,
-                        overall_status: false
-                    },
-                    audioDevices: {
-                        input: [],
-                        output: [],
-                        loopback: [],
-                        recommended_system_device: null,
-                        total_devices: 0
-                    },
-                    loadingPermissions: false,
-                    showPermissionHelpModal: false,
-                    permissionHelp: {}
-                }
-            },
+        layui.use(['layer'], () => {
 
-            computed: {
-                isConfigValid() {
-                    return this.meetingConfig.meetingApp &&
-                        this.meetingConfig.sourceLanguage &&
-                        this.meetingConfig.engine;
-                }
-            },
-
-            async mounted() {
-                await this.checkPermissions();
-                await this.loadAudioDevices();
-                this.simulateVolumeLevel();
-            },
-
-            beforeUnmount() {
-                this.stopMonitoring();
-                if (this.volumeTimer) {
-                    clearInterval(this.volumeTimer);
-                }
-            },
-
-            methods: {
-                // 权限和设备相关方法
-                async checkPermissions() {
-                    if (this.loadingPermissions) return;
-
-                    this.loadingPermissions = true;
-                    try {
-                        // TODO: 全部要换成封装的http对象
-                        // const response = await fetch('/api/tasks/meeting/audio-permissions');
-                        // const result = await response.json();
-
-                        // if (result.success) {
-                        //     this.audioPermissions = result.data;
-                        // } else {
-                        //     console.error('检查权限失败:', result.error);
-                        // }
-                    } catch (error) {
-                        console.error('检查权限异常:', error);
-                    } finally {
-                        this.loadingPermissions = false;
+            createApp({
+                data() {
+                    return {
+                        monitoringStatus: 'stopped', // monitoring, stopped
+                        monitoringTime: 0,
+                        volumeLevel: 0,
+                        meetingConfig: {
+                            meetingApp: 'auto',
+                            sourceLanguage: 'auto',
+                            targetLanguage: 'none',
+                            engine: 'sensevoice',
+                            audioDevice: 'auto'
+                        },
+                        transcripts: [],
+                        summary: {
+                            content: '',
+                            keyPoints: [],
+                            keywords: []
+                        },
+                        participants: [],
+                        monitoringTimer: null,
+                        volumeTimer: null,
+                        eventSource: null,
+                        currentTaskId: null,
+                        // 新增的数据
+                        audioPermissions: {
+                            microphone: null,
+                            system_audio: null,
+                            overall_status: false
+                        },
+                        audioDevices: {
+                            input: [],
+                            output: [],
+                            loopback: [],
+                            recommended_system_device: null,
+                            total_devices: 0
+                        },
+                        loadingPermissions: false,
+                        showPermissionHelpModal: false,
+                        permissionHelp: {}
                     }
                 },
 
-                async loadAudioDevices() {
-                    try {
-                        // TODO: 全部要换成封装的http对象
-                        // const response = await fetch('/api/tasks/meeting/audio-devices');
-                        // const result = await response.json();
-
-                        // if (result.success) {
-                        //     this.audioDevices = result.data;
-
-                        //     // 如果有推荐的系统音频设备，自动选择
-                        //     if (this.audioDevices.recommended_system_device?.id && this.meetingConfig.audioDevice === 'auto') {
-                        //         this.meetingConfig.audioDevice = this.audioDevices.recommended_system_device.id;
-                        //     }
-                        // } else {
-                        //     console.error('加载音频设备失败:', result.error);
-                        // }
-                    } catch (error) {
-                        console.error('加载音频设备异常:', error);
+                computed: {
+                    isConfigValid() {
+                        return this.meetingConfig.meetingApp &&
+                            this.meetingConfig.sourceLanguage &&
+                            this.meetingConfig.engine;
                     }
                 },
 
-                async requestPermissions() {
-                    try {
-                        // TODO: 全部要换成封装的http对象
-                        // const response = await fetch('/api/tasks/meeting/request-permissions', {
-                        //     method: 'POST'
-                        // });
-                        // const result = await response.json();
+                async mounted() {
+                    await this.checkPermissions();
+                    await this.loadAudioDevices();
+                    this.simulateVolumeLevel();
+                },
 
-                        // if (result.success) {
-                        //     alert(result.data.message);
-                        //     // 重新检查权限
-                        //     setTimeout(() => this.checkPermissions(), 1000);
-                        // } else {
-                        //     alert('权限申请失败: ' + result.error);
-                        // }
-                    } catch (error) {
-                        alert('权限申请异常: ' + error.message);
+                beforeUnmount() {
+                    this.stopMonitoring();
+                    if (this.volumeTimer) {
+                        clearInterval(this.volumeTimer);
                     }
                 },
 
-                async showPermissionHelp() {
-                    try {
-                        // TODO: 全部要换成封装的http对象
-                        // const response = await fetch('/api/tasks/meeting/permission-help');
-                        // const result = await response.json();
+                methods: {
+                    // 权限和设备相关方法
+                    async checkPermissions() {
+                        if (this.loadingPermissions) return;
 
-                        // if (result.success) {
-                        //     this.permissionHelp = result.data;
-                        //     this.showPermissionHelpModal = true;
-                        // } else {
-                        //     alert('获取帮助信息失败: ' + result.error);
-                        // }
-                    } catch (error) {
-                        alert('获取帮助信息异常: ' + error.message);
-                    }
-                },
-
-                closePermissionHelp() {
-                    this.showPermissionHelpModal = false;
-                },
-
-                onAudioDeviceChange() {
-                    console.log('音频设备已更改为:', this.meetingConfig.audioDevice);
-                },
-
-                async testAudioCapture() {
-                    try {
-                        // TODO: 全部要换成封装的http对象
-                        // const deviceId = this.meetingConfig.audioDevice === 'auto' ? null : this.meetingConfig.audioDevice;
-
-                        // const response = await fetch('/api/tasks/meeting/test-audio-capture', {
-                        //     method: 'POST',
-                        //     headers: {
-                        //         'Content-Type': 'application/json'
-                        //     },
-                        //     body: JSON.stringify({
-                        //         device_id: deviceId,
-                        //         duration: 2.0
-                        //     })
-                        // });
-
-                        // const result = await response.json();
-
-                        // if (result.success) {
-                        //     const data = result.data;
-                        //     alert(`音频测试成功！\n设备: ${data.device_info?.name || '未知'}\n采样数: ${data.samples_captured}\n平均音量: ${(data.average_volume * 100).toFixed(1)}%\n最大音量: ${(data.max_volume * 100).toFixed(1)}%`);
-                        // } else {
-                        //     alert('音频测试失败: ' + result.error);
-                        // }
-                    } catch (error) {
-                        alert('音频测试异常: ' + error.message);
-                    }
-                },
-
-                // 监控相关方法
-                toggleMonitoring() {
-                    if (this.monitoringStatus === 'stopped') {
-                        this.startMonitoring();
-                    } else {
-                        this.stopMonitoring();
-                    }
-                },
-
-                async startMonitoring() {
-                    try {
-                        this.monitoringStatus = 'monitoring';
-                        this.monitoringTime = 0;
-
-                        // 开始计时
-                        this.monitoringTimer = setInterval(() => {
-                            this.monitoringTime++;
-                        }, 1000);
-
-                        // 启动音频捕获和实时转录
-                        await this.initializeAudioCapture();
-                        console.log('开始监控会议音频...');
-
-                    } catch (error) {
-                        console.error('启动监控失败:', error);
-                        alert('启动监控失败: ' + error.message);
-                        this.stopMonitoring();
-                    }
-                },
-
-                stopRecording() {
-                    this.recordingStatus = 'stopped';
-
-                    if (this.recordingTimer) {
-                        clearInterval(this.recordingTimer);
-                        this.recordingTimer = null;
-                    }
-
-                    // 自动生成总结
-                    if (this.transcripts.length > 0) {
-                        this.generateSummary();
-                    }
-
-                    console.log('停止录制会议');
-                },
-
-                stopMonitoring() {
-                    this.monitoringStatus = 'stopped';
-
-                    if (this.monitoringTimer) {
-                        clearInterval(this.monitoringTimer);
-                        this.monitoringTimer = null;
-                    }
-
-                    // 关闭SSE连接
-                    if (this.eventSource) {
-                        this.eventSource.close();
-                        this.eventSource = null;
-                    }
-
-                    console.log('停止监控会议音频');
-                },
-
-                async initializeAudioCapture() {
-                    try {
-                        // 创建实时转录任务
-                        const response = await fetch('/api/tasks/meeting', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                meetingApp: this.meetingConfig.meetingApp,
-                                sourceLanguage: this.meetingConfig.sourceLanguage,
-                                targetLanguage: this.meetingConfig.targetLanguage,
-                                engine: this.meetingConfig.engine,
-                                captureMode: this.meetingConfig.captureMode,
-                                realtime: true
-                            })
-                        });
-
-                        if (!response.ok) {
-                            throw new Error('创建监控任务失败');
-                        }
-
-                        const result = await response.json();
-                        this.currentTaskId = result.task_id;
-
-                        // 建立SSE连接接收实时转录
-                        this.connectSSE();
-
-                    } catch (error) {
-                        throw new Error('初始化音频捕获失败: ' + error.message);
-                    }
-                },
-
-                connectSSE() {
-                    if (!this.currentTaskId) return;
-
-                    const url = `/api/tasks/meeting/${this.currentTaskId}/stream`;
-                    this.eventSource = new EventSource(url);
-
-                    this.eventSource.onmessage = (event) => {
+                        this.loadingPermissions = true;
                         try {
-                            const data = JSON.parse(event.data);
-                            this.handleRealtimeData(data);
+                            // TODO: 全部要换成封装的http对象
+                            // const response = await fetch('/api/tasks/meeting/audio-permissions');
+                            // const result = await response.json();
+
+                            // if (result.success) {
+                            //     this.audioPermissions = result.data;
+                            // } else {
+                            //     console.error('检查权限失败:', result.error);
+                            // }
                         } catch (error) {
-                            console.error('解析SSE数据失败:', error);
+                            console.error('检查权限异常:', error);
+                        } finally {
+                            this.loadingPermissions = false;
                         }
-                    };
+                    },
 
-                    this.eventSource.onerror = (error) => {
-                        console.error('SSE连接错误:', error);
-                        setTimeout(() => {
-                            if (this.monitoringStatus === 'monitoring') {
-                                this.connectSSE();
-                            }
-                        }, 3000);
-                    };
-                },
+                    async loadAudioDevices() {
+                        try {
+                            // TODO: 全部要换成封装的http对象
+                            // const response = await fetch('/api/tasks/meeting/audio-devices');
+                            // const result = await response.json();
 
-                handleRealtimeData(data) {
-                    switch (data.type) {
-                        case 'connected':
-                            console.log('会议监控已连接:', data.message);
-                            break;
-                        case 'transcript':
-                            this.addTranscript(data.content);
-                            break;
-                        case 'translation':
-                            this.addTranslation(data.content);
-                            break;
-                        case 'volume':
-                            this.volumeLevel = data.level;
-                            break;
-                        case 'analysis':
-                            this.updateAnalysis(data.content);
-                            break;
-                        case 'heartbeat':
-                            // 心跳包，保持连接
-                            break;
-                        case 'disconnected':
-                            console.log('会议监控已断开:', data.message);
-                            if (data.summary) {
-                                this.updateFinalSummary(data.summary);
-                            }
-                            break;
-                        case 'error':
-                            console.error('转录错误:', data.message);
-                            this.showError('转录错误: ' + data.message);
-                            break;
-                        default:
-                            console.log('未知数据类型:', data.type, data);
-                    }
-                },
+                            // if (result.success) {
+                            //     this.audioDevices = result.data;
 
-                addTranscript(content) {
-                    this.transcripts.unshift({
-                        id: Date.now(),
-                        text: content.text,
-                        translation: content.translation || '',
-                        timestamp: new Date().toLocaleTimeString(),
-                        speaker: content.speaker || '未知',
-                        confidence: content.confidence || 0.9
-                    });
-
-                    // 保持转录列表不超过100条
-                    if (this.transcripts.length > 100) {
-                        this.transcripts = this.transcripts.slice(0, 100);
-                    }
-                },
-
-                addTranslation(content) {
-                    // 为最新的转录添加翻译
-                    if (this.transcripts.length > 0) {
-                        this.transcripts[0].translation = content.translation;
-                    }
-                },
-
-                updateAnalysis(content) {
-                    // 更新关键词
-                    if (content.keywords) {
-                        content.keywords.forEach(keyword => {
-                            if (!this.summary.keywords.includes(keyword)) {
-                                this.summary.keywords.push(keyword);
-                            }
-                        });
-                    }
-
-                    // 更新要点
-                    if (content.key_point) {
-                        this.summary.keyPoints.push(content.key_point);
-
-                        // 保持要点列表不超过20条
-                        if (this.summary.keyPoints.length > 20) {
-                            this.summary.keyPoints = this.summary.keyPoints.slice(-20);
+                            //     // 如果有推荐的系统音频设备，自动选择
+                            //     if (this.audioDevices.recommended_system_device?.id && this.meetingConfig.audioDevice === 'auto') {
+                            //         this.meetingConfig.audioDevice = this.audioDevices.recommended_system_device.id;
+                            //     }
+                            // } else {
+                            //     console.error('加载音频设备失败:', result.error);
+                            // }
+                        } catch (error) {
+                            console.error('加载音频设备异常:', error);
                         }
-                    }
-                },
+                    },
 
-                updateFinalSummary(summaryData) {
-                    // 更新最终摘要
-                    if (summaryData.summary_text) {
-                        this.summary.content = summaryData.summary_text;
-                    }
+                    async requestPermissions() {
+                        try {
+                            // TODO: 全部要换成封装的http对象
+                            // const response = await fetch('/api/tasks/meeting/request-permissions', {
+                            //     method: 'POST'
+                            // });
+                            // const result = await response.json();
 
-                    // 更新参与者信息
-                    if (summaryData.speakers) {
-                        this.participants = [];
-                        Object.keys(summaryData.speakers).forEach((speakerKey, index) => {
-                            const speaker = summaryData.speakers[speakerKey];
-                            this.participants.push({
-                                id: index + 1,
-                                name: speaker.name,
-                                status: '已结束',
-                                speaking: false,
-                                wordCount: speaker.word_count,
-                                speakingTime: speaker.speaking_time
-                            });
-                        });
-                    }
+                            // if (result.success) {
+                            //     alert(result.data.message);
+                            //     // 重新检查权限
+                            //     setTimeout(() => this.checkPermissions(), 1000);
+                            // } else {
+                            //     alert('权限申请失败: ' + result.error);
+                            // }
+                        } catch (error) {
+                            alert('权限申请异常: ' + error.message);
+                        }
+                    },
 
-                    // 显示完成通知
-                    this.showSuccess('会议监控已完成，摘要已生成！');
-                },
+                    async showPermissionHelp() {
+                        try {
+                            // TODO: 全部要换成封装的http对象
+                            // const response = await fetch('/api/tasks/meeting/permission-help');
+                            // const result = await response.json();
 
-                showError(message) {
-                    // 简单的错误提示（可以替换为更好的UI组件）
-                    alert('错误: ' + message);
-                },
+                            // if (result.success) {
+                            //     this.permissionHelp = result.data;
+                            //     this.showPermissionHelpModal = true;
+                            // } else {
+                            //     alert('获取帮助信息失败: ' + result.error);
+                            // }
+                        } catch (error) {
+                            alert('获取帮助信息异常: ' + error.message);
+                        }
+                    },
 
-                showSuccess(message) {
-                    // 简单的成功提示（可以替换为更好的UI组件）
-                    console.log('成功: ' + message);
-                },
+                    closePermissionHelp() {
+                        this.showPermissionHelpModal = false;
+                    },
 
+                    onAudioDeviceChange() {
+                        console.log('音频设备已更改为:', this.meetingConfig.audioDevice);
+                    },
 
+                    async testAudioCapture() {
+                        try {
+                            // TODO: 全部要换成封装的http对象
+                            // const deviceId = this.meetingConfig.audioDevice === 'auto' ? null : this.meetingConfig.audioDevice;
 
-                getMonitoringStatusText() {
-                    const statusMap = {
-                        monitoring: '监控中',
-                        stopped: '已停止'
-                    };
-                    return statusMap[this.monitoringStatus] || this.monitoringStatus;
-                },
+                            // const response = await fetch('/api/tasks/meeting/test-audio-capture', {
+                            //     method: 'POST',
+                            //     headers: {
+                            //         'Content-Type': 'application/json'
+                            //     },
+                            //     body: JSON.stringify({
+                            //         device_id: deviceId,
+                            //         duration: 2.0
+                            //     })
+                            // });
 
-                addMockTranscript() {
-                    const mockTexts = [
-                        '大家好，欢迎参加今天的产品讨论会议。',
-                        '我们今天主要讨论新版本的功能特性。',
-                        '关于用户体验方面，我们需要重点关注界面的简洁性。',
-                        '技术实现上，我建议采用模块化的架构设计。',
-                        '项目时间线需要再次确认，确保按时交付。',
-                        '我们还需要考虑性能优化的问题。',
-                        '用户反馈显示加载速度需要提升。',
-                        '测试环节要覆盖各种边界情况。'
-                    ];
+                            // const result = await response.json();
 
-                    const randomText = mockTexts[Math.floor(Math.random() * mockTexts.length)];
-                    const now = new Date();
-                    const timeStr = now.toLocaleTimeString();
+                            // if (result.success) {
+                            //     const data = result.data;
+                            //     alert(`音频测试成功！\n设备: ${data.device_info?.name || '未知'}\n采样数: ${data.samples_captured}\n平均音量: ${(data.average_volume * 100).toFixed(1)}%\n最大音量: ${(data.max_volume * 100).toFixed(1)}%`);
+                            // } else {
+                            //     alert('音频测试失败: ' + result.error);
+                            // }
+                        } catch (error) {
+                            alert('音频测试异常: ' + error.message);
+                        }
+                    },
 
-                    this.transcripts.push({
-                        time: timeStr,
-                        text: randomText
-                    });
-
-                    // 保持最多50条记录
-                    if (this.transcripts.length > 50) {
-                        this.transcripts.shift();
-                    }
-
-                    // 模拟参与者发言状态
-                    this.participants.forEach(p => p.speaking = false);
-                    if (this.participants.length > 0) {
-                        const randomParticipant = this.participants[Math.floor(Math.random() * this.participants.length)];
-                        randomParticipant.speaking = true;
-                    }
-                },
-
-                generateSummary() {
-                    if (this.transcripts.length === 0) return;
-
-                    // 模拟生成会议总结
-                    this.summary = {
-                        content: '本次会议主要讨论了新产品版本的开发计划和技术方案。团队就用户体验优化、技术架构选择、项目时间安排等关键议题进行了深入交流。',
-                        keyPoints: [
-                            '确定采用模块化架构设计',
-                            '优先解决性能和加载速度问题',
-                            '加强用户体验测试',
-                            '按时交付项目里程碑'
-                        ],
-                        keywords: ['产品开发', '用户体验', '技术架构', '性能优化', '项目管理']
-                    };
-                },
-
-                clearTranscript() {
-                    if (confirm('确定要清除所有转录内容吗？')) {
-                        this.transcripts = [];
-                    }
-                },
-
-                exportTranscript() {
-                    if (this.transcripts.length === 0) {
-                        alert('暂无转录内容可导出');
-                        return;
-                    }
-
-                    // 生成导出内容
-                    let content = `会议记录 - ${this.meetingConfig.name}\n`;
-                    content += `时间：${new Date().toLocaleString()}\n`;
-                    content += `语言：${this.meetingConfig.language}\n\n`;
-                    content += '=== 转录内容 ===\n';
-
-                    this.transcripts.forEach(item => {
-                        content += `[${item.time}] ${item.text}\n`;
-                    });
-
-                    // 创建下载
-                    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `会议记录_${this.meetingConfig.name}_${new Date().toISOString().slice(0, 10)}.txt`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                },
-
-                addParticipant() {
-                    const name = prompt('请输入参与者姓名：');
-                    if (name && name.trim()) {
-                        this.participants.push({
-                            id: Date.now(),
-                            name: name.trim(),
-                            status: '在线',
-                            speaking: false
-                        });
-                    }
-                },
-
-                simulateVolumeLevel() {
-                    this.volumeTimer = setInterval(() => {
-                        if (this.recordingStatus === 'recording') {
-                            // 模拟音量变化
-                            this.volumeLevel = Math.floor(Math.random() * 8) + 1;
+                    // 监控相关方法
+                    toggleMonitoring() {
+                        if (this.monitoringStatus === 'stopped') {
+                            this.startMonitoring();
                         } else {
-                            this.volumeLevel = 0;
+                            this.stopMonitoring();
                         }
-                    }, 200);
-                },
+                    },
 
-                getRecordingStatusText() {
-                    return this.recordingStatus === 'recording' ? '录制中' : '已停止';
-                },
+                    async startMonitoring() {
+                        try {
+                            this.monitoringStatus = 'monitoring';
+                            this.monitoringTime = 0;
 
-                formatTime(seconds) {
-                    const hours = Math.floor(seconds / 3600);
-                    const minutes = Math.floor((seconds % 3600) / 60);
-                    const secs = seconds % 60;
+                            // 开始计时
+                            this.monitoringTimer = setInterval(() => {
+                                this.monitoringTime++;
+                            }, 1000);
 
-                    if (hours > 0) {
-                        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                    } else {
-                        return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                            // 启动音频捕获和实时转录
+                            await this.initializeAudioCapture();
+                            console.log('开始监控会议音频...');
+
+                        } catch (error) {
+                            console.error('启动监控失败:', error);
+                            alert('启动监控失败: ' + error.message);
+                            this.stopMonitoring();
+                        }
+                    },
+
+                    stopRecording() {
+                        this.recordingStatus = 'stopped';
+
+                        if (this.recordingTimer) {
+                            clearInterval(this.recordingTimer);
+                            this.recordingTimer = null;
+                        }
+
+                        // 自动生成总结
+                        if (this.transcripts.length > 0) {
+                            this.generateSummary();
+                        }
+
+                        console.log('停止录制会议');
+                    },
+
+                    stopMonitoring() {
+                        this.monitoringStatus = 'stopped';
+
+                        if (this.monitoringTimer) {
+                            clearInterval(this.monitoringTimer);
+                            this.monitoringTimer = null;
+                        }
+
+                        // 关闭SSE连接
+                        if (this.eventSource) {
+                            this.eventSource.close();
+                            this.eventSource = null;
+                        }
+
+                        console.log('停止监控会议音频');
+                    },
+
+                    async initializeAudioCapture() {
+                        try {
+                            // 创建实时转录任务
+                            const response = await fetch('/api/tasks/meeting', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    meetingApp: this.meetingConfig.meetingApp,
+                                    sourceLanguage: this.meetingConfig.sourceLanguage,
+                                    targetLanguage: this.meetingConfig.targetLanguage,
+                                    engine: this.meetingConfig.engine,
+                                    captureMode: this.meetingConfig.captureMode,
+                                    realtime: true
+                                })
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('创建监控任务失败');
+                            }
+
+                            const result = await response.json();
+                            this.currentTaskId = result.task_id;
+
+                            // 建立SSE连接接收实时转录
+                            this.connectSSE();
+
+                        } catch (error) {
+                            throw new Error('初始化音频捕获失败: ' + error.message);
+                        }
+                    },
+
+                    connectSSE() {
+                        if (!this.currentTaskId) return;
+
+                        const url = `/api/tasks/meeting/${this.currentTaskId}/stream`;
+                        this.eventSource = new EventSource(url);
+
+                        this.eventSource.onmessage = (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleRealtimeData(data);
+                            } catch (error) {
+                                console.error('解析SSE数据失败:', error);
+                            }
+                        };
+
+                        this.eventSource.onerror = (error) => {
+                            console.error('SSE连接错误:', error);
+                            setTimeout(() => {
+                                if (this.monitoringStatus === 'monitoring') {
+                                    this.connectSSE();
+                                }
+                            }, 3000);
+                        };
+                    },
+
+                    handleRealtimeData(data) {
+                        switch (data.type) {
+                            case 'connected':
+                                console.log('会议监控已连接:', data.message);
+                                break;
+                            case 'transcript':
+                                this.addTranscript(data.content);
+                                break;
+                            case 'translation':
+                                this.addTranslation(data.content);
+                                break;
+                            case 'volume':
+                                this.volumeLevel = data.level;
+                                break;
+                            case 'analysis':
+                                this.updateAnalysis(data.content);
+                                break;
+                            case 'heartbeat':
+                                // 心跳包，保持连接
+                                break;
+                            case 'disconnected':
+                                console.log('会议监控已断开:', data.message);
+                                if (data.summary) {
+                                    this.updateFinalSummary(data.summary);
+                                }
+                                break;
+                            case 'error':
+                                console.error('转录错误:', data.message);
+                                this.showError('转录错误: ' + data.message);
+                                break;
+                            default:
+                                console.log('未知数据类型:', data.type, data);
+                        }
+                    },
+
+                    addTranscript(content) {
+                        this.transcripts.unshift({
+                            id: Date.now(),
+                            text: content.text,
+                            translation: content.translation || '',
+                            timestamp: new Date().toLocaleTimeString(),
+                            speaker: content.speaker || '未知',
+                            confidence: content.confidence || 0.9
+                        });
+
+                        // 保持转录列表不超过100条
+                        if (this.transcripts.length > 100) {
+                            this.transcripts = this.transcripts.slice(0, 100);
+                        }
+                    },
+
+                    addTranslation(content) {
+                        // 为最新的转录添加翻译
+                        if (this.transcripts.length > 0) {
+                            this.transcripts[0].translation = content.translation;
+                        }
+                    },
+
+                    updateAnalysis(content) {
+                        // 更新关键词
+                        if (content.keywords) {
+                            content.keywords.forEach(keyword => {
+                                if (!this.summary.keywords.includes(keyword)) {
+                                    this.summary.keywords.push(keyword);
+                                }
+                            });
+                        }
+
+                        // 更新要点
+                        if (content.key_point) {
+                            this.summary.keyPoints.push(content.key_point);
+
+                            // 保持要点列表不超过20条
+                            if (this.summary.keyPoints.length > 20) {
+                                this.summary.keyPoints = this.summary.keyPoints.slice(-20);
+                            }
+                        }
+                    },
+
+                    updateFinalSummary(summaryData) {
+                        // 更新最终摘要
+                        if (summaryData.summary_text) {
+                            this.summary.content = summaryData.summary_text;
+                        }
+
+                        // 更新参与者信息
+                        if (summaryData.speakers) {
+                            this.participants = [];
+                            Object.keys(summaryData.speakers).forEach((speakerKey, index) => {
+                                const speaker = summaryData.speakers[speakerKey];
+                                this.participants.push({
+                                    id: index + 1,
+                                    name: speaker.name,
+                                    status: '已结束',
+                                    speaking: false,
+                                    wordCount: speaker.word_count,
+                                    speakingTime: speaker.speaking_time
+                                });
+                            });
+                        }
+
+                        // 显示完成通知
+                        this.showSuccess('会议监控已完成，摘要已生成！');
+                    },
+
+                    showError(message) {
+                        // 简单的错误提示（可以替换为更好的UI组件）
+                        alert('错误: ' + message);
+                    },
+
+                    showSuccess(message) {
+                        // 简单的成功提示（可以替换为更好的UI组件）
+                        console.log('成功: ' + message);
+                    },
+
+
+
+                    getMonitoringStatusText() {
+                        const statusMap = {
+                            monitoring: '监控中',
+                            stopped: '已停止'
+                        };
+                        return statusMap[this.monitoringStatus] || this.monitoringStatus;
+                    },
+
+                    addMockTranscript() {
+                        const mockTexts = [
+                            '大家好，欢迎参加今天的产品讨论会议。',
+                            '我们今天主要讨论新版本的功能特性。',
+                            '关于用户体验方面，我们需要重点关注界面的简洁性。',
+                            '技术实现上，我建议采用模块化的架构设计。',
+                            '项目时间线需要再次确认，确保按时交付。',
+                            '我们还需要考虑性能优化的问题。',
+                            '用户反馈显示加载速度需要提升。',
+                            '测试环节要覆盖各种边界情况。'
+                        ];
+
+                        const randomText = mockTexts[Math.floor(Math.random() * mockTexts.length)];
+                        const now = new Date();
+                        const timeStr = now.toLocaleTimeString();
+
+                        this.transcripts.push({
+                            time: timeStr,
+                            text: randomText
+                        });
+
+                        // 保持最多50条记录
+                        if (this.transcripts.length > 50) {
+                            this.transcripts.shift();
+                        }
+
+                        // 模拟参与者发言状态
+                        this.participants.forEach(p => p.speaking = false);
+                        if (this.participants.length > 0) {
+                            const randomParticipant = this.participants[Math.floor(Math.random() * this.participants.length)];
+                            randomParticipant.speaking = true;
+                        }
+                    },
+
+                    generateSummary() {
+                        if (this.transcripts.length === 0) return;
+
+                        // 模拟生成会议总结
+                        this.summary = {
+                            content: '本次会议主要讨论了新产品版本的开发计划和技术方案。团队就用户体验优化、技术架构选择、项目时间安排等关键议题进行了深入交流。',
+                            keyPoints: [
+                                '确定采用模块化架构设计',
+                                '优先解决性能和加载速度问题',
+                                '加强用户体验测试',
+                                '按时交付项目里程碑'
+                            ],
+                            keywords: ['产品开发', '用户体验', '技术架构', '性能优化', '项目管理']
+                        };
+                    },
+
+                    clearTranscript() {
+                        if (confirm('确定要清除所有转录内容吗？')) {
+                            this.transcripts = [];
+                        }
+                    },
+
+                    exportTranscript() {
+                        if (this.transcripts.length === 0) {
+                            alert('暂无转录内容可导出');
+                            return;
+                        }
+
+                        // 生成导出内容
+                        let content = `会议记录 - ${this.meetingConfig.name}\n`;
+                        content += `时间：${new Date().toLocaleString()}\n`;
+                        content += `语言：${this.meetingConfig.language}\n\n`;
+                        content += '=== 转录内容 ===\n';
+
+                        this.transcripts.forEach(item => {
+                            content += `[${item.time}] ${item.text}\n`;
+                        });
+
+                        // 创建下载
+                        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `会议记录_${this.meetingConfig.name}_${new Date().toISOString().slice(0, 10)}.txt`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    },
+
+                    addParticipant() {
+                        const name = prompt('请输入参与者姓名：');
+                        if (name && name.trim()) {
+                            this.participants.push({
+                                id: Date.now(),
+                                name: name.trim(),
+                                status: '在线',
+                                speaking: false
+                            });
+                        }
+                    },
+
+                    simulateVolumeLevel() {
+                        this.volumeTimer = setInterval(() => {
+                            if (this.recordingStatus === 'recording') {
+                                // 模拟音量变化
+                                this.volumeLevel = Math.floor(Math.random() * 8) + 1;
+                            } else {
+                                this.volumeLevel = 0;
+                            }
+                        }, 200);
+                    },
+
+                    getRecordingStatusText() {
+                        return this.recordingStatus === 'recording' ? '录制中' : '已停止';
+                    },
+
+                    formatTime(seconds) {
+                        const hours = Math.floor(seconds / 3600);
+                        const minutes = Math.floor((seconds % 3600) / 60);
+                        const secs = seconds % 60;
+
+                        if (hours > 0) {
+                            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                        } else {
+                            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                        }
                     }
                 }
-            }
-        }).mount('#app');
+            }).mount('#app');
+
+
+
+
+
+        })
     </script>
 </body>
 

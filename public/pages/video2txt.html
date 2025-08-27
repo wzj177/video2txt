@@ -1,1088 +1,17 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI听世界 - 音视频转文本</title>
     <link rel="icon" href="/favicon.ico">
+    <link href="/assets/js/layui/css/layui.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/common.css">
     <link rel="stylesheet" href="/assets/css/icons.css">
-    <style>
-        :root {
-            --primary-color: #00B26A;
-            --secondary-color: #00A1D6;
-            --primary-light: #26d17c;
-            --secondary-light: #40c7f0;
-            --success-color: #52c41a;
-            --warning-color: #faad14;
-            --error-color: #ff4d4f;
-            --info-color: #1890ff;
-            --bg-color: #f5f5f5;
-            --card-bg: #ffffff;
-            --text-primary: #262626;
-            --text-secondary: #595959;
-            --text-tertiary: #8c8c8c;
-            --border-light: #f0f0f0;
-            --shadow-light: 0 2px 8px rgba(0,0,0,0.06);
-            --shadow-medium: 0 4px 16px rgba(0,0,0,0.12);
-            --spacing-xs: 4px;
-            --spacing-sm: 8px;
-            --spacing-md: 16px;
-            --spacing-lg: 24px;
-            --spacing-xl: 32px;
-            --spacing-xxl: 48px;
-            --radius-small: 4px;
-            --radius-medium: 8px;
-            --radius-large: 12px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-color);
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
-
-        .video2txt-container {
-            min-height: 100vh;
-            background: linear-gradient(135deg, 
-                rgba(0, 178, 106, 0.03) 0%, 
-                rgba(0, 161, 214, 0.03) 100%);
-        }
-
-        .header {
-            background: var(--card-bg);
-            box-shadow: var(--shadow-light);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            padding: 0 var(--spacing-lg);
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 64px;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-lg);
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            font-size: 20px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-decoration: none;
-        }
-
-        .nav-menu {
-            display: flex;
-            gap: var(--spacing-lg);
-        }
-
-        .nav-item {
-            padding: var(--spacing-sm) var(--spacing-md);
-            border-radius: var(--radius-medium);
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-            font-weight: 500;
-        }
-
-        .nav-item:hover,
-        .nav-item.active {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-        }
-
-        .main-layout {
-            display: flex;
-            height: calc(100vh - 64px);
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .sidebar {
-            width: 350px;
-            background: var(--card-bg);
-            border-right: 1px solid var(--border-light);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar-header {
-            padding: var(--spacing-lg);
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .sidebar-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .task-filters {
-            display: flex;
-            gap: var(--spacing-sm);
-        }
-
-        .filter-btn {
-            padding: var(--spacing-xs) var(--spacing-sm);
-            border: 1px solid var(--border-light);
-            background: transparent;
-            color: var(--text-secondary);
-            border-radius: var(--radius-small);
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .filter-btn.active {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .task-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: var(--spacing-md);
-        }
-
-        .task-item {
-            background: var(--card-bg);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-medium);
-            padding: var(--spacing-md);
-            margin-bottom: var(--spacing-md);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .task-item:hover {
-            border-color: var(--primary-color);
-            box-shadow: var(--shadow-light);
-        }
-
-        .task-item.active {
-            border-color: var(--primary-color);
-            background: rgba(0, 178, 106, 0.05);
-        }
-
-        .task-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .task-actions {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .task-delete-btn {
-            background: none;
-            border: none;
-            color: #dc3545;
-            cursor: pointer;
-            padding: 4px;
-            border-radius: var(--radius-small);
-            opacity: 0.7;
-            transition: all 0.2s ease;
-        }
-
-        .task-delete-btn:hover {
-            opacity: 1;
-            background: rgba(220, 53, 69, 0.1);
-        }
-
-        .task-delete-btn .icon {
-            width: 16px;
-            height: 16px;
-        }
-
-        .task-title {
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 14px;
-        }
-
-        .task-status {
-            padding: var(--spacing-xs) var(--spacing-sm);
-            border-radius: var(--radius-small);
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .task-status.running {
-            background: rgba(24, 144, 255, 0.1);
-            color: var(--info-color);
-        }
-
-        .task-status.completed {
-            background: rgba(82, 196, 26, 0.1);
-            color: var(--success-color);
-        }
-
-        .task-status.failed {
-            background: rgba(255, 77, 79, 0.1);
-            color: var(--error-color);
-        }
-
-        .task-status.pending {
-            background: rgba(250, 173, 20, 0.1);
-            color: var(--warning-color);
-        }
-
-        .task-meta {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-            color: var(--text-tertiary);
-            font-size: 12px;
-        }
-
-        .task-progress {
-            width: 100%;
-            height: 6px;
-            background: var(--border-light);
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: var(--spacing-sm);
-            position: relative;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            transition: width 0.3s ease;
-            position: relative;
-        }
-
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 20px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
-            animation: shimmer 1.5s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-20px); }
-            100% { transform: translateX(20px); }
-        }
-
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-color);
-        }
-
-        .content-header {
-            background: var(--card-bg);
-            padding: var(--spacing-lg);
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .content-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .content-body {
-            flex: 1;
-            padding: var(--spacing-lg);
-            overflow-y: auto;
-        }
-
-        /* 创建任务表单 */
-        .create-task-form {
-            background: var(--card-bg);
-            border-radius: var(--radius-large);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-light);
-        }
-
-        .form-section {
-            margin-bottom: var(--spacing-xl);
-        }
-
-        .form-section-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-md);
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--spacing-lg);
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
-        }
-
-        .form-label {
-            font-weight: 500;
-            color: var(--text-primary);
-            font-size: 14px;
-        }
-
-        .form-select,
-        .form-input {
-            padding: var(--spacing-sm) var(--spacing-md);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-medium);
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-
-        .form-select:focus,
-        .form-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(0, 178, 106, 0.1);
-        }
-
-        /* 模型选择器样式 */
-        .form-select option.recommended {
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-        
-        .form-select option.not-installed {
-            color: #999;
-            font-style: italic;
-        }
-        
-        .form-select optgroup {
-            font-weight: bold;
-            color: var(--text-primary);
-            background-color: #f8f9fa;
-        }
-
-        .checkbox-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: var(--spacing-md);
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            padding: var(--spacing-sm);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-medium);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .checkbox-item:hover {
-            border-color: var(--primary-color);
-            background: rgba(0, 178, 106, 0.05);
-        }
-
-        .checkbox-item input {
-            width: 16px;
-            height: 16px;
-        }
-
-        /* 文件上传区域 */
-        .upload-area {
-            border: 2px dashed var(--border-light);
-            border-radius: var(--radius-large);
-            padding: var(--spacing-xxl);
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            background: var(--bg-color);
-            position: relative;
-            overflow: hidden;
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .upload-area:hover,
-        .upload-area.dragover {
-            border-color: var(--primary-color);
-            background: rgba(0, 178, 106, 0.05);
-            transform: scale(1.02);
-        }
-
-        .upload-area.dragover {
-            animation: dragPulse 1s infinite;
-        }
-
-        .upload-area.uploading {
-            border-color: var(--info-color);
-            background: rgba(24, 144, 255, 0.05);
-        }
-
-        .upload-progress {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            transition: width 0.3s ease;
-            border-radius: 0 0 var(--radius-large) var(--radius-large);
-            width: 0%;
-        }
-
-        @keyframes dragPulse {
-            0%, 100% { transform: scale(1.02); }
-            50% { transform: scale(1.05); }
-        }
-
-        /* 智能模型推荐 */
-        .model-recommendation {
-            background: linear-gradient(135deg, rgba(24, 144, 255, 0.1), rgba(7, 193, 96, 0.1));
-            border: 1px solid rgba(24, 144, 255, 0.3);
-            border-radius: var(--radius-medium);
-            padding: var(--spacing-md);
-            margin-top: var(--spacing-md);
-            display: none;
-        }
-
-        .model-recommendation.show {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .recommendation-text {
-            font-size: 14px;
-            color: var(--info-color);
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .recommendation-model {
-            font-weight: 600;
-            color: var(--primary-color);
-        }
-
-        .upload-icon {
-            width: 48px;
-            height: 48px;
-            margin: 0 auto var(--spacing-md);
-            color: var(--text-tertiary);
-        }
-
-        .upload-text {
-            font-size: 16px;
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .upload-hint {
-            font-size: 12px;
-            color: var(--text-tertiary);
-        }
-        
-        .model-recommendation {
-            margin-top: var(--spacing-lg);
-            padding: var(--spacing-md);
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-            border-radius: var(--radius-medium);
-            border-left: 4px solid #ffc107;
-            display: none;
-        }
-        
-        .model-recommendation.show {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-        
-        .recommendation-text {
-            font-size: 14px;
-            color: #856404;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        
-        .recommendation-model {
-            font-size: 16px;
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .url-input-section {
-            margin-top: var(--spacing-lg);
-            padding-top: var(--spacing-lg);
-            border-top: 1px solid var(--border-light);
-        }
-
-        .url-input {
-            width: 100%;
-            padding: var(--spacing-md);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-medium);
-            font-size: 14px;
-        }
-
-        .submit-btn {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border: none;
-            padding: var(--spacing-md) var(--spacing-xl);
-            border-radius: var(--radius-medium);
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-            margin-top: var(--spacing-lg);
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-medium);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* 任务详情 */
-        .task-detail {
-            background: var(--card-bg);
-            border-radius: var(--radius-large);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-light);
-        }
-
-        .detail-section {
-            margin-bottom: var(--spacing-xl);
-        }
-
-        .detail-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .detail-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .download-btn {
-            background: var(--secondary-color);
-            color: white;
-            border: none;
-            padding: var(--spacing-sm) var(--spacing-md);
-            border-radius: var(--radius-medium);
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .download-btn:hover {
-            background: var(--secondary-light);
-        }
-
-        .result-content {
-            background: var(--bg-color);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-medium);
-            padding: var(--spacing-lg);
-            white-space: pre-wrap;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 14px;
-            line-height: 1.6;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .file-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: var(--spacing-md);
-        }
-
-        .file-item {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            padding: var(--spacing-md);
-            background: var(--bg-color);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-medium);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .file-item:hover {
-            border-color: var(--primary-color);
-            background: rgba(0, 178, 106, 0.05);
-        }
-
-        .file-icon {
-            width: 24px;
-            height: 24px;
-            color: var(--primary-color);
-        }
-
-        .file-name {
-            font-size: 14px;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        /* 处理进度 */
-        .processing-status {
-            background: var(--card-bg);
-            border-radius: var(--radius-large);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-light);
-            text-align: center;
-        }
-
-        .processing-icon {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto var(--spacing-lg);
-            color: var(--primary-color);
-            animation: pulse 2s infinite;
-        }
-
-        .processing-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .processing-message {
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .processing-progress {
-            width: 100%;
-            height: 8px;
-            background: var(--border-light);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .processing-logs {
-            background: var(--bg-color);
-            border-radius: var(--radius-medium);
-            padding: var(--spacing-md);
-            margin-top: var(--spacing-lg);
-            max-height: 300px;
-            border: 1px solid var(--border-light);
-        }
-
-        .logs-header {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-md);
-            padding-bottom: var(--spacing-sm);
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .logs-content {
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .log-item {
-            display: flex;
-            margin-bottom: var(--spacing-xs);
-            animation: fadeInUp 0.3s ease;
-        }
-
-        .log-time {
-            color: var(--text-tertiary);
-            margin-right: var(--spacing-sm);
-            flex-shrink: 0;
-        }
-
-        .log-message {
-            color: var(--text-secondary);
-        }
-
-        .log-item.log-success .log-message {
-            color: var(--success-color);
-        }
-
-        .log-item.log-error .log-message {
-            color: var(--error-color);
-        }
-
-        .log-item.log-warning .log-message {
-            color: var(--warning-color);
-        }
-
-        .logs-empty {
-            text-align: center;
-            color: var(--text-tertiary);
-            font-style: italic;
-            padding: var(--spacing-lg);
-        }
-
-        /* SSE流式文本显示 */
-        .partial-results {
-            background: var(--card-bg);
-            border-radius: var(--radius-medium);
-            border: 1px solid var(--border-light);
-            margin-top: var(--spacing-lg);
-            overflow: hidden;
-        }
-
-        .partial-header {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            font-weight: 600;
-            color: var(--text-primary);
-            padding: var(--spacing-md);
-            background: var(--bg-color);
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .partial-content {
-            padding: var(--spacing-md);
-            max-height: 200px;
-            overflow-y: auto;
-            color: var(--text-secondary);
-            line-height: 1.6;
-            position: relative;
-        }
-
-        /* 流式文本光标效果 - 模拟ChatGPT的打字效果 */
-        .streaming-cursor {
-            display: inline-block;
-            background: var(--primary-color);
-            color: var(--primary-color);
-            animation: blink 1s infinite;
-            margin-left: 2px;
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-
-        .current-step {
-            text-align: center;
-            color: var(--info-color);
-            font-weight: 500;
-            margin: var(--spacing-sm) 0;
-            padding: var(--spacing-xs) var(--spacing-sm);
-            background: rgba(24, 144, 255, 0.1);
-            border-radius: var(--radius-small);
-            display: inline-block;
-        }
-
-        .icon {
-            width: 16px;
-            height: 16px;
-            fill: currentColor;
-        }
-
-        .icon.icon-sm {
-            width: 14px;
-            height: 14px;
-        }
-
-        .icon.icon-md {
-            width: 18px;
-            height: 18px;
-        }
-
-        .icon.icon-lg {
-            width: 20px;
-            height: 20px;
-        }
-
-        .icon-spin {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(0.95); }
-        }
-
-        .fade-in {
-            opacity: 0;
-            animation: fadeInUp 0.6s ease forwards;
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 处理状态页面 */
-        .processing-status {
-            background: var(--card-bg);
-            border-radius: var(--radius-large);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-light);
-            text-align: center;
-        }
-
-        .processing-icon {
-            width: 64px;
-            height: 64px;
-            color: var(--primary-color);
-            margin: 0 auto var(--spacing-lg);
-            animation: spin 2s linear infinite;
-        }
-
-        .processing-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .processing-message {
-            font-size: 16px;
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .current-step {
-            background: rgba(0, 178, 106, 0.1);
-            border: 1px solid rgba(0, 178, 106, 0.3);
-            border-radius: var(--radius-medium);
-            padding: var(--spacing-md);
-            margin-bottom: var(--spacing-lg);
-            color: var(--primary-color);
-            font-weight: 500;
-        }
-
-        .processing-progress {
-            width: 100%;
-            height: 12px;
-            background: var(--border-light);
-            border-radius: 6px;
-            overflow: hidden;
-            margin-bottom: var(--spacing-sm);
-            position: relative;
-        }
-
-        .processing-progress .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            transition: width 0.5s ease;
-            position: relative;
-        }
-
-        .processing-progress .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 30px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6));
-            animation: shimmer 2s infinite;
-        }
-
-        /* 处理日志 */
-        .processing-logs {
-            background: #f8f9fa;
-            border-radius: var(--radius-medium);
-            border: 1px solid var(--border-light);
-            margin-top: var(--spacing-xl);
-            max-height: 300px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .logs-header {
-            padding: var(--spacing-md);
-            background: var(--card-bg);
-            border-bottom: 1px solid var(--border-light);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .logs-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: var(--spacing-md);
-            max-height: 250px;
-        }
-
-        .log-item {
-            padding: var(--spacing-xs) 0;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 13px;
-            line-height: 1.4;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-
-        .log-item:last-child {
-            border-bottom: none;
-        }
-
-        .log-time {
-            color: var(--text-tertiary);
-            margin-right: var(--spacing-sm);
-        }
-
-        .log-message {
-            color: var(--text-primary);
-        }
-
-        .log-info .log-message {
-            color: var(--info-color);
-        }
-
-        .log-success .log-message {
-            color: var(--success-color);
-        }
-
-        .log-warning .log-message {
-            color: var(--warning-color);
-        }
-
-        .log-error .log-message {
-            color: var(--error-color);
-        }
-
-        .logs-empty {
-            text-align: center;
-            color: var(--text-tertiary);
-            padding: var(--spacing-lg);
-            font-style: italic;
-        }
-
-        /* 实时转录预览 */
-        .partial-results {
-            background: var(--card-bg);
-            border-radius: var(--radius-medium);
-            border: 1px solid var(--border-light);
-            margin-top: var(--spacing-lg);
-            overflow: hidden;
-        }
-
-        .partial-header {
-            padding: var(--spacing-md);
-            background: rgba(0, 178, 106, 0.05);
-            border-bottom: 1px solid var(--border-light);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            color: var(--primary-color);
-        }
-
-        .partial-content {
-            padding: var(--spacing-md);
-            max-height: 200px;
-            overflow-y: auto;
-            line-height: 1.6;
-            font-size: 14px;
-        }
-
-        .streaming-cursor {
-            color: var(--primary-color);
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-            .main-layout {
-                flex-direction: column;
-                height: auto;
-            }
-            
-            .sidebar {
-                width: 100%;
-                height: 300px;
-            }
-            
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .checkbox-group {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/assets/css/video2txt.css">
 </head>
+
 <body>
     <div id="app" class="video2txt-container">
         <!-- 顶部导航 -->
@@ -1091,32 +20,36 @@
                 <div class="header-left">
                     <a href="./" class="logo">
                         <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            <path
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                         </svg>
                         AI听世界
                     </a>
                     <nav class="nav-menu">
                         <a href="/dashboard" class="nav-item">
                             <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
                             </svg>
                             仪表盘
                         </a>
                         <a href="/video2txt" class="nav-item active">
                             <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+                                <path
+                                    d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z" />
                             </svg>
                             音视频转文本
                         </a>
                         <a href="/meeting2txt" class="nav-item">
                             <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                <path
+                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                             实时会议记录
                         </a>
                         <a href="/settings" class="nav-item">
                             <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+                                <path
+                                    d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" />
                             </svg>
                             设置
                         </a>
@@ -1127,1222 +60,1448 @@
 
         <!-- 主要布局 -->
         <div class="main-layout">
-            <!-- 左侧任务列表 -->
-            <aside class="sidebar">
-                <div class="sidebar-header">
-                    <div class="sidebar-title">处理任务</div>
-                    <div class="task-filters">
-                        <button class="filter-btn" :class="{active: filter === 'all'}" @click="setFilter('all')">全部</button>
-                        <button class="filter-btn" :class="{active: filter === 'running'}" @click="setFilter('running')">进行中</button>
-                        <button class="filter-btn" :class="{active: filter === 'completed'}" @click="setFilter('completed')">已完成</button>
-                        <button class="filter-btn" :class="{active: filter === 'failed'}" @click="setFilter('failed')">失败</button>
+            <!-- 任务列表核心内容 -->
+            <div class="tasks-container">
+                <!-- 页面标题和创建按钮 -->
+                <div class="tasks-header">
+                    <h1 class="tasks-title">音视频处理任务</h1>
+                    <button class="create-task-btn" @click="openCreateDrawer">
+                        <svg class="icon icon-md" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                        </svg>
+                        创建新任务
+                    </button>
+                </div>
+
+                <!-- 筛选器 -->
+                <div class="tasks-filters">
+                    <div class="filters-row">
+                        <!-- 状态筛选 -->
+                        <div class="filter-group">
+                            <label class="filter-label">状态筛选</label>
+                            <select v-model="filter" class="filter-select" @change="setFilter">
+                                <option value="all">全部状态</option>
+                                <option value="running">进行中</option>
+                                <option value="completed">已完成</option>
+                                <option value="failed">失败</option>
+                            </select>
+                        </div>
+
+                        <!-- 时间筛选 -->
+                        <div class="filter-group">
+                            <label class="filter-label">时间范围</label>
+                            <select v-model="timeFilter" class="filter-select" @change="onTimeFilterChange">
+                                <option value="all">全部时间</option>
+                                <option value="today">今天</option>
+                                <option value="yesterday">昨天</option>
+                                <option value="week">本周</option>
+                                <option value="month">本月</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+
+                        <!-- 自定义时间范围 -->
+                        <div v-if="timeFilter === 'custom'" class="filter-group">
+                            <label class="filter-label">开始时间</label>
+                            <input type="date" v-model="customStartDate" @change="onCustomDateChange"
+                                class="filter-select">
+                        </div>
+
+                        <div v-if="timeFilter === 'custom'" class="filter-group">
+                            <label class="filter-label">结束时间</label>
+                            <input type="date" v-model="customEndDate" @change="onCustomDateChange"
+                                class="filter-select">
+                        </div>
                     </div>
                 </div>
-                <div class="task-list" v-if="filteredTasks.length">
-                    <div v-for="task in filteredTasks" 
-                         :key="task.id" 
-                         class="task-item" 
-                         :class="{active: selectedTask?.id === task.id}"
-                         @click="selectTask(task)">
-                        <div class="task-header">
-                            <div class="task-title">{{ task.input?.filename || task.input?.url || task.id }}</div>
-                            <div class="task-actions">
-                                <div class="task-status" :class="task.status">
-                                    {{ getStatusText(task.status) }}
-                                </div>
-                                <button class="task-delete-btn" @click.stop="deleteTask(task)" title="删除任务">
-                                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                    </svg>
-                                </button>
+
+                <!-- 任务网格 -->
+                <div class="tasks-grid" v-if="currentPageTasks.length">
+                    <div v-for="task in currentPageTasks" :key="task.id" class="task-card"
+                        :class="{active: selectedTask?.id === task.id}" @click="selectTask(task)">
+                        <div class="task-card-header">
+                            <div class="task-card-title">{{ getTaskTitle(task) }}</div>
+                            <div class="task-card-status" :class="task.status">
+                                {{ getStatusText(task.status) }}
                             </div>
                         </div>
-                        <div class="task-meta">
-                            <span>{{ task.type === 'video' ? '视频' : '音频' }}</span>
+
+                        <div class="task-card-meta">
+                            <span>{{ getTaskType(task) }}</span>
                             <span>{{ formatDate(task.created_at) }}</span>
                         </div>
-                        <div v-if="task.status === 'running'" class="task-progress">
+
+                        <div v-if="task.status === 'running'" class="task-card-progress">
                             <div class="progress-fill" :style="{width: task.progress + '%'}"></div>
                         </div>
+
+                        <div class="task-card-actions">
+                            <button class="task-action-btn" @click.stop="viewTask(task)">
+                                查看详情
+                            </button>
+                            <button class="task-action-btn delete" @click.stop="deleteTask(task)">
+                                删除
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div v-else class="task-list">
-                    <div  class="text-center" style="padding: 2rem; color: var(--text-tertiary);">
-                        暂无任务
+
+                <!-- 空状态 -->
+                <div v-else class="empty-state">
+                    <div class="empty-icon">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                        </svg>
                     </div>
+                    <h3>暂无任务</h3>
+                    <p>点击上方"创建新任务"按钮开始您的第一个音视频处理任务</p>
                 </div>
-            </aside>
 
-            <!-- 右侧主要内容 -->
-            <main class="main-content">
-                <div class="content-header">
-                    <div class="content-title">
-                        {{ selectedTask ? '任务详情' : '创建新任务' }}
+                <!-- 分页控件 -->
+                <div v-if="totalPages > 0" class="pagination-container">
+                    <div class="pagination-info">
+                        共 {{ totalTasks }} 个任务，第 {{ currentPage }} / {{ totalPages }} 页
                     </div>
-                </div>
-                <div class="content-body">
-                    <!-- 创建任务表单 -->
-                    <div v-if="!selectedTask" class="create-task-form fade-in">
-                        <div class="form-section">
-                            <div class="form-section-title">
-                                <svg class="icon icon-md" viewBox="0 0 24 24">
-                                    <path d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
-                                </svg>
-                                基础设置
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label">语言选择</label>
-                                    <select v-model="formData.language" class="form-select" @change="onLanguageChange">
-                                        <option value="auto">自动检测</option>
-                                        <option value="zh">中文</option>
-                                        <option value="en">英语</option>
-                                        <option value="dialect">方言</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">识别模型</label>
-                                    <select v-model="formData.model" class="form-select">
-                                        <template v-if="models.length > 0">
-                                            <!-- 自动选择选项 -->
-                                            <option value="auto">自动选择</option>
-                                            <!-- 按引擎类型分组显示 -->
-                                            <optgroup v-for="(engineModels, engineType) in groupedModelsByEngine" :key="engineType" :label="getEngineDisplayName(engineType)">
-                                                <option v-for="model in engineModels" :key="model.id" :value="model.id"
-                                                        :class="{'recommended': model.recommended, 'not-installed': !model.installed}">
-                                                    {{ model.displayName }}{{ model.recommended ? ' (推荐)' : '' }}{{ !model.installed ? ' (未安装)' : '' }}
-                                                </option>
-                                            </optgroup>
-                                        </template>
-                                        <!-- 模型未加载时的备用选项 -->
-                                        <template v-else>
-                                            <option v-for="model in availableModels" :key="model.value" :value="model.value">
-                                                {{ model.label }}
-                                            </option>
-                                        </template>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <!-- 语言选择智能推荐提示 -->
-                            <div v-if="languageRecommendation.show" class="model-recommendation show">
-                                <div class="recommendation-text">{{ languageRecommendation.text }}</div>
-                                <div class="recommendation-model">{{ languageRecommendation.model }}</div>
-                            </div>
-                        </div>
+                    <div class="pagination-controls">
+                        <button class="pagination-btn" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
+                            上一页
+                        </button>
 
-                        <div class="form-section">
-                            <div class="form-section-title">
-                                <svg class="icon icon-md" viewBox="0 0 24 24">
-                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                输出内容选择
-                            </div>
-                            <div class="checkbox-group">
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="formData.outputTypes" value="transcript" @change="onOutputTypeChange('transcript')">
-                                    <span>转录文本</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="formData.outputTypes" value="summary" @change="onOutputTypeChange('summary')">
-                                    <span>内容摘要</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="formData.outputTypes" value="mindmap" @change="onOutputTypeChange('mindmap')">
-                                    <span>思维导图</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="formData.outputTypes" value="flashcards" @change="onOutputTypeChange('flashcards')">
-                                    <span>学习闪卡</span>
-                                </label>
-                                <label class="checkbox-item" style="border: 2px solid var(--primary-color); background: rgba(0, 178, 106, 0.05);">
-                                    <input type="checkbox" :checked="isAllSelected" @change="onAllToggle">
-                                    <span style="font-weight: 600; color: var(--primary-color);">全部内容 (All in)</span>
-                                </label>
-                            </div>
-                        </div>
+                        <!-- 页码按钮 -->
+                        <button v-for="page in visiblePages" :key="page" class="pagination-btn"
+                            :class="{active: page === currentPage}" @click="goToPage(page)">
+                            {{ page }}
+                        </button>
 
-                        <div class="form-section">
-                            <div class="form-section-title">
-                                <svg class="icon icon-md" viewBox="0 0 24 24">
-                                    <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                                文件上传
-                            </div>
-                            <div class="upload-area" 
-                                 @click="triggerFileSelect"
-                                 @dragover.prevent="onDragOver"
-                                 @drop.prevent="onDrop"
-                                 @dragleave="onDragLeave"
-                                 :class="{ dragover: isDragOver }">
-                                <div class="upload-progress" :style="{ width: uploadProgress + '%' }"></div>
-                                <svg class="upload-icon" viewBox="0 0 24 24">
-                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                                </svg>
-                                <div class="upload-text">
-                                    <span v-if="!selectedFile">拖拽文件到此处或点击上传</span>
-                                    <span v-else>已选择: {{ selectedFile.name }}</span>
-                                </div>
-                                <div class="upload-hint">支持 MP4, AVI, MOV, MP3, WAV 等格式，最大 500MB</div>
-                                <input type="file" 
-                                       ref="fileInput" 
-                                       @change="onFileSelect" 
-                                       accept="video/*,audio/*" 
-                                       style="display: none;">
-                            </div>
-                            
-                            <!-- 智能模型推荐 -->
-                            <div class="model-recommendation">
-                                <div class="recommendation-text"></div>
-                                <div class="recommendation-model"></div>
-                            </div>
-                            
-                            <div class="url-input-section">
-                                <div class="form-group">
-                                    <label class="form-label">或输入音视频链接/本地文件路径</label>
-                                    <div class="url-input-group">
-                                        <input type="text" 
-                                               v-model="formData.url" 
-                                               class="url-input" 
-                                               placeholder="https://example.com/video.mp4 或 /path/to/video.mp4">
-                                        <button type="button" 
-                                                class="browse-btn" 
-                                                @click="showFileBrowser = true"
-                                                title="浏览本地文件">
-                                            <svg class="icon" viewBox="0 0 24 24">
-                                                <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button class="submit-btn" 
-                                @click="createTask" 
-                                :disabled="!canSubmit || isSubmitting">
-                            <svg v-if="isSubmitting" class="icon icon-md icon-spin" viewBox="0 0 24 24" style="margin-right: 8px;">
-                                <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
-                            </svg>
-                            {{ isSubmitting ? '正在创建...' : '开始处理' }}
+                        <button class="pagination-btn" :disabled="currentPage === totalPages"
+                            @click="goToPage(currentPage + 1)">
+                            下一页
                         </button>
                     </div>
-
-                    <!-- 任务详情 -->
-                    <div v-else-if="selectedTask && selectedTask.status !== 'running'" class="task-detail fade-in">
-                        <div class="detail-section">
-                            <div class="detail-header">
-                                <div class="detail-title">任务信息</div>
-                                <button class="download-btn" @click="downloadAll">下载全部</button>
-                            </div>
-                            <div class="task-info">
-                                <p><strong>文件名:</strong> {{ selectedTask.input?.filename || selectedTask.input?.url }}</p>
-                                <p><strong>状态:</strong> <span class="task-status" :class="selectedTask.status">{{ getStatusText(selectedTask.status) }}</span></p>
-                                <p><strong>创建时间:</strong> {{ formatDate(selectedTask.created_at) }}</p>
-                                <p><strong>完成时间:</strong> {{ formatDate(selectedTask.updated_at) }}</p>
-                                <p><strong>语言:</strong> {{ selectedTask.config?.language || 'auto' }}</p>
-                                <p><strong>模型:</strong> {{ selectedTask.config?.model || 'auto' }}</p>
-                            </div>
-                        </div>
-
-                        <div v-if="selectedTask.results?.transcript" class="detail-section">
-                            <div class="detail-header">
-                                <div class="detail-title">转录结果</div>
-                                <button class="download-btn" @click="downloadTranscript">下载</button>
-                            </div>
-                            <div class="result-content">{{ selectedTask.results.transcript }}</div>
-                        </div>
-
-                        <div v-if="selectedTask.results?.summary" class="detail-section">
-                            <div class="detail-header">
-                                <div class="detail-title">内容摘要</div>
-                                <button class="download-btn" @click="downloadSummary">下载</button>
-                            </div>
-                            <div class="result-content">{{ selectedTask.results.summary }}</div>
-                        </div>
-
-                        <div v-if="selectedTask.results?.files" class="detail-section">
-                            <div class="detail-header">
-                                <div class="detail-title">输出文件</div>
-                            </div>
-                            <div class="file-list">
-                                <div v-for="file in selectedTask.results.files" 
-                                     :key="file.name" 
-                                     class="file-item"
-                                     @click="downloadFile(file)">
-                                    <svg class="file-icon" viewBox="0 0 24 24">
-                                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                                    </svg>
-                                    <span class="file-name">{{ file.name }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 处理中状态 -->
-                    <div v-else-if="selectedTask && selectedTask.status === 'running'" class="processing-status fade-in">
-                        <svg class="processing-icon" viewBox="0 0 24 24">
-                            <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
-                        </svg>
-                        <div class="processing-title">正在处理中...</div>
-                        <div class="processing-message">{{ getProcessingMessage(selectedTask.progress) }}</div>
-                        <div v-if="selectedTask.current_step" class="current-step">
-                            当前步骤: {{ selectedTask.current_step }}
-                        </div>
-                        
-                        <div class="processing-progress">
-                            <div class="progress-fill" :style="{width: selectedTask.progress + '%'}"></div>
-                        </div>
-                        <div style="text-align: center; color: var(--text-secondary); margin-bottom: var(--spacing-lg);">
-                            {{ selectedTask.progress }}%
-                        </div>
-
-                        <!-- SSE实时日志流 - 类似ChatGPT的对话流 -->
-                        <div class="processing-logs">
-                            <div class="logs-header">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                                </svg>
-                                实时处理日志
-                            </div>
-                            <div class="logs-content">
-                                <div v-for="log in processingLogs" :key="log.id" 
-                                     class="log-item" 
-                                     :class="'log-' + (log.level || 'info')">
-                                    <span class="log-time">[{{ formatTime(log.timestamp) }}]</span>
-                                    <span class="log-message">{{ log.message }}</span>
-                                </div>
-                                <div v-if="processingLogs.length === 0" class="logs-empty">
-                                    等待处理日志...
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 实时转录预览 - 流式文本显示 -->
-                        <div v-if="selectedTask.partial_transcript" class="partial-results">
-                            <div class="partial-header">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
-                                </svg>
-                                实时转录预览
-                            </div>
-                            <div class="partial-content">
-                                {{ selectedTask.partial_transcript }}
-                                <span class="streaming-cursor">|</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-            </main>
+            </div>
+        </div>
+
+        <!-- 创建任务抽屉 -->
+        <div class="drawer-overlay" :class="{show: showCreateDrawer}" @click="closeCreateDrawer"></div>
+        <div class="drawer" :class="{show: showCreateDrawer}">
+            <div class="drawer-header">
+                <div class="drawer-title">创建新任务</div>
+                <button class="drawer-close" @click="closeCreateDrawer">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="drawer-body">
+                <!-- 创建任务表单 -->
+                <div class="create-task-form">
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <svg class="icon icon-md" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" />
+                            </svg>
+                            基础设置
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">语言选择</label>
+                                <select v-model="formData.language" class="form-select" @change="onLanguageChange">
+                                    <option v-for="option in languageOptions" :key="option.value" :value="option.value"
+                                        :selected="option.value === formData.language">
+                                        {{ option.label }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">识别模型</label>
+                                <select class="form-select" @change="onModelChange">
+                                    <template v-if="models.length > 0">
+                                        <!-- 自动选择选项 -->
+                                        <option value="auto">自动选择</option>
+                                        <!-- 按引擎类型分组显示 -->
+                                        <optgroup v-for="(engineModels, engineType) in groupedModelsByEngine"
+                                            :key="engineType" :label="getEngineDisplayName(engineType)">
+                                            <option v-for="model in engineModels" :key="model.id" :value="model.id"
+                                                :selected="model.id === `${formData.model}-${formData.modelSize}`"
+                                                :class="{'recommended': model.recommended, 'not-installed': !model.installed}">
+                                                {{ model.displayName }}{{ model.recommended ? ' (推荐)' : '' }}{{
+                                                !model.installed ? ' (未安装)' : '' }}
+                                            </option>
+                                        </optgroup>
+                                    </template>
+                                    <!-- 模型未加载时的备用选项 -->
+                                    <template v-else>
+                                        <option v-for="model in availableModels" :key="model.value"
+                                            :value="model.value">
+                                            {{ model.label }}
+                                        </option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 语言选择智能推荐提示 -->
+                        <div v-if="languageRecommendation.show" class="model-recommendation show">
+                            <div class="recommendation-text">{{ languageRecommendation.text }}</div>
+                            <div class="recommendation-model">{{ languageRecommendation.model }}</div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <svg class="icon icon-md" viewBox="0 0 24 24">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            输出内容选择
+                        </div>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" v-model="formData.outputTypes" value="transcript"
+                                    @change="onOutputTypeChange('transcript')">
+                                <span>转录文本</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" v-model="formData.outputTypes" value="summary"
+                                    @change="onOutputTypeChange('summary')">
+                                <span>内容摘要</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" v-model="formData.outputTypes" value="mindmap"
+                                    @change="onOutputTypeChange('mindmap')">
+                                <span>思维导图</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" v-model="formData.outputTypes" value="flashcards"
+                                    @change="onOutputTypeChange('flashcards')">
+                                <span>学习闪卡</span>
+                            </label>
+                            <label class="checkbox-item"
+                                style="border: 2px solid var(--primary-color); background: rgba(0, 178, 106, 0.05);">
+                                <input type="checkbox" :checked="isAllSelected" @change="onAllToggle">
+                                <span style="font-weight: 600; color: var(--primary-color);">全部内容 (All in)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <svg class="icon icon-md" viewBox="0 0 24 24">
+                                <path
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            文件上传
+                        </div>
+                        <div class="upload-area" @click="triggerFileSelect" @dragover.prevent="onDragOver"
+                            @drop.prevent="onDrop" @dragleave="onDragLeave" :class="{ dragover: isDragOver }">
+                            <div class="upload-progress" :style="{ width: uploadProgress + '%' }"></div>
+                            <svg class="upload-icon" viewBox="0 0 24 24">
+                                <path
+                                    d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                            </svg>
+                            <div class="upload-text">
+                                <span v-if="!selectedFile">拖拽文件到此处或点击上传</span>
+                                <span v-else>已选择: {{ selectedFile.name }}</span>
+                            </div>
+                            <div class="upload-hint">支持 MP4, AVI, MOV, MP3, WAV 等格式，最大 500MB</div>
+                            <input type="file" ref="fileInput" @change="onFileSelect" accept="video/*,audio/*"
+                                style="display: none;">
+                        </div>
+
+                        <!-- 智能模型推荐 -->
+                        <!-- <div class="model-recommendation">
+                            <div class="recommendation-text"></div>
+                            <div class="recommendation-model"></div>
+                        </div> -->
+
+                        <div class="url-input-section">
+                            <div class="form-group">
+                                <label class="form-label">或输入音视频链接/本地文件路径</label>
+                                <div class="url-input-group">
+                                    <input type="text" v-model="formData.url" class="url-input"
+                                        placeholder="https://example.com/video.mp4 或 /path/to/video.mp4">
+                                    <button type="button" class="browse-btn" @click="showFileBrowser = true"
+                                        title="浏览本地文件">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path
+                                                d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="submit-btn" @click="createTask" :disabled="!canSubmit || isSubmitting">
+                        <svg v-if="isSubmitting" class="icon icon-md icon-spin" viewBox="0 0 24 24"
+                            style="margin-right: 8px;">
+                            <path
+                                d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" />
+                        </svg>
+                        {{ isSubmitting ? '正在创建...' : '开始处理' }}
+                    </button>
+                </div>
+                </main>
+            </div>
         </div>
     </div>
 
-    <script src="../assets/js/vue.global.js"></script>
-    <script src="../assets/js/axios/axios.min.js"></script>
-    <script src="../assets/js/http.js"></script>
+    <script src="/assets/js/vue.global.js"></script>
+    <script src="/assets/js/axios/axios.min.js"></script>
+    <script src="/assets/js/layui/layui.js"></script>
+    <script src="/assets/js/http.js"></script>
     <script type="module">
         const { createApp } = Vue;
-        
-        createApp({
-            data() {
-                return {
-                    tasks: [],
-                    selectedTask: null,
-                    filter: 'all',
-                    isDragOver: false,
-                    isSubmitting: false,
-                    processingLogs: [],
-                    eventSource: null, // SSE连接对象
-                    streamingText: '', // 流式文本显示
-                    selectedFile: null, // 当前选择的文件
-                    uploadProgress: 0, // 上传进度
-                    languageRecommendation: {
-                        text: '',
-                        model: '',
-                        show: false
-                    },
-                    smartRecommendation: {
-                        text: '',
-                        model: '',
-                        show: false
-                    },
-                    formData: {
-                        language: 'auto',
-                        model: 'auto',
-                        outputTypes: ['transcript'],
-                        url: ''
-                    },
-                    selectedFile: null,
-                    models: [], // 从API动态加载的模型列表
-                    modelOptions: {
-                        auto: [
-                            { label: '自动选择', value: 'auto' },
-                            { label: 'Whisper Large', value: 'whisper-large' },
-                            { label: 'SenseVoice', value: 'sensevoice' }
-                        ],
-                        zh: [
-                            { label: 'SenseVoice (推荐)', value: 'sensevoice' },
-                            { label: 'Whisper Large', value: 'whisper-large' }
-                        ],
-                        en: [
-                            { label: 'Whisper Large (推荐)', value: 'whisper-large' },
-                            { label: 'SenseVoice', value: 'sensevoice' }
-                        ],
-                        dialect: [
-                            { label: 'Dolphin (推荐)', value: 'dolphin' },
-                            { label: 'SenseVoice', value: 'sensevoice' }
-                        ]
-                    }
-                }
-            },
-
-            computed: {
-                filteredTasks() {
-                    if (this.filter === 'all') return this.tasks;
-                    return this.tasks.filter(task => task.status === this.filter);
-                },
-
-                availableModels() {
-                    if (this.models.length === 0) {
-                        // 如果模型还未加载，使用默认选项
-                        return this.modelOptions[this.formData.language] || this.modelOptions.auto;
-                    }
-                    
-                    // 按厂商分组并排序（已安装的在前面）
-                    const groupedModels = this.groupModelsByVendor(this.models);
-                    
-                    // 根据语言过滤和推荐模型
-                    return this.filterModelsByLanguage(groupedModels, this.formData.language);
-                },
-
-                canSubmit() {
-                    return (this.selectedFile || this.formData.url.trim()) && 
-                           this.formData.outputTypes.length > 0;
-                },
-
-                // 全选状态计算
-                isAllSelected() {
-                    const allTypes = ['transcript', 'summary', 'mindmap', 'flashcards'];
-                    return allTypes.every(type => this.formData.outputTypes.includes(type));
-                },
-                
-                // 按引擎类型分组的模型（用于HTML optgroup显示）
-                groupedModelsByEngine() {
-                    if (this.models.length === 0) return {};
-                    
-                    const grouped = {};
-                    
-                    this.models.forEach(model => {
-                        if (!grouped[model.engineType]) {
-                            grouped[model.engineType] = [];
-                        }
-                        
-                        // 根据语言添加推荐标记
-                        const recommended = this.isModelRecommended(model, this.formData.language);
-                        
-                        grouped[model.engineType].push({
-                            ...model,
-                            recommended,
-                            displayName: this.getModelDisplayName(model, model.engineType)
-                        });
-                    });
-                    
-                    // 对每个引擎类型内的模型进行排序：已安装的在前
-                    Object.keys(grouped).forEach(engineType => {
-                        grouped[engineType].sort((a, b) => {
-                            if (a.installed !== b.installed) {
-                                return b.installed - a.installed;
-                            }
-                            return a.name.localeCompare(b.name);
-                        });
-                    });
-                    
-                    return grouped;
-                }
-            },
-
-            async mounted() {
-                await this.loadTasks();
-                await this.loadModels();
-                this.setupDragAndDrop();
-                
-                // 定期刷新任务列表
-                setInterval(() => {
-                    this.loadTasks();
-                }, 5000);
-            },
-
-            beforeUnmount() {
-                // 清理SSE连接
-                this.closeSSEConnection();
-            },
-
-            methods: {
-                // 加载模型列表
-                async loadModels() {
-                    try {
-                        const data = await http.get('/api/models');
-                        this.models = [];
-                        
-                        // 处理各种引擎的模型
-                        Object.entries(data).forEach(([engineType, models]) => {
-                            if (Array.isArray(models)) {
-                                models.forEach((model, index) => {
-                                    this.models.push({
-                                        ...model,
-                                        id: `${engineType}-${model.name}`, // 生成唯一ID
-                                        engineType,
-                                        installed: model.installed || false
-                                    });
-                                });
-                            }
-                        });
-                    } catch (error) {
-                        console.error('加载模型列表失败:', error);
-                    }
-                },
-                
-                // 获取引擎显示名称
-                getEngineDisplayName(engineType) {
-                    const engineMap = {
-                        'whisper': 'Whisper (OpenAI)',
-                        'faster_whisper': 'Whisper (OpenAI)',
-                        'sensevoice': 'SenseVoice (阿里)',
-                        'dolphin': 'Dolphin (方言专用)'
-                    };
-                    return engineMap[engineType] || engineType;
-                },
-                
-                // 获取模型显示名称
-                getModelDisplayName(model, engineType) {
-                    // 直接使用模型的name和size信息
-                    let displayName = model.name;
-                    if (model.size) {
-                        displayName += ` (${model.size})`;
-                    }
-                    return displayName;
-                },
-                
-                // 判断模型是否推荐
-                isModelRecommended(model, language) {
-                    if (language === 'zh' && model.engineType === 'sensevoice') {
-                        return true;
-                    }
-                    if (language === 'en' && model.engineType.includes('whisper')) {
-                        return true;
-                    }
-                    if (language === 'dialect' && model.engineType === 'dolphin') {
-                        return true;
-                    }
-                    return false;
-                },
-                
-                // 按厂商分组模型
-                groupModelsByVendor(models) {
-                    const grouped = {};
-                    
-                    models.forEach(model => {
-                        const vendor = this.getEngineDisplayName(model.engineType);
-                        if (!grouped[vendor]) {
-                            grouped[vendor] = [];
-                        }
-                        
-                        // 添加推荐标记
-                        const recommended = this.isModelRecommended(model, this.formData.language);
-                        grouped[vendor].push({
-                            ...model,
-                            recommended,
-                            displayName: this.getModelDisplayName(model, model.engineType)
-                        });
-                    });
-                    
-                    // 对每个厂商内的模型进行排序：已安装的在前
-                    Object.keys(grouped).forEach(vendor => {
-                        grouped[vendor].sort((a, b) => {
-                            if (a.installed !== b.installed) {
-                                return b.installed - a.installed;
-                            }
-                            return a.name.localeCompare(b.name);
-                        });
-                    });
-                    
-                    return grouped;
-                },
-                
-                // 根据语言过滤和推荐模型
-                filterModelsByLanguage(groupedModels, language) {
-                    const filtered = {};
-                    
-                    Object.entries(groupedModels).forEach(([vendor, models]) => {
-                        const filteredModels = models.filter(model => {
-                            // 检查语言支持
-                            if (language === 'auto') {
-                                return true; // auto支持所有语言
-                            }
-                            
-                            // 检查模型是否支持指定语言
-                            if (model.supported_languages) {
-                                if (Array.isArray(model.supported_languages)) {
-                                    return model.supported_languages.includes(language);
-                                } else if (typeof model.supported_languages === 'object') {
-                                    return language in model.supported_languages;
-                                }
-                            }
-                            
-                            return true; // 如果没有语言信息，默认支持
-                        });
-                        
-                        if (filteredModels.length > 0) {
-                            filtered[vendor] = filteredModels;
-                        }
-                    });
-                    
-                    return filtered;
-                },
-
-                // 设置拖拽上传
-                setupDragAndDrop() {
-                    const uploadArea = document.querySelector('.upload-area');
-                    if (!uploadArea) return;
-                    
-                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                        uploadArea.addEventListener(eventName, this.preventDefaults, false);
-                        document.body.addEventListener(eventName, this.preventDefaults, false);
-                    });
-
-                    ['dragenter', 'dragover'].forEach(eventName => {
-                        uploadArea.addEventListener(eventName, this.handleDragEnter, false);
-                    });
-
-                    ['dragleave', 'drop'].forEach(eventName => {
-                        uploadArea.addEventListener(eventName, this.handleDragLeave, false);
-                    });
-
-                    uploadArea.addEventListener('drop', this.handleDrop, false);
-                },
-
-                preventDefaults(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                },
-
-                handleDragEnter(e) {
-                    this.isDragOver = true;
-                    e.target.classList.add('dragover');
-                },
-
-                handleDragLeave(e) {
-                    this.isDragOver = false;
-                    e.target.classList.remove('dragover');
-                },
-
-                handleDrop(e) {
-                    this.isDragOver = false;
-                    e.target.classList.remove('dragover');
-                    
-                    const files = Array.from(e.dataTransfer.files);
-                    if (files.length > 0) {
-                        this.handleFileSelect(files[0]);
-                    }
-                },
-
-                // 处理文件选择
-                handleFileSelect(file) {
-                    // 验证文件类型
-                    const validTypes = ['video/', 'audio/'];
-                    const isValid = validTypes.some(type => file.type.startsWith(type));
-                    
-                    if (!isValid) {
-                        alert('请选择音频或视频文件');
-                        return;
-                    }
-
-                    // 验证文件大小 (500MB限制)
-                    if (file.size > 500 * 1024 * 1024) {
-                        alert('文件大小不能超过500MB');
-                        return;
-                    }
-
-                    this.selectedFile = file;
-                    this.smartLanguageDetection(file.name);
-                },
-
-                // 智能语言检测和模型推荐
-                smartLanguageDetection(filename) {
-                    const recommendation = this.getLanguageRecommendation(filename);
-                    
-                    if (recommendation.language !== 'auto') {
-                        // 显示推荐
-                        this.showModelRecommendation(recommendation);
-                        
-                        // 自动切换语言
-                        setTimeout(() => {
-                            this.formData.language = recommendation.language;
-                            this.formData.model = recommendation.model;
-                            this.formData.model_size = recommendation.model_size;
-                        }, 1000);
-                    }
-
-                    return recommendation;
-                },
-
-                // 获取语言推荐
-                getLanguageRecommendation(filename) {
-                    const lowerName = filename.toLowerCase();
-                    
-                    // 中文相关关键词
-                    const chineseKeywords = ['中文', '普通话', '国语', '中国', 'chinese', 'mandarin', 'cn', 'zh'];
-                    // 英文相关关键词  
-                    const englishKeywords = ['english', 'en', 'eng', '英文', '英语'];
-                    // 方言相关关键词
-                    const dialectKeywords = ['方言', '粤语', '闽南', '客家', '上海', '四川', 'dialect', 'cantonese'];
-
-                    if (chineseKeywords.some(keyword => lowerName.includes(keyword))) {
-                        return {
-                            language: 'zh',
-                            model: 'sensevoice',
-                            model_size: 'small',
-                            reason: '检测到中文内容，推荐使用SenseVoice模型'
-                        };
-                    }
-
-                    if (englishKeywords.some(keyword => lowerName.includes(keyword))) {
-                        return {
-                            language: 'en', 
-                            model: 'whisper',
-                            model_size: 'large',
-                            reason: '检测到英文内容，推荐使用Whisper Large模型'
-                        };
-                    }
-
-                    if (dialectKeywords.some(keyword => lowerName.includes(keyword))) {
-                        return {
-                            language: 'dialect',
-                            model: 'dolphin', 
-                            model_size: 'small',
-                            reason: '检测到方言内容，推荐使用Dolphin模型'
-                        };
-                    }
-
+        layui.use(['layer'], () => {
+            createApp({
+                data() {
                     return {
-                        language: 'auto',
-                        model: 'whisper',
-                        model_size: 'small',
-                        reason: '小型模型，平衡速度和精度，适合日常使用'
-                    };
-                },
-
-                // 显示模型推荐
-                showModelRecommendation(recommendation) {
-                    const recommendationEl = document.querySelector('.model-recommendation');
-                    if (recommendationEl) {
-                        const textEl = recommendationEl.querySelector('.recommendation-text');
-                        const modelEl = recommendationEl.querySelector('.recommendation-model');
-                        
-                        if (textEl) textEl.textContent = recommendation.reason;
-                        if (modelEl) modelEl.textContent = `推荐模型: ${recommendation.model}`;
-                        
-                        recommendationEl.classList.add('show');
-                        
-                        // 3秒后隐藏
-                        setTimeout(() => {
-                            recommendationEl.classList.remove('show');
-                        }, 3000);
-                    }
-                },
-
-                // 语言变化时更新可用模型
-                onLanguageChange() {
-                    // 自动选择推荐模型
-                    const models = this.availableModels;
-                    if (models.length > 0) {
-                        // 选择第一个推荐模型
-                        const recommended = models.find(m => m.label.includes('推荐'));
-                        this.formData.model = recommended ? recommended.value : models[0].value;
-                    }
-                    
-                    // 显示语言选择推荐
-                    this.showLanguageRecommendation();
-                },
-
-                // 显示语言选择推荐
-                showLanguageRecommendation() {
-                    const languageMap = {
-                        'zh': { text: '已切换到中文模式', model: '推荐使用 SenseVoice 模型，对中文识别效果更佳' },
-                        'en': { text: '已切换到英文模式', model: '推荐使用 Whisper Large 模型，对英文识别效果更佳' },
-                        'dialect': { text: '已切换到方言模式', model: '推荐使用 Dolphin 模型，对方言识别效果更佳' },
-                        'auto': { text: '已切换到自动检测模式', model: '系统将自动选择最适合的识别模型' }
-                    };
-                    
-                    const recommendation = languageMap[this.formData.language];
-                    if (recommendation) {
-                        this.languageRecommendation = {
-                            text: recommendation.text,
-                            model: recommendation.model,
-                            show: true
-                        };
-                        
-                        // 3秒后隐藏
-                        setTimeout(() => {
-                            this.languageRecommendation.show = false;
-                        }, 3000);
-                    }
-                },
-
-                // 输出类型变化处理
-                onOutputTypeChange(type) {
-                    // 如果选择了全部内容相关的单项，需要检查是否应该自动选中全部
-                    // 这里不需要特殊处理，Vue的双向绑定会自动处理
-                },
-
-                // 全选/取消全选切换
-                onAllToggle(event) {
-                    const allTypes = ['transcript', 'summary', 'mindmap', 'flashcards'];
-                    if (event.target.checked) {
-                        // 全选
-                        this.formData.outputTypes = [...allTypes];
-                    } else {
-                        // 取消全选
-                        this.formData.outputTypes = [];
-                    }
-                },
-
-                async loadTasks() {
-                    try {
-                        // 如果有筛选条件且不是'all'，则添加status参数
-                        let url = '/api/tasks/video';
-                        if (this.filter && this.filter !== 'all') {
-                            url += `?status=${this.filter}`;
-                        }
-                        
-                        const response = await http.get(url);
-                        // 确保 tasks 是数组格式
-                        this.tasks = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
-                        
-                        // 如果当前选中的任务更新了，同步更新
-                        if (this.selectedTask) {
-                            const updated = this.tasks.find(t => t.id === this.selectedTask.id);
-                            if (updated) {
-                                this.selectedTask = updated;
-                            }
-                        }
-                    } catch (error) {
-                        console.error('加载任务列表失败:', error);
-                        // 确保即使出错也有数组格式
-                        this.tasks = [];
-                    }
-                },
-
-                selectTask(task) {
-                    this.selectedTask = task;
-                    if (task.status === 'running') {
-                        this.simulateProcessingLogs();
-                    }
-                },
-
-                async setFilter(filter) {
-                    this.filter = filter;
-                    await this.loadTasks();
-                },
-
-                // 删除任务
-                async deleteTask(task) {
-                    // 确认提示
-                    if (!confirm(`确认删除任务"${task.input?.filename || task.input?.url || task.id}"？\n删除之后会清理相关资源。`)) {
-                        return;
-                    }
-                    
-                    try {
-                        await http.delete(`/api/tasks/video/${task.id}`);
-                        
-                        // 如果删除的是当前选中的任务，清除选中状态
-                        if (this.selectedTask?.id === task.id) {
-                            this.selectedTask = null;
-                        }
-                        
-                        // 刷新任务列表
-                        await this.loadTasks();
-                        
-                        alert('任务删除成功');
-                    } catch (error) {
-                        console.error('删除任务失败:', error);
-                        alert('删除任务失败: ' + (error.message || '未知错误'));
-                    }
-                },
-
-                triggerFileSelect() {
-                    this.$refs.fileInput.click();
-                },
-
-                onFileSelect(event) {
-                    const file = event.target.files[0];
-                    if (file) {
-                        this.selectedFile = file;
-                        this.formData.url = ''; // 清空URL输入
-                        
-                        // 智能检测语言和模型推荐
-                        const recommendation = this.smartLanguageDetection(file.name);
-                        if (recommendation.reason) {
-                            // 应用推荐设置
-                            this.formData.language = recommendation.language;
-                            this.formData.model = recommendation.model;
-                            
-                            // 显示推荐提示
-                            this.showModelRecommendation(recommendation);
-                            
-                            // 触发语言变化事件以更新模型选项
-                            this.onLanguageChange();
+                        tasks: [],
+                        selectedTask: null,
+                        filter: 'all',
+                        timeFilter: 'all',
+                        customStartDate: '',
+                        customEndDate: '',
+                        currentPage: 1,
+                        pageSize: 10,
+                        showCreateDrawer: false,
+                        isDragOver: false,
+                        isSubmitting: false,
+                        processingLogs: [],
+                        eventSource: null, // SSE连接对象
+                        streamingText: '', // 流式文本显示
+                        selectedFile: null, // 当前选择的文件
+                        uploadProgress: 0, // 上传进度
+                        languageOptions: [
+                            { label: '自动检测', value: 'auto' },
+                            { label: '中文', value: 'zh' },
+                            { label: '英语', value: 'en' },
+                            { label: '方言', value: 'dialect' }
+                        ],
+                        languageRecommendation: {
+                            text: '',
+                            model: '',
+                            show: false
+                        },
+                        smartRecommendation: {
+                            text: '',
+                            model: '',
+                            show: false
+                        },
+                        formData: {
+                            language: 'zh',
+                            model: 'whisper',
+                            modelSize: 'medium',
+                            outputTypes: ['transcript'],
+                            url: ''
+                        },
+                        models: [], // 从API动态加载的模型列表
+                        modelOptions: {
+                            auto: [
+                                { label: '自动选择', value: 'auto' },
+                                { label: 'Whisper Large', value: 'whisper-large' },
+                                { label: 'SenseVoice', value: 'sensevoice' }
+                            ],
+                            zh: [
+                                { label: 'SenseVoice (推荐)', value: 'sensevoice' },
+                                { label: 'Whisper Large', value: 'whisper-large' }
+                            ],
+                            en: [
+                                { label: 'Whisper Large (推荐)', value: 'whisper-large' },
+                                { label: 'SenseVoice', value: 'sensevoice' }
+                            ],
+                            dialect: [
+                                { label: 'Dolphin (推荐)', value: 'dolphin' },
+                                { label: 'SenseVoice', value: 'sensevoice' }
+                            ]
                         }
                     }
                 },
 
-                onDragOver(event) {
-                    this.isDragOver = true;
-                },
+                computed: {
+                    // 根据状态筛选任务
+                    filteredTasks() {
+                        let filtered = this.tasks;
 
-                onDragLeave(event) {
-                    this.isDragOver = false;
-                },
-
-                onDrop(event) {
-                    this.isDragOver = false;
-                    const files = event.dataTransfer.files;
-                    if (files.length > 0) {
-                        this.selectedFile = files[0];
-                        this.formData.url = '';
-                        
-                        // 智能检测语言和模型推荐
-                        const recommendation = this.smartLanguageDetection(files[0].name);
-                        if (recommendation.reason) {
-                            // 应用推荐设置
-                            this.formData.language = recommendation.language;
-                            this.formData.model = recommendation.model;
-                            
-                            // 显示推荐提示
-                            this.showModelRecommendation(recommendation);
-                            
-                            // 触发语言变化事件以更新模型选项
-                            this.onLanguageChange();
-                        }
-                    }
-                },
-
-                async createTask() {
-                    if (!this.canSubmit || this.isSubmitting) return;
-
-                    this.isSubmitting = true;
-                    this.uploadProgress = 0;
-                    
-                    try {
-                        // 检查引擎可用性
-                        const enginesResponse = await http.get('/api/tasks/video/engines');
-                        const engines = enginesResponse.data;
-                        
-                        // 如果是 auto 引擎，检查是否有任何可用引擎
-                        if (this.formData.model === 'auto') {
-                            const hasAvailableEngine = Object.values(engines).some(engine => engine.available);
-                            if (!hasAvailableEngine) {
-                                throw new Error('没有可用的语音识别引擎');
-                            }
-                        } else if (!engines[this.formData.model]?.available) {
-                            throw new Error(`语音识别引擎 ${this.formData.model} 不可用`);
+                        // 状态筛选
+                        if (this.filter !== 'all') {
+                            filtered = filtered.filter(task => task.status === this.filter);
                         }
 
-                        const formData = new FormData();
-                        
-                        if (this.selectedFile) {
-                            formData.append('file', this.selectedFile);
-                        } else {
-                            formData.append('url', this.formData.url);
-                        }
-                        
-                        formData.append('language', this.formData.language);
-                        formData.append('model', this.formData.model);
-                        formData.append('model_size', this.formData.modelSize || 'small');
-                        formData.append('output_types', this.formData.outputTypes.join(','));
+                        // 时间筛选
+                        if (this.timeFilter !== 'all') {
+                            const now = new Date();
+                            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
-                        // 创建XMLHttpRequest来支持上传进度
-                        const data = await this.uploadWithProgress('/api/tasks/video', formData);
-                        
-                        // 重置表单
-                        this.resetForm();
-                        
-                        // 刷新任务列表
-                        await this.loadTasks();
-                        
-                        // 选中新创建的任务并开始SSE监听
-                        const newTask = this.tasks.find(t => t.id === data.task_id);
-                        if (newTask) {
-                            this.selectTask(newTask);
-                            // 开始SSE实时监听任务进度
-                            this.startSSEConnection(newTask.id);
-                        }
-                    } catch (error) {
-                        console.error('创建任务失败:', error);
-                    } finally {
-                        this.isSubmitting = false;
-                    }
-                },
-
-                // 新增：SSE连接管理
-                startSSEConnection(taskId) {
-                    // 关闭之前的连接
-                    this.closeSSEConnection();
-                    
-                    // 创建新的SSE连接 - 这是大模型SSE Chat的核心
-                    this.eventSource = new EventSource(`/api/tasks/video/${taskId}/stream`);
-                    
-                    // 监听进度更新事件
-                    this.eventSource.addEventListener('progress', (event) => {
-                        const data = JSON.parse(event.data);
-                        this.updateTaskProgress(taskId, data);
-                    });
-                    
-                    // 监听日志事件 - 实时显示处理步骤
-                    this.eventSource.addEventListener('log', (event) => {
-                        const data = JSON.parse(event.data);
-                        this.addProcessingLog(data);
-                    });
-                    
-                    // 监听中间结果事件 - 显示部分处理结果
-                    this.eventSource.addEventListener('partial_result', (event) => {
-                        const data = JSON.parse(event.data);
-                        this.updatePartialResults(data);
-                    });
-                    
-                    // 监听完成事件
-                    this.eventSource.addEventListener('complete', (event) => {
-                        const data = JSON.parse(event.data);
-                        this.completeTask(taskId, data);
-                        this.closeSSEConnection();
-                    });
-                    
-                    // 监听错误事件
-                    this.eventSource.addEventListener('error', (event) => {
-                        console.error('SSE连接错误:', event);
-                        this.closeSSEConnection();
-                    });
-                    
-                    // 连接关闭事件
-                    this.eventSource.onclose = () => {
-                        console.log('SSE连接已关闭');
-                    };
-                },
-
-                closeSSEConnection() {
-                    if (this.eventSource) {
-                        this.eventSource.close();
-                        this.eventSource = null;
-                    }
-                },
-
-                // 更新任务进度 - SSE Chat的实时反馈
-                updateTaskProgress(taskId, data) {
-                    const task = this.tasks.find(t => t.id === taskId);
-                    if (task) {
-                        task.progress = data.progress;
-                        task.status = data.status;
-                        task.current_step = data.current_step;
-                        
-                        // 如果当前选中的是这个任务，更新显示
-                        if (this.selectedTask && this.selectedTask.id === taskId) {
-                            this.selectedTask = {...task};
-                        }
-                    }
-                },
-
-                // 添加处理日志 - 类似ChatGPT的流式文本显示
-                addProcessingLog(logData) {
-                    const log = {
-                        id: Date.now() + Math.random(),
-                        timestamp: Date.now(),
-                        message: logData.message,
-                        level: logData.level || 'info',
-                        step: logData.step
-                    };
-                    
-                    this.processingLogs.push(log);
-                    
-                    // 自动滚动到最新日志
-                    this.$nextTick(() => {
-                        const logsContainer = document.querySelector('.processing-logs');
-                        if (logsContainer) {
-                            logsContainer.scrollTop = logsContainer.scrollHeight;
-                        }
-                    });
-                },
-
-                // 更新部分结果 - 实时显示中间处理结果
-                updatePartialResults(data) {
-                    if (this.selectedTask) {
-                        // 更新转录文本（流式显示）
-                        if (data.transcript_chunk) {
-                            if (!this.selectedTask.partial_transcript) {
-                                this.selectedTask.partial_transcript = '';
-                            }
-                            this.selectedTask.partial_transcript += data.transcript_chunk;
-                        }
-                        
-                        // 更新AI分析进度
-                        if (data.analysis_progress) {
-                            this.selectedTask.analysis_progress = data.analysis_progress;
-                        }
-                    }
-                },
-
-                // 任务完成处理
-                completeTask(taskId, data) {
-                    const task = this.tasks.find(t => t.id === taskId);
-                    if (task) {
-                        task.status = 'completed';
-                        task.progress = 100;
-                        task.results = data.results;
-                        task.output_files = data.output_files;
-                        
-                        if (this.selectedTask && this.selectedTask.id === taskId) {
-                            this.selectedTask = {...task};
-                        }
-                        
-                        // 添加完成日志
-                        this.addProcessingLog({
-                            message: '🎉 处理完成！所有文件已生成',
-                            level: 'success'
-                        });
-                    }
-                },
-
-                resetForm() {
-                    this.formData = {
-                        language: 'auto',
-                        model: 'auto',
-                        outputTypes: ['transcript'],
-                        url: ''
-                    };
-                    this.selectedFile = null;
-                    this.$refs.fileInput.value = '';
-                },
-
-                simulateProcessingLogs() {
-                    // 模拟处理日志
-                    this.processingLogs = [
-                        { id: 1, timestamp: Date.now() - 30000, message: '开始处理音视频文件...' },
-                        { id: 2, timestamp: Date.now() - 25000, message: '正在提取音频数据...' },
-                        { id: 3, timestamp: Date.now() - 20000, message: '初始化语音识别模型...' },
-                        { id: 4, timestamp: Date.now() - 15000, message: '开始语音转文本处理...' },
-                        { id: 5, timestamp: Date.now() - 5000, message: '正在生成AI分析结果...' }
-                    ];
-                },
-
-                getStatusText(status) {
-                    const statusMap = {
-                        pending: '等待中',
-                        running: '处理中',
-                        completed: '已完成',
-                        failed: '失败'
-                    };
-                    return statusMap[status] || status;
-                },
-
-                getProcessingMessage(progress) {
-                    if (progress < 20) return '正在分析音视频文件...';
-                    if (progress < 40) return '正在提取音频数据...';
-                    if (progress < 60) return '正在进行语音识别...';
-                    if (progress < 80) return '正在生成AI分析...';
-                    return '正在生成最终结果...';
-                },
-
-                // 带进度的上传方法
-                uploadWithProgress(url, formData) {
-                    return new Promise((resolve, reject) => {
-                        const xhr = new XMLHttpRequest();
-                        
-                        // 监听上传进度
-                        xhr.upload.addEventListener('progress', (event) => {
-                            if (event.lengthComputable) {
-                                this.uploadProgress = Math.round((event.loaded / event.total) * 100);
-                            }
-                        });
-                        
-                        xhr.addEventListener('load', () => {
-                            if (xhr.status >= 200 && xhr.status < 300) {
-                                try {
-                                    const response = JSON.parse(xhr.responseText);
-                                    // 统一处理API响应格式
-                                    if (response.success && response.data) {
-                                        resolve(response.data);
-                                    } else {
-                                        resolve(response);
+                            switch (this.timeFilter) {
+                                case 'today':
+                                    filtered = filtered.filter(task => {
+                                        const taskDate = new Date(task.created_at);
+                                        return taskDate >= startOfDay && taskDate < endOfDay;
+                                    });
+                                    break;
+                                case 'yesterday':
+                                    const yesterdayStart = new Date(startOfDay);
+                                    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+                                    const yesterdayEnd = new Date(startOfDay);
+                                    filtered = filtered.filter(task => {
+                                        const taskDate = new Date(task.created_at);
+                                        return taskDate >= yesterdayStart && taskDate < yesterdayEnd;
+                                    });
+                                    break;
+                                case 'week':
+                                    const weekStart = new Date(startOfDay);
+                                    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // 本周开始
+                                    filtered = filtered.filter(task => {
+                                        const taskDate = new Date(task.created_at);
+                                        return taskDate >= weekStart;
+                                    });
+                                    break;
+                                case 'month':
+                                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                                    filtered = filtered.filter(task => {
+                                        const taskDate = new Date(task.created_at);
+                                        return taskDate >= monthStart;
+                                    });
+                                    break;
+                                case 'custom':
+                                    if (this.customStartDate && this.customEndDate) {
+                                        const customStart = new Date(this.customStartDate);
+                                        const customEnd = new Date(this.customEndDate);
+                                        customEnd.setDate(customEnd.getDate() + 1); // 包含结束日期
+                                        filtered = filtered.filter(task => {
+                                            const taskDate = new Date(task.created_at);
+                                            return taskDate >= customStart && taskDate < customEnd;
+                                        });
                                     }
-                                } catch (e) {
-                                    reject(new Error('响应解析失败'));
+                                    break;
+                            }
+                        }
+
+                        return filtered;
+                    },
+
+                    // 当前页的任务
+                    currentPageTasks() {
+                        const start = (this.currentPage - 1) * this.pageSize;
+                        const end = start + this.pageSize;
+                        return this.filteredTasks.slice(start, end);
+                    },
+
+                    // 总任务数
+                    totalTasks() {
+                        return this.filteredTasks.length;
+                    },
+
+                    // 总页数
+                    totalPages() {
+                        return Math.ceil(this.totalTasks / this.pageSize);
+                    },
+
+                    // 可见的页码
+                    visiblePages() {
+                        const pages = [];
+                        const maxVisible = 5;
+                        const start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+                        const end = Math.min(this.totalPages, start + maxVisible - 1);
+
+                        for (let i = start; i <= end; i++) {
+                            pages.push(i);
+                        }
+
+                        return pages;
+                    },
+
+                    availableModels() {
+                        if (this.models.length === 0) {
+                            // 如果模型还未加载，使用默认选项
+                            return this.modelOptions[this.formData.language] || this.modelOptions.auto;
+                        }
+
+                        // 按厂商分组并排序（已安装的在前面）
+                        const groupedModels = this.groupModelsByVendor(this.models);
+
+                        // 根据语言过滤和推荐模型
+                        return this.filterModelsByLanguage(groupedModels, this.formData.language);
+                    },
+
+                    canSubmit() {
+                        return (this.selectedFile || this.formData.url.trim()) &&
+                            this.formData.outputTypes.length > 0;
+                    },
+
+                    // 全选状态计算
+                    isAllSelected() {
+                        const allTypes = ['transcript', 'summary', 'mindmap', 'flashcards'];
+                        return allTypes.every(type => this.formData.outputTypes.includes(type));
+                    },
+
+                    // 按引擎类型分组的模型（用于HTML optgroup显示）
+                    groupedModelsByEngine() {
+                        if (this.models.length === 0) return {};
+
+                        const grouped = {};
+
+                        this.models.forEach(model => {
+                            if (!grouped[model.engineType]) {
+                                grouped[model.engineType] = [];
+                            }
+
+                            // 根据语言添加推荐标记
+                            const recommended = this.isModelRecommended(model, this.formData.language);
+
+                            grouped[model.engineType].push({
+                                ...model,
+                                recommended,
+                                displayName: this.getModelDisplayName(model, model.engineType)
+                            });
+                        });
+
+                        // 对每个引擎类型内的模型进行排序：已安装的在前
+                        Object.keys(grouped).forEach(engineType => {
+                            grouped[engineType].sort((a, b) => {
+                                if (a.installed !== b.installed) {
+                                    return b.installed - a.installed;
                                 }
-                            } else {
-                                reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                                return a.name.localeCompare(b.name);
+                            });
+                        });
+
+                        return grouped;
+                    }
+                },
+
+                async mounted() {
+                    await this.loadTasks();
+                    await this.loadModels();
+                    this.setupDragAndDrop();
+
+                    // 定期刷新任务列表
+                    // setInterval(() => {
+                    //     this.loadTasks();
+                    // }, 5000);
+                },
+
+                beforeUnmount() {
+                    // 清理SSE连接
+                    this.closeSSEConnection();
+                },
+
+                methods: {
+                    // 加载模型列表
+                    async loadModels() {
+                        try {
+                            const data = await http.get('/api/models');
+                            this.models = [];
+
+                            // 处理各种引擎的模型
+                            Object.entries(data).forEach(([engineType, models]) => {
+                                if (Array.isArray(models)) {
+                                    models.forEach((model, index) => {
+                                        //                                     {
+                                        //     "name": "tiny",
+                                        //     "size": "39MB",
+                                        //     "description": "最小模型，速度快但精度较低，适合快速预览",
+                                        //     "url": "https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f83b26e78e39ff2a90c3a76f8e65c3a0e4f1c3c3c5/tiny.pt",
+                                        //     "installed": true,
+                                        //     "local_path": "/Users/jiechengyang/.cache/whisper/tiny.pt"
+                                        // }
+                                        this.models.push({
+                                            ...model,
+                                            id: `${engineType}-${model.name}`, // 生成唯一ID
+                                            engineType,
+                                            installed: model.installed || false
+                                        });
+                                    });
+                                }
+                            });
+                        } catch (error) {
+                            console.error('加载模型列表失败:', error);
+                        }
+                    },
+
+                    // 获取引擎显示名称
+                    getEngineDisplayName(engineType) {
+                        const engineMap = {
+                            'whisper': 'Whisper (OpenAI)',
+                            'faster_whisper': 'Whisper (OpenAI)',
+                            'sensevoice': 'SenseVoice (阿里)',
+                            'dolphin': 'Dolphin (方言专用)'
+                        };
+                        return engineMap[engineType] || engineType;
+                    },
+
+                    // 获取模型显示名称
+                    getModelDisplayName(model, engineType) {
+                        // 直接使用模型的name和size信息
+                        let displayName = model.name;
+                        if (model.size) {
+                            displayName += ` (${model.size})`;
+                        }
+                        return displayName;
+                    },
+
+                    // 判断模型是否推荐
+                    isModelRecommended(model, language) {
+                        if (language === 'zh' && model.engineType === 'sensevoice') {
+                            return true;
+                        }
+                        if (language === 'en' && model.engineType.includes('whisper')) {
+                            return true;
+                        }
+                        if (language === 'dialect' && model.engineType === 'dolphin') {
+                            return true;
+                        }
+                        return false;
+                    },
+
+                    // 按厂商分组模型
+                    groupModelsByVendor(models) {
+                        const grouped = {};
+
+                        models.forEach(model => {
+                            const vendor = this.getEngineDisplayName(model.engineType);
+                            if (!grouped[vendor]) {
+                                grouped[vendor] = [];
+                            }
+
+                            // 添加推荐标记
+                            const recommended = this.isModelRecommended(model, this.formData.language);
+                            grouped[vendor].push({
+                                ...model,
+                                recommended,
+                                displayName: this.getModelDisplayName(model, model.engineType)
+                            });
+                        });
+
+                        // 对每个厂商内的模型进行排序：已安装的在前
+                        Object.keys(grouped).forEach(vendor => {
+                            grouped[vendor].sort((a, b) => {
+                                if (a.installed !== b.installed) {
+                                    return b.installed - a.installed;
+                                }
+                                return a.name.localeCompare(b.name);
+                            });
+                        });
+
+                        return grouped;
+                    },
+
+                    // 根据语言过滤和推荐模型
+                    filterModelsByLanguage(groupedModels, language) {
+                        const filtered = {};
+
+                        Object.entries(groupedModels).forEach(([vendor, models]) => {
+                            const filteredModels = models.filter(model => {
+                                // 检查语言支持
+                                if (language === 'auto') {
+                                    return true; // auto支持所有语言
+                                }
+
+                                // 检查模型是否支持指定语言
+                                if (model.supported_languages) {
+                                    if (Array.isArray(model.supported_languages)) {
+                                        return model.supported_languages.includes(language);
+                                    } else if (typeof model.supported_languages === 'object') {
+                                        return language in model.supported_languages;
+                                    }
+                                }
+
+                                return true; // 如果没有语言信息，默认支持
+                            });
+
+                            if (filteredModels.length > 0) {
+                                filtered[vendor] = filteredModels;
                             }
                         });
-                        
-                        xhr.addEventListener('error', () => {
-                            reject(new Error('网络错误'));
+
+                        return filtered;
+                    },
+
+                    // 设置拖拽上传
+                    setupDragAndDrop() {
+                        const uploadArea = document.querySelector('.upload-area');
+                        if (!uploadArea) return;
+
+                        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                            uploadArea.addEventListener(eventName, this.preventDefaults, false);
+                            document.body.addEventListener(eventName, this.preventDefaults, false);
                         });
-                        
-                        xhr.open('POST', url);
-                        xhr.send(formData);
-                    });
-                },
 
-                formatDate(dateString) {
-                    if (!dateString) return '';
-                    const date = new Date(dateString);
-                    return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-                },
+                        ['dragenter', 'dragover'].forEach(eventName => {
+                            uploadArea.addEventListener(eventName, this.handleDragEnter, false);
+                        });
 
-                formatTime(timestamp) {
-                    const date = new Date(timestamp);
-                    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
-                },
+                        ['dragleave', 'drop'].forEach(eventName => {
+                            uploadArea.addEventListener(eventName, this.handleDragLeave, false);
+                        });
 
-                async downloadTranscript() {
-                    if (this.selectedTask?.results?.transcript) {
-                        const blob = new Blob([this.selectedTask.results.transcript], { type: 'text/plain' });
-                        this.downloadBlob(blob, `${this.selectedTask.id}_transcript.txt`);
+                        uploadArea.addEventListener('drop', this.handleDrop, false);
+                    },
+
+                    preventDefaults(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    },
+
+                    handleDragEnter(e) {
+                        this.isDragOver = true;
+                        e.target.classList.add('dragover');
+                    },
+
+                    handleDragLeave(e) {
+                        this.isDragOver = false;
+                        e.target.classList.remove('dragover');
+                    },
+
+                    handleDrop(e) {
+                        this.isDragOver = false;
+                        e.target.classList.remove('dragover');
+
+                        const files = Array.from(e.dataTransfer.files);
+                        if (files.length > 0) {
+                            this.handleFileSelect(files[0]);
+                        }
+                    },
+
+                    // 处理文件选择
+                    handleFileSelect(file) {
+                        // 验证文件类型
+                        const validTypes = ['video/', 'audio/'];
+                        const isValid = validTypes.some(type => file.type.startsWith(type));
+
+                        if (!isValid) {
+                            alert('请选择音频或视频文件');
+                            return;
+                        }
+
+                        // 验证文件大小 (500MB限制)
+                        if (file.size > 500 * 1024 * 1024) {
+                            alert('文件大小不能超过500MB');
+                            return;
+                        }
+
+                        this.selectedFile = file;
+                        // this.smartLanguageDetection(file.name);
+                    },
+
+                    // 智能语言检测和模型推荐
+                    smartLanguageDetection(filename) {
+                        const recommendation = this.getLanguageRecommendation(filename);
+
+                        if (recommendation.language !== 'auto') {
+                            // 显示推荐
+                            this.showModelRecommendation(recommendation);
+
+                            // 自动切换语言
+                            setTimeout(() => {
+                                this.formData.language = recommendation.language;
+                                this.formData.model = recommendation.model;
+                                this.formData.model_size = recommendation.model_size;
+                            }, 1000);
+                        }
+
+                        return recommendation;
+                    },
+
+                    // 获取语言推荐
+                    getLanguageRecommendation(filename) {
+                        const lowerName = filename.toLowerCase();
+
+                        // 中文相关关键词
+                        const chineseKeywords = ['中文', '普通话', '国语', '中国', 'chinese', 'mandarin', 'cn', 'zh'];
+                        // 英文相关关键词  
+                        const englishKeywords = ['english', 'en', 'eng', '英文', '英语'];
+                        // 方言相关关键词
+                        const dialectKeywords = ['方言', '粤语', '闽南', '客家', '上海', '四川', 'dialect', 'cantonese'];
+
+                        if (chineseKeywords.some(keyword => lowerName.includes(keyword))) {
+                            return {
+                                language: 'zh',
+                                model: 'sensevoice',
+                                model_size: 'small',
+                                reason: '检测到中文内容，推荐使用SenseVoice模型'
+                            };
+                        }
+
+                        if (englishKeywords.some(keyword => lowerName.includes(keyword))) {
+                            return {
+                                language: 'en',
+                                model: 'whisper',
+                                model_size: 'large',
+                                reason: '检测到英文内容，推荐使用Whisper Large模型'
+                            };
+                        }
+
+                        if (dialectKeywords.some(keyword => lowerName.includes(keyword))) {
+                            return {
+                                language: 'dialect',
+                                model: 'dolphin',
+                                model_size: 'small',
+                                reason: '检测到方言内容，推荐使用Dolphin模型'
+                            };
+                        }
+
+                        return {
+                            language: 'auto',
+                            model: 'whisper',
+                            model_size: 'small',
+                            reason: '小型模型，平衡速度和精度，适合日常使用'
+                        };
+                    },
+
+                    // 显示模型推荐
+                    showModelRecommendation(recommendation) {
+                        const recommendationEl = document.querySelector('.model-recommendation');
+                        if (recommendationEl) {
+                            const textEl = recommendationEl.querySelector('.recommendation-text');
+                            const modelEl = recommendationEl.querySelector('.recommendation-model');
+
+                            if (textEl) textEl.textContent = recommendation.reason;
+                            if (modelEl) modelEl.textContent = `推荐模型: ${recommendation.model}`;
+
+                            recommendationEl.classList.add('show');
+
+                            // 3秒后隐藏
+                            setTimeout(() => {
+                                recommendationEl.classList.remove('show');
+                            }, 3000);
+                        }
+                    },
+
+                    // 语言变化时更新可用模型
+                    onLanguageChange() {
+                        // 自动选择推荐模型
+                        const models = this.availableModels;
+                        if (models.length > 0) {
+                            // 选择第一个推荐模型
+                            const recommended = models.find(m => m.label.includes('推荐'));
+                            this.formData.model = recommended ? recommended.value : models[0].value;
+                        }
+
+                        // 显示语言选择推荐
+                        this.showLanguageRecommendation();
+                    },
+
+                    onModelChange(e) {
+                        console.log('onModelChange', e.target.value)
+                        const model = e.target.value.split('-')[0]
+                        const modelSize = e.target.value.split('-')[1]
+                        this.formData.model = model
+                        this.formData.modelSize = modelSize
+                    },
+
+                    // 显示语言选择推荐
+                    showLanguageRecommendation() {
+                        const languageMap = {
+                            'zh': { text: '已切换到中文模式', model: '推荐使用 SenseVoice 模型，对中文识别效果更佳' },
+                            'en': { text: '已切换到英文模式', model: '推荐使用 Whisper Large 模型，对英文识别效果更佳' },
+                            'dialect': { text: '已切换到方言模式', model: '推荐使用 Dolphin 模型，对方言识别效果更佳' },
+                            'auto': { text: '已切换到自动检测模式', model: '系统将自动选择最适合的识别模型' }
+                        };
+
+                        const recommendation = languageMap[this.formData.language];
+                        if (recommendation) {
+                            this.languageRecommendation = {
+                                text: recommendation.text,
+                                model: recommendation.model,
+                                show: true
+                            };
+
+                            // 3秒后隐藏
+                            setTimeout(() => {
+                                this.languageRecommendation.show = false;
+                            }, 3000);
+                        }
+                    },
+
+                    // 输出类型变化处理
+                    onOutputTypeChange(type) {
+                        // 如果选择了全部内容相关的单项，需要检查是否应该自动选中全部
+                        // 这里不需要特殊处理，Vue的双向绑定会自动处理
+                    },
+
+                    // 全选/取消全选切换
+                    onAllToggle(event) {
+                        const allTypes = ['transcript', 'summary', 'mindmap', 'flashcards'];
+                        if (event.target.checked) {
+                            // 全选
+                            this.formData.outputTypes = [...allTypes];
+                        } else {
+                            // 取消全选
+                            this.formData.outputTypes = [];
+                        }
+                    },
+
+                    async loadTasks() {
+                        try {
+                            // 构建查询参数
+                            const params = new URLSearchParams();
+
+                            // 状态筛选
+                            if (this.filter && this.filter !== 'all') {
+                                params.append('status', this.filter);
+                            }
+
+                            // 时间筛选
+                            if (this.timeFilter !== 'all') {
+                                params.append('time_filter', this.timeFilter);
+
+                                if (this.timeFilter === 'custom' && this.customStartDate && this.customEndDate) {
+                                    params.append('start_date', this.customStartDate);
+                                    params.append('end_date', this.customEndDate);
+                                }
+                            }
+
+                            // 分页参数
+                            params.append('page', this.currentPage);
+                            params.append('page_size', this.pageSize);
+
+                            const url = `/api/tasks/video?${params.toString()}`;
+                            const data = await http.get(url);
+                            console.log('tasks data:', data)
+                            // 如果API支持分页，使用API返回的数据
+                            if (data.tasks && data.total !== undefined) {
+                                this.tasks = data.tasks;
+                                // 这里可以添加总任务数的处理，如果API支持的话
+                            } else {
+                                // 否则使用前端分页
+                                this.tasks = Array.isArray(data) ? data : [];
+                            }
+
+                            // 如果当前选中的任务更新了，同步更新
+                            if (this.selectedTask) {
+                                const updated = this.tasks.find(t => t.id === this.selectedTask.id);
+                                if (updated) {
+                                    this.selectedTask = updated;
+                                }
+                            }
+
+                            // 确保当前页有效
+                            if (this.currentPage > this.totalPages && this.totalPages > 0) {
+                                this.currentPage = this.totalPages;
+                            }
+
+                        } catch (error) {
+                            console.error('加载任务列表失败:', error);
+                            this.tasks = [];
+                        }
+                    },
+
+                    selectTask(task) {
+                        this.selectedTask = task;
+                        if (task.status === 'running') {
+                            this.simulateProcessingLogs();
+                        }
+                    },
+
+                    async setFilter(filter) {
+                        this.filter = filter;
+                        this.currentPage = 1; // 重置到第一页
+                        await this.loadTasks();
+                    },
+
+                    // 时间筛选变化处理
+                    onTimeFilterChange() {
+                        this.currentPage = 1; // 重置到第一页
+                        // 如果是自定义时间，设置默认日期
+                        if (this.timeFilter === 'custom') {
+                            const today = new Date();
+                            const yesterday = new Date(today);
+                            yesterday.setDate(yesterday.getDate() - 7); // 默认显示最近7天
+
+                            this.customStartDate = yesterday.toISOString().split('T')[0];
+                            this.customEndDate = today.toISOString().split('T')[0];
+                        }
+                    },
+
+                    // 自定义日期变化处理
+                    onCustomDateChange() {
+                        this.currentPage = 1; // 重置到第一页
+                    },
+
+                    // 分页跳转
+                    goToPage(page) {
+                        if (page >= 1 && page <= this.totalPages) {
+                            this.currentPage = page;
+                            // 滚动到任务列表顶部
+                            const taskList = document.querySelector('.tasks-grid');
+                            if (taskList) {
+                                taskList.scrollTop = 0;
+                            }
+                        }
+                    },
+
+                    // 抽屉控制
+                    openCreateDrawer() {
+                        this.showCreateDrawer = true;
+                        document.body.style.overflow = 'hidden'; // 防止背景滚动
+                    },
+
+                    closeCreateDrawer() {
+                        this.showCreateDrawer = false;
+                        document.body.style.overflow = ''; // 恢复背景滚动
+                        this.resetForm();
+                    },
+
+                    // 查看任务详情
+                    viewTask(task) {
+                        this.selectedTask = task;
+                        layui.layer.open({
+                            type: 2,
+                            title: '任务详情',
+                            offset: 'r',
+                            anim: 'slideLeft',
+                            shade: 0.1,
+                            shadeClose: true,
+                            content: `/task_detail?task_id=${task.id}`,
+                            area: ['45%', '100%']
+                        })
+                    },
+
+                    // 安全获取任务标题
+                    getTaskTitle(task) {
+                        if (!task) return '未知任务';
+                        if (task.input?.filename) return task.input.filename;
+                        if (task.input?.url) return task.input.url;
+                        return task.id || '未知任务';
+                    },
+
+                    // 安全获取任务类型
+                    getTaskType(task) {
+                        if (!task) return '未知';
+                        return task.type === 'video' ? '视频' : '音频';
+                    },
+
+                    // 删除任务
+                    deleteTask(task) {
+                        // 确认提示
+                        layer.confirm(`确认删除任务"${task.input?.filename || task.input?.url || task.id}"？\n删除之后会清理相关资源。`, {
+                            btn: ['确定', '关闭'] //按钮
+                        }, async () => {
+                            try {
+                                await http.delete(`/api/tasks/video/${task.id}`);
+
+                                // 如果删除的是当前选中的任务，清除选中状态
+                                if (this.selectedTask?.id === task.id) {
+                                    this.selectedTask = null;
+                                }
+
+                                // 刷新任务列表
+                                await this.loadTasks();
+
+                                layer.msg('任务删除成功', { icon: 1 });
+                            } catch (error) {
+                                console.error('删除任务失败:', error);
+                                layer.msg('删除任务失败: ' + (error.message || '未知错误'), { icon: 2 });
+                            }
+                        }, function () { });
+
+                    },
+
+                    triggerFileSelect() {
+                        this.$refs.fileInput.click();
+                    },
+
+                    onFileSelect(event) {
+                        const file = event.target.files[0];
+                        if (file) {
+                            this.selectedFile = file;
+                            this.formData.url = ''; // 清空URL输入
+
+                            // 智能检测语言和模型推荐
+                            const recommendation = this.smartLanguageDetection(file.name);
+                            if (recommendation.reason) {
+                                // 应用推荐设置
+                                this.formData.language = recommendation.language;
+                                this.formData.model = recommendation.model;
+
+                                // 显示推荐提示
+                                this.showModelRecommendation(recommendation);
+
+                                // 触发语言变化事件以更新模型选项
+                                this.onLanguageChange();
+                            }
+                        }
+                    },
+
+                    onDragOver(event) {
+                        this.isDragOver = true;
+                    },
+
+                    onDragLeave(event) {
+                        this.isDragOver = false;
+                    },
+
+                    onDrop(event) {
+                        this.isDragOver = false;
+                        const files = event.dataTransfer.files;
+                        if (files.length > 0) {
+                            this.selectedFile = files[0];
+                            this.formData.url = '';
+
+                            // 智能检测语言和模型推荐
+                            const recommendation = this.smartLanguageDetection(files[0].name);
+                            if (recommendation.reason) {
+                                // 应用推荐设置
+                                this.formData.language = recommendation.language;
+                                this.formData.model = recommendation.model;
+
+                                // 显示推荐提示
+                                this.showModelRecommendation(recommendation);
+
+                                // 触发语言变化事件以更新模型选项
+                                this.onLanguageChange();
+                            }
+                        }
+                    },
+
+                    async createTask() {
+                        if (!this.canSubmit || this.isSubmitting) return;
+
+                        this.isSubmitting = true;
+                        this.uploadProgress = 0;
+
+                        try {
+                            // 检查引擎可用性
+                            const engines = await http.get('/api/tasks/video/engines');
+                            console.log('engines:', engines)
+
+                            // 如果是 auto 引擎，检查是否有任何可用引擎
+                            if (this.formData.model === 'auto') {
+                                const hasAvailableEngine = Object.values(engines).some(engine => engine.available);
+                                if (!hasAvailableEngine) {
+                                    throw new Error('没有可用的语音识别引擎');
+                                }
+                            } else if (!engines[this.formData.model]?.available) {
+                                throw new Error(`语音识别引擎 ${this.formData.model} 不可用`);
+                            }
+
+                            const formData = new FormData();
+
+                            if (this.selectedFile) {
+                                formData.append('file', this.selectedFile);
+                            } else {
+                                formData.append('url', this.formData.url);
+                            }
+
+                            formData.append('language', this.formData.language);
+                            formData.append('model', this.formData.model);
+                            formData.append('model_size', this.formData.modelSize);
+                            formData.append('output_types', this.formData.outputTypes.join(','));
+
+                            // 创建XMLHttpRequest来支持上传进度
+                            const data = await this.uploadWithProgress('/api/tasks/video', formData);
+
+                            // 关闭抽屉
+                            this.closeCreateDrawer();
+
+                            // 刷新任务列表
+                            await this.loadTasks();
+
+                            // 选中新创建的任务并开始SSE监听
+                            const newTask = this.tasks.find(t => t.id === data.task_id);
+                            if (newTask) {
+                                this.selectTask(newTask);
+                                // 开始SSE实时监听任务进度
+                                this.startSSEConnection(newTask.id);
+                            }
+                        } catch (error) {
+                            console.error('创建任务失败:', error);
+                            
+                            // 显示用户友好的错误提示
+                            const errorMessage = error.message || '创建任务失败，请重试';
+                            this.showErrorMessage(errorMessage);
+                        } finally {
+                            this.isSubmitting = false;
+                        }
+                    },
+
+                    // 新增：SSE连接管理
+                    startSSEConnection(taskId) {
+                        // 关闭之前的连接
+                        this.closeSSEConnection();
+
+                        // 创建新的SSE连接 - 这是大模型SSE Chat的核心
+                        this.eventSource = new EventSource(`/api/tasks/video/${taskId}/stream`);
+
+                        // 监听进度更新事件
+                        this.eventSource.addEventListener('progress', (event) => {
+                            const data = JSON.parse(event.data);
+                            this.updateTaskProgress(taskId, data);
+                        });
+
+                        // 监听日志事件 - 实时显示处理步骤
+                        this.eventSource.addEventListener('log', (event) => {
+                            const data = JSON.parse(event.data);
+                            this.addProcessingLog(data);
+                        });
+
+                        // 监听中间结果事件 - 显示部分处理结果
+                        this.eventSource.addEventListener('partial_result', (event) => {
+                            const data = JSON.parse(event.data);
+                            this.updatePartialResults(data);
+                        });
+
+                        // 监听完成事件
+                        this.eventSource.addEventListener('complete', (event) => {
+                            const data = JSON.parse(event.data);
+                            this.completeTask(taskId, data);
+                            this.closeSSEConnection();
+                        });
+
+                        // 监听错误事件
+                        this.eventSource.addEventListener('error', (event) => {
+                            console.error('SSE连接错误:', event);
+                            this.closeSSEConnection();
+                        });
+
+                        // 连接关闭事件
+                        this.eventSource.onclose = () => {
+                            console.log('SSE连接已关闭');
+                        };
+                    },
+
+                    closeSSEConnection() {
+                        if (this.eventSource) {
+                            this.eventSource.close();
+                            this.eventSource = null;
+                        }
+                    },
+
+                    // 更新任务进度 - SSE Chat的实时反馈
+                    updateTaskProgress(taskId, data) {
+                        const task = this.tasks.find(t => t.id === taskId);
+                        if (task) {
+                            task.progress = data.progress;
+                            task.status = data.status;
+                            task.current_step = data.current_step;
+
+                            // 如果当前选中的是这个任务，更新显示
+                            if (this.selectedTask && this.selectedTask.id === taskId) {
+                                this.selectedTask = { ...task };
+                            }
+                        }
+                    },
+
+                    // 添加处理日志 - 类似ChatGPT的流式文本显示
+                    addProcessingLog(logData) {
+                        const log = {
+                            id: Date.now() + Math.random(),
+                            timestamp: Date.now(),
+                            message: logData.message,
+                            level: logData.level || 'info',
+                            step: logData.step
+                        };
+
+                        this.processingLogs.push(log);
+
+                        // 自动滚动到最新日志
+                        this.$nextTick(() => {
+                            const logsContainer = document.querySelector('.processing-logs');
+                            if (logsContainer) {
+                                logsContainer.scrollTop = logsContainer.scrollHeight;
+                            }
+                        });
+                    },
+
+                    // 更新部分结果 - 实时显示中间处理结果
+                    updatePartialResults(data) {
+                        if (this.selectedTask) {
+                            // 更新转录文本（流式显示）
+                            if (data.transcript_chunk) {
+                                if (!this.selectedTask.partial_transcript) {
+                                    this.selectedTask.partial_transcript = '';
+                                }
+                                this.selectedTask.partial_transcript += data.transcript_chunk;
+                            }
+
+                            // 更新AI分析进度
+                            if (data.analysis_progress) {
+                                this.selectedTask.analysis_progress = data.analysis_progress;
+                            }
+                        }
+                    },
+
+                    // 任务完成处理
+                    completeTask(taskId, data) {
+                        const task = this.tasks.find(t => t.id === taskId);
+                        if (task) {
+                            task.status = 'completed';
+                            task.progress = 100;
+                            task.results = data.results;
+                            task.output_files = data.output_files;
+
+                            if (this.selectedTask && this.selectedTask.id === taskId) {
+                                this.selectedTask = { ...task };
+                            }
+
+                            // 添加完成日志
+                            this.addProcessingLog({
+                                message: '🎉 处理完成！所有文件已生成',
+                                level: 'success'
+                            });
+                        }
+                    },
+
+                    resetForm() {
+                        this.formData = {
+                            language: 'auto',
+                            model: 'auto',
+                            modelSize: 'small',
+                            outputTypes: ['transcript'],
+                            url: ''
+                        };
+                        this.selectedFile = null;
+                        this.$refs.fileInput.value = '';
+                    },
+
+                    simulateProcessingLogs() {
+                        // 模拟处理日志
+                        this.processingLogs = [
+                            { id: 1, timestamp: Date.now() - 30000, message: '开始处理音视频文件...' },
+                            { id: 2, timestamp: Date.now() - 25000, message: '正在提取音频数据...' },
+                            { id: 3, timestamp: Date.now() - 20000, message: '初始化语音识别模型...' },
+                            { id: 4, timestamp: Date.now() - 15000, message: '开始语音转文本处理...' },
+                            { id: 5, timestamp: Date.now() - 5000, message: '正在生成AI分析结果...' }
+                        ];
+                    },
+
+                    getStatusText(status) {
+                        const statusMap = {
+                            pending: '等待中',
+                            running: '处理中',
+                            completed: '已完成',
+                            failed: '失败'
+                        };
+                        return statusMap[status] || status;
+                    },
+
+                    getProcessingMessage(progress) {
+                        if (progress < 20) return '正在分析音视频文件...';
+                        if (progress < 40) return '正在提取音频数据...';
+                        if (progress < 60) return '正在进行语音识别...';
+                        if (progress < 80) return '正在生成AI分析...';
+                        return '正在生成最终结果...';
+                    },
+
+                    // 带进度的上传方法
+                    uploadWithProgress(url, formData) {
+                        return new Promise((resolve, reject) => {
+                            const xhr = new XMLHttpRequest();
+
+                            // 监听上传进度
+                            xhr.upload.addEventListener('progress', (event) => {
+                                if (event.lengthComputable) {
+                                    this.uploadProgress = Math.round((event.loaded / event.total) * 100);
+                                }
+                            });
+
+                            xhr.addEventListener('load', () => {
+                                if (xhr.status >= 200 && xhr.status < 300) {
+                                    try {
+                                        const response = JSON.parse(xhr.responseText);
+                                        // 统一处理API响应格式
+                                        if (response.success && response.data) {
+                                            resolve(response.data);
+                                        } else {
+                                            resolve(response);
+                                        }
+                                    } catch (e) {
+                                        reject(new Error('响应解析失败'));
+                                    }
+                                } else {
+                                    // 尝试解析错误响应中的详细信息
+                                    try {
+                                        const errorResponse = JSON.parse(xhr.responseText);
+                                        const errorMessage = errorResponse.message || errorResponse.detail || `HTTP ${xhr.status}: ${xhr.statusText}`;
+                                        reject(new Error(errorMessage));
+                                    } catch (e) {
+                                        // 如果无法解析JSON，使用默认错误信息
+                                        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                                    }
+                                }
+                            });
+
+                            xhr.addEventListener('error', () => {
+                                reject(new Error('网络错误'));
+                            });
+
+                            xhr.open('POST', url);
+                            xhr.send(formData);
+                        });
+                    },
+
+                    formatDate(dateString) {
+                        if (!dateString) return '';
+                        const date = new Date(dateString);
+                        return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                    },
+
+                    // 显示错误消息
+                    showErrorMessage(message) {
+                        // 使用layui的消息提示
+                        if (typeof layui !== 'undefined' && layui.layer) {
+                            layui.layer.msg(message, { icon: 2, time: 3000 });
+                        } else {
+                            // 备用方案：使用alert
+                            alert(message);
+                        }
+                    },
+
+                    formatTime(timestamp) {
+                        const date = new Date(timestamp);
+                        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+                    },
+
+                    async downloadTranscript() {
+                        if (this.selectedTask?.results?.transcript) {
+                            const blob = new Blob([this.selectedTask.results.transcript], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.selectedTask.id}_transcript.txt`);
+                        }
+                    },
+
+                    async downloadSummary() {
+                        if (this.selectedTask?.results?.summary) {
+                            const blob = new Blob([this.selectedTask.results.summary], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.selectedTask.id}_summary.txt`);
+                        }
+                    },
+
+                    async downloadFile(file) {
+                        try {
+                            await http.download(`/api/tasks/video/${this.selectedTask.id}/files/${file.name}`, file.name);
+                        } catch (error) {
+                            console.error('下载文件失败:', error);
+                        }
+                    },
+
+                    async downloadAll() {
+                        try {
+                            await http.download(`/api/tasks/video/${this.selectedTask.id}/download`, `${this.selectedTask.id}_all.zip`);
+                        } catch (error) {
+                            console.error('下载全部文件失败:', error);
+                        }
+                    },
+
+                    downloadBlob(blob, filename) {
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
                     }
-                },
-
-                async downloadSummary() {
-                    if (this.selectedTask?.results?.summary) {
-                        const blob = new Blob([this.selectedTask.results.summary], { type: 'text/plain' });
-                        this.downloadBlob(blob, `${this.selectedTask.id}_summary.txt`);
-                    }
-                },
-
-                async downloadFile(file) {
-                    try {
-                        await http.download(`/api/tasks/video/${this.selectedTask.id}/files/${file.name}`, file.name);
-                    } catch (error) {
-                        console.error('下载文件失败:', error);
-                    }
-                },
-
-                async downloadAll() {
-                    try {
-                        await http.download(`/api/tasks/video/${this.selectedTask.id}/download`, `${this.selectedTask.id}_all.zip`);
-                    } catch (error) {
-                        console.error('下载全部文件失败:', error);
-                    }
-                },
-
-                downloadBlob(blob, filename) {
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = filename;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
                 }
-            }
-        }).mount('#app');
+            }).mount('#app');
+        })
     </script>
 </body>
+
 </html>

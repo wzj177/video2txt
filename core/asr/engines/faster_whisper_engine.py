@@ -28,14 +28,17 @@ class FasterWhisperEngine(BaseVoiceEngine):
             if self.config.chinese_optimized:
                 whisper_model = self.config.preferred_chinese_model
 
+            # 智能选择计算类型
+            compute_type = self._get_optimal_compute_type()
+
             self.model = WhisperModel(
                 whisper_model,
                 device=self.config.device,
-                compute_type=self.config.compute_type,
+                compute_type=compute_type,
             )
 
             self.initialized = True
-            logger.info("✅ FasterWhisper初始化成功")
+            logger.info(f"✅ FasterWhisper初始化成功 (计算类型: {compute_type})")
             return True
 
         except ImportError:
@@ -44,6 +47,49 @@ class FasterWhisperEngine(BaseVoiceEngine):
         except Exception as e:
             logger.error(f"❌ FasterWhisper初始化失败: {e}")
             return False
+
+    def _get_optimal_compute_type(self) -> str:
+        """获取最优的计算类型"""
+        try:
+            import torch
+
+            # 如果是CPU或者不支持float16，使用int8或float32
+            if self.config.device == "cpu":
+                logger.info("🔧 CPU设备，使用int8计算类型")
+                return "int8"
+
+            # 检查CUDA是否支持float16
+            if self.config.device == "cuda" or self.config.device == "auto":
+                try:
+                    # 测试是否支持float16
+                    device = torch.device(
+                        "cuda" if torch.cuda.is_available() else "cpu"
+                    )
+                    if device.type == "cuda":
+                        # 检查GPU计算能力
+                        capability = torch.cuda.get_device_capability(device)
+                        if capability[0] >= 7:  # Volta架构及以上支持高效的float16
+                            logger.info("🚀 GPU支持高效float16计算")
+                            return "float16"
+                        else:
+                            logger.info("🔧 GPU不支持高效float16，使用int8")
+                            return "int8"
+                    else:
+                        logger.info("🔧 未检测到CUDA，使用int8计算类型")
+                        return "int8"
+                except Exception as cuda_e:
+                    logger.warning(f"⚠️ CUDA检查失败: {cuda_e}，使用int8")
+                    return "int8"
+
+            # 默认回退到int8
+            return "int8"
+
+        except ImportError:
+            logger.info("🔧 PyTorch未安装，使用int8计算类型")
+            return "int8"
+        except Exception as e:
+            logger.warning(f"⚠️ 计算类型检测失败: {e}，使用int8")
+            return "int8"
 
     def recognize_file(self, audio_path: str, language: str = "auto") -> Dict[str, Any]:
         """使用FasterWhisper转录"""
