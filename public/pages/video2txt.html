@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI听世界 - 音视频转文本</title>
+    <link rel="icon" href="/favicon.ico">
     <link rel="stylesheet" href="/assets/css/common.css">
     <link rel="stylesheet" href="/assets/css/icons.css">
     <style>
@@ -197,6 +198,33 @@
             margin-bottom: var(--spacing-sm);
         }
 
+        .task-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .task-delete-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: var(--radius-small);
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+
+        .task-delete-btn:hover {
+            opacity: 1;
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+        .task-delete-btn .icon {
+            width: 16px;
+            height: 16px;
+        }
+
         .task-title {
             font-weight: 600;
             color: var(--text-primary);
@@ -351,6 +379,23 @@
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(0, 178, 106, 0.1);
+        }
+
+        /* 模型选择器样式 */
+        .form-select option.recommended {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .form-select option.not-installed {
+            color: #999;
+            font-style: italic;
+        }
+        
+        .form-select optgroup {
+            font-weight: bold;
+            color: var(--text-primary);
+            background-color: #f8f9fa;
         }
 
         .checkbox-group {
@@ -1093,7 +1138,7 @@
                         <button class="filter-btn" :class="{active: filter === 'failed'}" @click="setFilter('failed')">失败</button>
                     </div>
                 </div>
-                <div class="task-list">
+                <div class="task-list" v-if="filteredTasks.length">
                     <div v-for="task in filteredTasks" 
                          :key="task.id" 
                          class="task-item" 
@@ -1101,8 +1146,15 @@
                          @click="selectTask(task)">
                         <div class="task-header">
                             <div class="task-title">{{ task.input?.filename || task.input?.url || task.id }}</div>
-                            <div class="task-status" :class="task.status">
-                                {{ getStatusText(task.status) }}
+                            <div class="task-actions">
+                                <div class="task-status" :class="task.status">
+                                    {{ getStatusText(task.status) }}
+                                </div>
+                                <button class="task-delete-btn" @click.stop="deleteTask(task)" title="删除任务">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                         <div class="task-meta">
@@ -1113,7 +1165,9 @@
                             <div class="progress-fill" :style="{width: task.progress + '%'}"></div>
                         </div>
                     </div>
-                    <div v-if="filteredTasks.length === 0" class="text-center" style="padding: 2rem; color: var(--text-tertiary);">
+                </div>
+                <div v-else class="task-list">
+                    <div  class="text-center" style="padding: 2rem; color: var(--text-tertiary);">
                         暂无任务
                     </div>
                 </div>
@@ -1149,9 +1203,23 @@
                                 <div class="form-group">
                                     <label class="form-label">识别模型</label>
                                     <select v-model="formData.model" class="form-select">
-                                        <option v-for="model in availableModels" :key="model.value" :value="model.value">
-                                            {{ model.label }}
-                                        </option>
+                                        <template v-if="models.length > 0">
+                                            <!-- 自动选择选项 -->
+                                            <option value="auto">自动选择</option>
+                                            <!-- 按引擎类型分组显示 -->
+                                            <optgroup v-for="(engineModels, engineType) in groupedModelsByEngine" :key="engineType" :label="getEngineDisplayName(engineType)">
+                                                <option v-for="model in engineModels" :key="model.id" :value="model.id"
+                                                        :class="{'recommended': model.recommended, 'not-installed': !model.installed}">
+                                                    {{ model.displayName }}{{ model.recommended ? ' (推荐)' : '' }}{{ !model.installed ? ' (未安装)' : '' }}
+                                                </option>
+                                            </optgroup>
+                                        </template>
+                                        <!-- 模型未加载时的备用选项 -->
+                                        <template v-else>
+                                            <option v-for="model in availableModels" :key="model.value" :value="model.value">
+                                                {{ model.label }}
+                                            </option>
+                                        </template>
                                     </select>
                                 </div>
                             </div>
@@ -1231,11 +1299,21 @@
                             
                             <div class="url-input-section">
                                 <div class="form-group">
-                                    <label class="form-label">或输入音视频链接</label>
-                                    <input type="url" 
-                                           v-model="formData.url" 
-                                           class="url-input" 
-                                           placeholder="https://example.com/video.mp4">
+                                    <label class="form-label">或输入音视频链接/本地文件路径</label>
+                                    <div class="url-input-group">
+                                        <input type="text" 
+                                               v-model="formData.url" 
+                                               class="url-input" 
+                                               placeholder="https://example.com/video.mp4 或 /path/to/video.mp4">
+                                        <button type="button" 
+                                                class="browse-btn" 
+                                                @click="showFileBrowser = true"
+                                                title="浏览本地文件">
+                                            <svg class="icon" viewBox="0 0 24 24">
+                                                <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1395,6 +1473,7 @@
                         url: ''
                     },
                     selectedFile: null,
+                    models: [], // 从API动态加载的模型列表
                     modelOptions: {
                         auto: [
                             { label: '自动选择', value: 'auto' },
@@ -1424,7 +1503,16 @@
                 },
 
                 availableModels() {
-                    return this.modelOptions[this.formData.language] || this.modelOptions.auto;
+                    if (this.models.length === 0) {
+                        // 如果模型还未加载，使用默认选项
+                        return this.modelOptions[this.formData.language] || this.modelOptions.auto;
+                    }
+                    
+                    // 按厂商分组并排序（已安装的在前面）
+                    const groupedModels = this.groupModelsByVendor(this.models);
+                    
+                    // 根据语言过滤和推荐模型
+                    return this.filterModelsByLanguage(groupedModels, this.formData.language);
                 },
 
                 canSubmit() {
@@ -1436,21 +1524,52 @@
                 isAllSelected() {
                     const allTypes = ['transcript', 'summary', 'mindmap', 'flashcards'];
                     return allTypes.every(type => this.formData.outputTypes.includes(type));
+                },
+                
+                // 按引擎类型分组的模型（用于HTML optgroup显示）
+                groupedModelsByEngine() {
+                    if (this.models.length === 0) return {};
+                    
+                    const grouped = {};
+                    
+                    this.models.forEach(model => {
+                        if (!grouped[model.engineType]) {
+                            grouped[model.engineType] = [];
+                        }
+                        
+                        // 根据语言添加推荐标记
+                        const recommended = this.isModelRecommended(model, this.formData.language);
+                        
+                        grouped[model.engineType].push({
+                            ...model,
+                            recommended,
+                            displayName: this.getModelDisplayName(model, model.engineType)
+                        });
+                    });
+                    
+                    // 对每个引擎类型内的模型进行排序：已安装的在前
+                    Object.keys(grouped).forEach(engineType => {
+                        grouped[engineType].sort((a, b) => {
+                            if (a.installed !== b.installed) {
+                                return b.installed - a.installed;
+                            }
+                            return a.name.localeCompare(b.name);
+                        });
+                    });
+                    
+                    return grouped;
                 }
             },
 
             async mounted() {
                 await this.loadTasks();
+                await this.loadModels();
+                this.setupDragAndDrop();
                 
                 // 定期刷新任务列表
                 setInterval(() => {
                     this.loadTasks();
                 }, 5000);
-            },
-
-            mounted() {
-                this.loadTasks();
-                this.setupDragAndDrop();
             },
 
             beforeUnmount() {
@@ -1459,6 +1578,128 @@
             },
 
             methods: {
+                // 加载模型列表
+                async loadModels() {
+                    try {
+                        const data = await http.get('/api/models');
+                        this.models = [];
+                        
+                        // 处理各种引擎的模型
+                        Object.entries(data).forEach(([engineType, models]) => {
+                            if (Array.isArray(models)) {
+                                models.forEach((model, index) => {
+                                    this.models.push({
+                                        ...model,
+                                        id: `${engineType}-${model.name}`, // 生成唯一ID
+                                        engineType,
+                                        installed: model.installed || false
+                                    });
+                                });
+                            }
+                        });
+                    } catch (error) {
+                        console.error('加载模型列表失败:', error);
+                    }
+                },
+                
+                // 获取引擎显示名称
+                getEngineDisplayName(engineType) {
+                    const engineMap = {
+                        'whisper': 'Whisper (OpenAI)',
+                        'faster_whisper': 'Whisper (OpenAI)',
+                        'sensevoice': 'SenseVoice (阿里)',
+                        'dolphin': 'Dolphin (方言专用)'
+                    };
+                    return engineMap[engineType] || engineType;
+                },
+                
+                // 获取模型显示名称
+                getModelDisplayName(model, engineType) {
+                    // 直接使用模型的name和size信息
+                    let displayName = model.name;
+                    if (model.size) {
+                        displayName += ` (${model.size})`;
+                    }
+                    return displayName;
+                },
+                
+                // 判断模型是否推荐
+                isModelRecommended(model, language) {
+                    if (language === 'zh' && model.engineType === 'sensevoice') {
+                        return true;
+                    }
+                    if (language === 'en' && model.engineType.includes('whisper')) {
+                        return true;
+                    }
+                    if (language === 'dialect' && model.engineType === 'dolphin') {
+                        return true;
+                    }
+                    return false;
+                },
+                
+                // 按厂商分组模型
+                groupModelsByVendor(models) {
+                    const grouped = {};
+                    
+                    models.forEach(model => {
+                        const vendor = this.getEngineDisplayName(model.engineType);
+                        if (!grouped[vendor]) {
+                            grouped[vendor] = [];
+                        }
+                        
+                        // 添加推荐标记
+                        const recommended = this.isModelRecommended(model, this.formData.language);
+                        grouped[vendor].push({
+                            ...model,
+                            recommended,
+                            displayName: this.getModelDisplayName(model, model.engineType)
+                        });
+                    });
+                    
+                    // 对每个厂商内的模型进行排序：已安装的在前
+                    Object.keys(grouped).forEach(vendor => {
+                        grouped[vendor].sort((a, b) => {
+                            if (a.installed !== b.installed) {
+                                return b.installed - a.installed;
+                            }
+                            return a.name.localeCompare(b.name);
+                        });
+                    });
+                    
+                    return grouped;
+                },
+                
+                // 根据语言过滤和推荐模型
+                filterModelsByLanguage(groupedModels, language) {
+                    const filtered = {};
+                    
+                    Object.entries(groupedModels).forEach(([vendor, models]) => {
+                        const filteredModels = models.filter(model => {
+                            // 检查语言支持
+                            if (language === 'auto') {
+                                return true; // auto支持所有语言
+                            }
+                            
+                            // 检查模型是否支持指定语言
+                            if (model.supported_languages) {
+                                if (Array.isArray(model.supported_languages)) {
+                                    return model.supported_languages.includes(language);
+                                } else if (typeof model.supported_languages === 'object') {
+                                    return language in model.supported_languages;
+                                }
+                            }
+                            
+                            return true; // 如果没有语言信息，默认支持
+                        });
+                        
+                        if (filteredModels.length > 0) {
+                            filtered[vendor] = filteredModels;
+                        }
+                    });
+                    
+                    return filtered;
+                },
+
                 // 设置拖拽上传
                 setupDragAndDrop() {
                     const uploadArea = document.querySelector('.upload-area');
@@ -1538,8 +1779,11 @@
                         setTimeout(() => {
                             this.formData.language = recommendation.language;
                             this.formData.model = recommendation.model;
+                            this.formData.model_size = recommendation.model_size;
                         }, 1000);
                     }
+
+                    return recommendation;
                 },
 
                 // 获取语言推荐
@@ -1557,6 +1801,7 @@
                         return {
                             language: 'zh',
                             model: 'sensevoice',
+                            model_size: 'small',
                             reason: '检测到中文内容，推荐使用SenseVoice模型'
                         };
                     }
@@ -1564,7 +1809,8 @@
                     if (englishKeywords.some(keyword => lowerName.includes(keyword))) {
                         return {
                             language: 'en', 
-                            model: 'whisper-large',
+                            model: 'whisper',
+                            model_size: 'large',
                             reason: '检测到英文内容，推荐使用Whisper Large模型'
                         };
                     }
@@ -1573,14 +1819,16 @@
                         return {
                             language: 'dialect',
                             model: 'dolphin', 
+                            model_size: 'small',
                             reason: '检测到方言内容，推荐使用Dolphin模型'
                         };
                     }
 
                     return {
                         language: 'auto',
-                        model: 'auto',
-                        reason: ''
+                        model: 'whisper',
+                        model_size: 'small',
+                        reason: '小型模型，平衡速度和精度，适合日常使用'
                     };
                 },
 
@@ -1661,20 +1909,27 @@
 
                 async loadTasks() {
                     try {
-                        const response = await http.get('/api/tasks/video');
-                        if (response.success) {
-                            this.tasks = response.data;
-                            
-                            // 如果当前选中的任务更新了，同步更新
-                            if (this.selectedTask) {
-                                const updated = this.tasks.find(t => t.id === this.selectedTask.id);
-                                if (updated) {
-                                    this.selectedTask = updated;
-                                }
+                        // 如果有筛选条件且不是'all'，则添加status参数
+                        let url = '/api/tasks/video';
+                        if (this.filter && this.filter !== 'all') {
+                            url += `?status=${this.filter}`;
+                        }
+                        
+                        const response = await http.get(url);
+                        // 确保 tasks 是数组格式
+                        this.tasks = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
+                        
+                        // 如果当前选中的任务更新了，同步更新
+                        if (this.selectedTask) {
+                            const updated = this.tasks.find(t => t.id === this.selectedTask.id);
+                            if (updated) {
+                                this.selectedTask = updated;
                             }
                         }
                     } catch (error) {
                         console.error('加载任务列表失败:', error);
+                        // 确保即使出错也有数组格式
+                        this.tasks = [];
                     }
                 },
 
@@ -1685,8 +1940,34 @@
                     }
                 },
 
-                setFilter(filter) {
+                async setFilter(filter) {
                     this.filter = filter;
+                    await this.loadTasks();
+                },
+
+                // 删除任务
+                async deleteTask(task) {
+                    // 确认提示
+                    if (!confirm(`确认删除任务"${task.input?.filename || task.input?.url || task.id}"？\n删除之后会清理相关资源。`)) {
+                        return;
+                    }
+                    
+                    try {
+                        await http.delete(`/api/tasks/video/${task.id}`);
+                        
+                        // 如果删除的是当前选中的任务，清除选中状态
+                        if (this.selectedTask?.id === task.id) {
+                            this.selectedTask = null;
+                        }
+                        
+                        // 刷新任务列表
+                        await this.loadTasks();
+                        
+                        alert('任务删除成功');
+                    } catch (error) {
+                        console.error('删除任务失败:', error);
+                        alert('删除任务失败: ' + (error.message || '未知错误'));
+                    }
                 },
 
                 triggerFileSelect() {
@@ -1750,7 +2031,23 @@
                     if (!this.canSubmit || this.isSubmitting) return;
 
                     this.isSubmitting = true;
+                    this.uploadProgress = 0;
+                    
                     try {
+                        // 检查引擎可用性
+                        const enginesResponse = await http.get('/api/tasks/video/engines');
+                        const engines = enginesResponse.data;
+                        
+                        // 如果是 auto 引擎，检查是否有任何可用引擎
+                        if (this.formData.model === 'auto') {
+                            const hasAvailableEngine = Object.values(engines).some(engine => engine.available);
+                            if (!hasAvailableEngine) {
+                                throw new Error('没有可用的语音识别引擎');
+                            }
+                        } else if (!engines[this.formData.model]?.available) {
+                            throw new Error(`语音识别引擎 ${this.formData.model} 不可用`);
+                        }
+
                         const formData = new FormData();
                         
                         if (this.selectedFile) {
@@ -1761,24 +2058,24 @@
                         
                         formData.append('language', this.formData.language);
                         formData.append('model', this.formData.model);
+                        formData.append('model_size', this.formData.modelSize || 'small');
                         formData.append('output_types', this.formData.outputTypes.join(','));
 
-                        const response = await http.post('/api/tasks/video', formData);
+                        // 创建XMLHttpRequest来支持上传进度
+                        const data = await this.uploadWithProgress('/api/tasks/video', formData);
                         
-                        if (response.success) {
-                            // 重置表单
-                            this.resetForm();
-                            
-                            // 刷新任务列表
-                            await this.loadTasks();
-                            
-                            // 选中新创建的任务并开始SSE监听
-                            const newTask = this.tasks.find(t => t.id === response.data.id);
-                            if (newTask) {
-                                this.selectTask(newTask);
-                                // 开始SSE实时监听任务进度
-                                this.startSSEConnection(newTask.id);
-                            }
+                        // 重置表单
+                        this.resetForm();
+                        
+                        // 刷新任务列表
+                        await this.loadTasks();
+                        
+                        // 选中新创建的任务并开始SSE监听
+                        const newTask = this.tasks.find(t => t.id === data.task_id);
+                        if (newTask) {
+                            this.selectTask(newTask);
+                            // 开始SSE实时监听任务进度
+                            this.startSSEConnection(newTask.id);
                         }
                     } catch (error) {
                         console.error('创建任务失败:', error);
@@ -1952,6 +2249,45 @@
                     if (progress < 60) return '正在进行语音识别...';
                     if (progress < 80) return '正在生成AI分析...';
                     return '正在生成最终结果...';
+                },
+
+                // 带进度的上传方法
+                uploadWithProgress(url, formData) {
+                    return new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        
+                        // 监听上传进度
+                        xhr.upload.addEventListener('progress', (event) => {
+                            if (event.lengthComputable) {
+                                this.uploadProgress = Math.round((event.loaded / event.total) * 100);
+                            }
+                        });
+                        
+                        xhr.addEventListener('load', () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                try {
+                                    const response = JSON.parse(xhr.responseText);
+                                    // 统一处理API响应格式
+                                    if (response.success && response.data) {
+                                        resolve(response.data);
+                                    } else {
+                                        resolve(response);
+                                    }
+                                } catch (e) {
+                                    reject(new Error('响应解析失败'));
+                                }
+                            } else {
+                                reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                            }
+                        });
+                        
+                        xhr.addEventListener('error', () => {
+                            reject(new Error('网络错误'));
+                        });
+                        
+                        xhr.open('POST', url);
+                        xhr.send(formData);
+                    });
                 },
 
                 formatDate(dateString) {

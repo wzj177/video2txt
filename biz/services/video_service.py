@@ -13,8 +13,16 @@ import asyncio
 import json
 import subprocess
 import shutil
+import sys
+
+# 添加项目根目录到Python路径
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from ..services.task_service import task_service
+
+# 导入ASR模块
+from core.asr import voice_core, initialize_voice_recognition, transcribe_audio
 
 
 class VideoService:
@@ -25,6 +33,9 @@ class VideoService:
         self.uploads_dir = Path(__file__).parent.parent.parent / "data" / "uploads"
         self.work_dir.mkdir(parents=True, exist_ok=True)
         self.uploads_dir.mkdir(parents=True, exist_ok=True)
+
+        # 初始化ASR模块
+        self._initialize_asr()
 
     async def process_file(
         self, file_data: Dict[str, Any], config: Dict[str, Any]
@@ -39,7 +50,7 @@ class VideoService:
                 "current_step": "准备处理...",
             }
 
-            task = task_service.create_task("video", task_data)
+            task = await task_service.create_task("video", task_data)
             task_id = task["id"]
 
             # 异步处理文件
@@ -61,7 +72,7 @@ class VideoService:
                 "current_step": "准备下载...",
             }
 
-            task = task_service.create_task("video", task_data)
+            task = await task_service.create_task("video", task_data)
             task_id = task["id"]
 
             # 异步处理URL
@@ -89,35 +100,46 @@ class VideoService:
         self, task_id: str, file_data: Dict[str, Any], config: Dict[str, Any]
     ):
         """异步处理文件"""
+        temp_audio_path = None
         try:
             # 更新任务状态
-            task_service.update_task(
+            await task_service.update_task(
                 "video",
                 task_id,
                 {"status": "running", "progress": 10, "current_step": "文件预处理..."},
             )
 
-            await asyncio.sleep(1)  # 模拟处理延迟
-
-            # 步骤1: 文件预处理
-            task_service.update_task(
+            # 步骤1: 文件预处理 - 提取音频
+            await task_service.update_task(
                 "video", task_id, {"progress": 25, "current_step": "音频提取..."}
             )
 
-            await asyncio.sleep(2)
+            # 如果是视频文件，需要提取音频
+            if file_data.get("type") == "video":
+                temp_audio_path = await self._extract_audio_from_video(
+                    file_data.get("file_path", ""), task_id
+                )
+            else:
+                # 音频文件直接使用
+                temp_audio_path = file_data.get("file_path", "")
+
+            if not temp_audio_path or not os.path.exists(temp_audio_path):
+                raise Exception("音频文件处理失败")
 
             # 步骤2: 语音识别
-            task_service.update_task(
+            await task_service.update_task(
                 "video", task_id, {"progress": 50, "current_step": "语音识别中..."}
             )
 
-            # 调用实际的语音识别模块
-            transcript = await self._run_speech_recognition(file_data, config)
+            # 调用实际的ASR语音识别模块
+            transcript = await self._run_speech_recognition_with_asr(
+                temp_audio_path, config
+            )
 
             await asyncio.sleep(2)
 
             # 步骤3: 生成摘要和其他内容
-            task_service.update_task(
+            await task_service.update_task(
                 "video", task_id, {"progress": 75, "current_step": "生成摘要..."}
             )
 
@@ -126,7 +148,7 @@ class VideoService:
             await asyncio.sleep(1)
 
             # 步骤4: 生成输出文件
-            task_service.update_task(
+            await task_service.update_task(
                 "video", task_id, {"progress": 90, "current_step": "生成输出文件..."}
             )
 
@@ -135,7 +157,7 @@ class VideoService:
             )
 
             # 完成任务
-            task_service.update_task(
+            await task_service.update_task(
                 "video",
                 task_id,
                 {
@@ -143,16 +165,40 @@ class VideoService:
                     "progress": 100,
                     "current_step": "处理完成",
                     "results": {
-                        "transcript": transcript,
+                        "transcript": (
+                            transcript.get("text", "")
+                            if isinstance(transcript, dict)
+                            else str(transcript)
+                        ),
+                        "transcript_data": (
+                            transcript if isinstance(transcript, dict) else {}
+                        ),
                         "summary": summary,
                         "files": output_files,
+                        "engine_info": {
+                            "model": (
+                                transcript.get("model", "unknown")
+                                if isinstance(transcript, dict)
+                                else "unknown"
+                            ),
+                            "language": (
+                                transcript.get("language", "auto")
+                                if isinstance(transcript, dict)
+                                else "auto"
+                            ),
+                            "processing_time": (
+                                transcript.get("processing_time", 0)
+                                if isinstance(transcript, dict)
+                                else 0
+                            ),
+                        },
                     },
                 },
             )
 
         except Exception as e:
             # 任务失败
-            task_service.update_task(
+            await task_service.update_task(
                 "video",
                 task_id,
                 {
@@ -166,7 +212,7 @@ class VideoService:
         """异步处理URL"""
         try:
             # 更新任务状态
-            task_service.update_task(
+            await task_service.update_task(
                 "video",
                 task_id,
                 {"status": "running", "progress": 5, "current_step": "下载视频..."},
@@ -175,7 +221,7 @@ class VideoService:
             # 模拟下载过程
             for progress in range(5, 40, 5):
                 await asyncio.sleep(1)
-                task_service.update_task(
+                await task_service.update_task(
                     "video",
                     task_id,
                     {"progress": progress, "current_step": f"下载中... {progress}%"},
@@ -192,7 +238,7 @@ class VideoService:
             await self._process_file_async(task_id, file_data, config)
 
         except Exception as e:
-            task_service.update_task(
+            await task_service.update_task(
                 "video",
                 task_id,
                 {
@@ -353,6 +399,123 @@ class VideoService:
             )
 
         return flashcards
+
+    def _initialize_asr(self):
+        """初始化ASR语音识别模块"""
+        try:
+            import logging
+
+            logger = logging.getLogger(__name__)
+
+            logger.info("🔧 初始化ASR语音识别模块...")
+
+            # 初始化语音识别核心，使用auto模式自动选择最佳引擎
+            if initialize_voice_recognition("auto"):
+                logger.info("✅ ASR模块初始化成功")
+                # 获取当前引擎信息
+                engine_info = voice_core.get_engine_info()
+                logger.info(f"🎤 当前引擎: {engine_info.get('engine', 'unknown')}")
+            else:
+                logger.error("❌ ASR模块初始化失败")
+
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"❌ ASR初始化异常: {e}")
+
+    async def _run_speech_recognition_with_asr(
+        self, audio_path: str, config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """使用ASR模块进行语音识别"""
+        try:
+            import logging
+
+            logger = logging.getLogger(__name__)
+
+            language = config.get("language", "auto")
+            model = config.get("model", "auto")
+
+            logger.info(f"🎤 开始语音识别: {Path(audio_path).name}")
+            logger.info(f"   语言: {language}, 模型: {model}")
+
+            # 如果指定了特定模型，尝试切换引擎
+            if model != "auto":
+                engine_map = {
+                    "whisper": "whisper",
+                    "faster_whisper": "faster_whisper",
+                    "sensevoice": "sensevoice",
+                    "dolphin": "dolphin",
+                }
+
+                if model in engine_map:
+                    voice_core.switch_engine(engine_map[model])
+                    logger.info(f"🔄 切换到指定引擎: {model}")
+
+            # 执行语音识别
+            result = voice_core.recognize_file(audio_path, language)
+
+            if result:
+                logger.info(f"✅ 识别成功 - 文本长度: {len(result.get('text', ''))}")
+                logger.info(f"   处理时间: {result.get('processing_time', 0):.2f}秒")
+                return result
+            else:
+                raise Exception("语音识别返回空结果")
+
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"❌ 语音识别失败: {e}")
+            raise
+
+    async def _extract_audio_from_video(self, video_path: str, task_id: str) -> str:
+        """从视频中提取音频"""
+        try:
+            import logging
+
+            logger = logging.getLogger(__name__)
+
+            logger.info(f"🎬 从视频提取音频: {Path(video_path).name}")
+
+            # 创建音频输出路径
+            audio_filename = f"{task_id}_audio.wav"
+            audio_path = self.work_dir / task_id / audio_filename
+            audio_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # 使用ffmpeg提取音频
+            import subprocess
+
+            cmd = [
+                "ffmpeg",
+                "-i",
+                video_path,
+                "-vn",  # 不处理视频
+                "-acodec",
+                "pcm_s16le",  # 音频编码
+                "-ar",
+                "16000",  # 采样率
+                "-ac",
+                "1",  # 单声道
+                "-y",  # 覆盖输出文件
+                str(audio_path),
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            if result.returncode == 0 and audio_path.exists():
+                logger.info(f"✅ 音频提取成功: {audio_path}")
+                return str(audio_path)
+            else:
+                logger.error(f"❌ FFmpeg错误: {result.stderr}")
+                raise Exception(f"音频提取失败: {result.stderr}")
+
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"❌ 音频提取失败: {e}")
+            raise
 
 
 # 全局视频服务实例

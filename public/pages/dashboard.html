@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI听世界 - 仪表盘</title>
+    <link rel="icon" href="/favicon.ico">
     <link rel="stylesheet" href="/assets/css/common.css">
     <link rel="stylesheet" href="/assets/css/icons.css">
     <style>
@@ -664,10 +665,8 @@
                 
                 async loadVideoStats() {
                     try {
-                        const response = await http.get('/api/tasks/video/stats');
-                        if (response.success) {
-                            this.videoStats = response.data;
-                        }
+                        const data = await http.get('/api/tasks/video/stats');
+                        this.videoStats = data;
                     } catch (error) {
                         console.error('获取视频统计失败:', error);
                     }
@@ -675,10 +674,8 @@
                 
                 async loadMeetingStats() {
                     try {
-                        const response = await http.get('/api/tasks/meeting/stats');
-                        if (response.success) {
-                            this.meetingStats = response.data;
-                        }
+                        const data = await http.get('/api/tasks/meeting/stats');
+                        this.meetingStats = data;
                     } catch (error) {
                         console.error('获取会议统计失败:', error);
                     }
@@ -686,10 +683,8 @@
                 
                 async loadSystemInfo() {
                     try {
-                        const response = await http.get('/api/system/info');
-                        if (response.success) {
-                            this.systemInfo = response.data;
-                        }
+                        const data = await http.get('/api/system/info');
+                        this.systemInfo = data;
                     } catch (error) {
                         console.error('获取系统信息失败:', error);
                     }

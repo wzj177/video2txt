@@ -57,15 +57,51 @@ class SystemService:
                 return {"gpu": False, "gpu_usage": 0}
 
         except ImportError:
-            # 模拟GPU信息（用于开发环境）
-            return {
-                "gpu": True,
-                "gpu_name": "模拟GPU (开发环境)",
-                "gpu_usage": 25,
-                "gpu_memory_usage": 30,
-            }
+            # 尝试其他方式检测GPU
+            return SystemService._get_gpu_info_fallback()
         except Exception:
             return {"gpu": False, "gpu_usage": 0}
+
+    @staticmethod
+    def _get_gpu_info_fallback() -> Dict[str, Any]:
+        """备用GPU检测方法"""
+        try:
+            # 尝试使用torch检测CUDA
+            import torch
+
+            if torch.cuda.is_available():
+                gpu_name = torch.cuda.get_device_name(0)
+                return {
+                    "gpu": True,
+                    "gpu_name": gpu_name,
+                    "gpu_usage": 0,  # torch不提供实时使用率
+                    "gpu_memory_usage": 0,
+                }
+        except ImportError:
+            pass
+
+        try:
+            # 尝试使用nvidia-ml-py检测NVIDIA GPU
+            import pynvml
+
+            pynvml.nvmlInit()
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+            name = pynvml.nvmlDeviceGetName(handle).decode("utf-8")
+
+            # 获取使用率
+            util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+
+            return {
+                "gpu": True,
+                "gpu_name": name,
+                "gpu_usage": util.gpu,
+                "gpu_memory_usage": util.memory,
+            }
+        except (ImportError, Exception):
+            pass
+
+        # 如果所有方法都失败，返回无GPU状态
+        return {"gpu": False, "gpu_usage": 0}
 
 
 # 全局系统服务实例

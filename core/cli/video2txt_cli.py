@@ -49,9 +49,9 @@ ssl._create_default_https_context = ssl._create_unverified_context
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # 导入核心模块
-from src.core.voice_recognition_core import voice_core, initialize_voice_recognition
-from src.adapters.ai_client_openai import OpenAIClientWrapper
-from src.adapters.ai_client_ollama import OllamaClient
+from core.asr.voice_recognition_core import voice_core, initialize_voice_recognition
+from core.ai.clients.ai_client_openai import OpenAIClientWrapper
+from core.ai.clients.ai_client_ollama import OllamaClient
 
 # 设置日志
 logging.basicConfig(

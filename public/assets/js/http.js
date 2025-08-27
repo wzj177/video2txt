@@ -42,7 +42,8 @@ class Http {
         // 统一处理响应数据
         if (response.data && response.data.success !== undefined) {
           if (response.data.success) {
-            return response.data.data || response.data;
+            // 对于API响应，返回完整数据以保持success字段
+            return response.data;
           } else {
             throw new Error(response.data.message || '请求失败');
           }

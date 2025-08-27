@@ -10,6 +10,8 @@ torchaudio>=0.12.0
 librosa>=0.9.0
 soundfile>=0.10.0
 pyaudio>=0.2.11
+sounddevice>=0.4.5  # 备用音频库
+wave  # 内置音频格式支持
 
 # 语音识别
 openai-whisper>=20231117
@@ -91,11 +93,18 @@ black>=22.0.0
 # torch-audio  # 如果需要GPU加速
 # torchaudio   # 如果需要GPU加速
 
+# 数据库支持
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+alembic>=1.12.0
+
+# Web框架和API服务
+fastapi>=0.95.0
+uvicorn>=0.20.0
+
 # 可选依赖 - 高级功能
 # gradio>=3.0.0        # 如果需要Web界面
 # streamlit>=1.20.0    # 如果需要Web应用
-# fastapi>=0.95.0      # 如果需要API服务
-# uvicorn>=0.20.0      # 如果需要API服务
 
 # 平台特定依赖
 # Windows

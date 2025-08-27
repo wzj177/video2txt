@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI听世界 - 系统设置</title>
+    <link rel="icon" href="/favicon.ico">
     <link rel="stylesheet" href="/assets/css/common.css">
     <link rel="stylesheet" href="/assets/css/icons.css">
     <style>
@@ -389,6 +390,37 @@
             transition: width 0.3s ease;
         }
 
+        .model-features {
+            margin: var(--spacing-sm) 0;
+            padding: var(--spacing-sm);
+            background: rgba(var(--primary-rgb), 0.05);
+            border-radius: var(--radius-small);
+            border: 1px solid rgba(var(--primary-rgb), 0.1);
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-xs);
+            font-size: 13px;
+        }
+
+        .feature-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .feature-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-right: var(--spacing-xs);
+            min-width: 70px;
+        }
+
+        .feature-value {
+            color: var(--text-secondary);
+            flex: 1;
+        }
+
         .ollama-install {
             text-align: center;
             padding: var(--spacing-xxl);
@@ -628,14 +660,14 @@
                             <div class="form-group">
                                 <label class="form-label">API Key</label>
                                 <input type="password" 
-                                       v-model="openaiConfig.apiKey" 
+                                       v-model="openaiConfig.api_key" 
                                        class="form-input" 
                                        placeholder="sk-...">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Base URL</label>
                                 <input type="url" 
-                                       v-model="openaiConfig.baseUrl" 
+                                       v-model="openaiConfig.base_url" 
                                        class="form-input" 
                                        placeholder="https://api.openai.com/v1">
                             </div>
@@ -644,17 +676,76 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">默认模型</label>
-                                <select v-model="openaiConfig.model" class="form-select">
-                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                    <option value="gpt-4">GPT-4</option>
-                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                    <option value="gpt-4o">GPT-4o</option>
-                                </select>
+                                <div class="model-selector">
+                                    <select v-model="openaiConfig.model" class="form-select" @change="onModelChange">
+                                        <optgroup label="OpenAI (美国)">
+                                            <option value="gpt-4.5">GPT-4.5</option>
+                                            <option value="gpt-5-thinking">GPT-5 Thinking</option>
+                                            <option value="o3-pro">o3 Pro (推理模型)</option>
+                                            <option value="gpt-4o">GPT-4o</option>
+                                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                            <option value="gpt-4">GPT-4</option>
+                                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                        </optgroup>
+                                        <optgroup label="Anthropic (美国)">
+                                            <option value="claude-4-opus">Claude 4 Opus</option>
+                                            <option value="claude-4-sonnet">Claude 4 Sonnet</option>
+                                            <option value="claude-3.7-sonnet">Claude 3.7 Sonnet</option>
+                                            <option value="claude-3-opus">Claude 3 Opus</option>
+                                            <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                                        </optgroup>
+                                        <optgroup label="Google DeepMind (美国)">
+                                            <option value="gemini-2.0-ultra">Gemini 2.0 Ultra</option>
+                                            <option value="gemini-2.5-pro">Gemini-2.5-Pro</option>
+                                            <option value="gemini-2.0-experimental">Gemini 2.0 实验性模型</option>
+                                            <option value="gemini-pro">Gemini Pro</option>
+                                        </optgroup>
+                                        <optgroup label="阿里巴巴 (中国)">
+                                            <option value="qwen-max-2025-01-25">Qwen Max</option>
+                                            <option value="qwen-turbo">Qwen Turbo</option>
+                                            <option value="qwen-plus">Qwen Plus</option>
+                                        </optgroup>
+                                        <optgroup label="Meta (美国)">
+                                            <option value="llama-3.1">LLaMA 3.1</option>
+                                            <option value="llama-3">LLaMA 3</option>
+                                            <option value="llama-2">LLaMA 2</option>
+                                        </optgroup>
+                                        <optgroup label="百度 (中国)">
+                                            <option value="ernie-4.0">文心一言 4.0</option>
+                                            <option value="ernie-3.5">文心一言 3.5</option>
+                                        </optgroup>
+                                        <optgroup label="智谱AI (中国)">
+                                            <option value="chatglm-6b">ChatGLM-6B</option>
+                                            <option value="chatglm-130b">ChatGLM-130B</option>
+                                        </optgroup>
+                                        <optgroup label="DeepSeek (中国)">
+                                            <option value="deepseek-v3">DeepSeek V3</option>
+                                            <option value="deepseek-r1">DeepSeek-R1</option>
+                                        </optgroup>
+                                        <optgroup label="其他">
+                                            <option value="custom">自定义模型...</option>
+                                        </optgroup>
+                                    </select>
+                                    
+                                    <!-- 自定义模型输入 -->
+                                    <div v-if="openaiConfig.model === 'custom'" class="custom-model-input" style="margin-top: 8px;">
+                                        <input 
+                                            type="text" 
+                                            v-model="openaiConfig.customModel" 
+                                            placeholder="请输入自定义模型名称，如：gpt-4-1106-preview"
+                                            class="form-input"
+                                            style="width: 100%;"
+                                        />
+                                        <div class="form-hint">
+                                            输入完整的模型名称，确保与API提供商的模型名称完全一致
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">最大Tokens</label>
                                 <input type="number" 
-                                       v-model="openaiConfig.maxTokens" 
+                                       v-model="openaiConfig.max_tokens" 
                                        class="form-input" 
                                        min="100" 
                                        max="4000">
@@ -688,7 +779,7 @@
                             <svg class="icon icon-md" viewBox="0 0 24 24">
                                 <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
                             </svg>
-                            Whisper模型
+                            语音模型
                         </div>
 
                         <div v-for="model in whisperModels" :key="model.name" class="model-card">
@@ -702,6 +793,47 @@
                                 </div>
                             </div>
                             <div class="model-desc">{{ model.description }}</div>
+                            
+                            <!-- 语言支持信息 -->
+                            <div v-if="model.languages || model.dialect_support || model.features" class="model-features">
+                                <div v-if="model.languages" class="feature-item">
+                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                        <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.01-4.65 1.73-6.53C11.87 5.5 11.45 5 10.95 5s-.92.5-1.14 1c-.28 1.88-.01 4.59 1.73 6.53l.03.03-2.54 2.51c-.42.42-.42 1.1 0 1.52s1.1.42 1.52 0L12 15.14l1.45 1.45c.42.42 1.1.42 1.52 0s.42-1.1 0-1.52z"/>
+                                    </svg>
+                                    <span class="feature-label">支持语言:</span>
+                                    <span class="feature-value">{{ Array.isArray(model.languages) ? model.languages.join('、') : model.languages }}</span>
+                                </div>
+                                <div v-if="model.dialect_support" class="feature-item">
+                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                        <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.89-1.99 2L3 20c0 1.11.89 2 2 2h14c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 16H5V9h14v11z"/>
+                                    </svg>
+                                    <span class="feature-label">方言支持:</span>
+                                    <span class="feature-value">{{ model.dialect_support }}</span>
+                                </div>
+                                <div v-if="model.features" class="feature-item">
+                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                    </svg>
+                                    <span class="feature-label">特色功能:</span>
+                                    <span class="feature-value">{{ Array.isArray(model.features) ? model.features.join('、') : model.features }}</span>
+                                </div>
+                                <div v-if="model.performance" class="feature-item">
+                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                        <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+                                    </svg>
+                                    <span class="feature-label">性能优势:</span>
+                                    <span class="feature-value">{{ model.performance }}</span>
+                                </div>
+                            </div>
+                            
+                            <div v-if="model.status === 'installed' && model.localPath" class="model-path">
+                                <small style="color: var(--text-tertiary); font-size: 0.8em;">
+                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                        <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                                    </svg>
+                                    {{ model.localPath }}
+                                </small>
+                            </div>
                             <div v-if="model.status === 'downloading'" class="download-progress">
                                 <div class="progress-fill" :style="{width: model.progress + '%'}"></div>
                             </div>
@@ -733,49 +865,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="setting-section">
-                        <div class="section-title">
-                            <svg class="icon icon-md" viewBox="0 0 24 24">
-                                <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
-                            </svg>
-                            其他语音模型
-                        </div>
-
-                        <div v-for="model in otherModels" :key="model.name" class="model-card">
-                            <div class="model-header">
-                                <div>
-                                    <div class="model-name">{{ model.name }}</div>
-                                    <div class="model-size">{{ model.size }}</div>
-                                </div>
-                                <div class="model-status" :class="model.status">
-                                    {{ getModelStatusText(model.status) }}
-                                </div>
-                            </div>
-                            <div class="model-desc">{{ model.description }}</div>
-                            <div v-if="model.status === 'downloading'" class="download-progress">
-                                <div class="progress-fill" :style="{width: model.progress + '%'}"></div>
-                            </div>
-                            <div class="model-actions">
-                                <button v-if="model.status === 'not-installed'" 
-                                        class="btn btn-primary" 
-                                        @click="downloadModel(model)">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
-                                    </svg>
-                                    下载
-                                </button>
-                                <button v-else-if="model.status === 'installed'" 
-                                        class="btn btn-secondary" 
-                                        @click="deleteModel(model)">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                                    </svg>
-                                    删除
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- 系统设置 -->
@@ -803,10 +892,10 @@
                                 <input type="text" 
                                        v-model="systemConfig.storagePath" 
                                        class="form-input" 
-                                       readonly>
-                                <button class="btn btn-secondary" style="margin-top: 8px;" @click="chooseStoragePath">
+                                       placeholder="请输入存储路径，如：/path/to/storage">
+                                <!-- <button class="btn btn-secondary" style="margin-top: 8px;" @click="chooseStoragePath">
                                     选择路径
-                                </button>
+                                </button> -->
                             </div>
                         </div>
 
@@ -850,10 +939,10 @@
                     ollamaInstalled: false,
                     ollamaStatus: 'disconnected', // connected, disconnected, checking
                     openaiConfig: {
-                        apiKey: '',
-                        baseUrl: 'https://api.openai.com/v1',
+                        api_key: '',
+                        base_url: 'https://api.openai.com/v1',
                         model: 'gpt-3.5-turbo',
-                        maxTokens: 2000
+                        max_tokens: 2000
                     },
                     systemConfig: {
                         defaultLanguage: 'auto',
@@ -889,29 +978,14 @@
                             status: 'not-installed',
                             progress: 0
                         }
-                    ],
-                    otherModels: [
-                        {
-                            name: 'SenseVoice',
-                            size: '2.1 GB',
-                            description: '阿里达摩院语音识别模型，对中文支持优秀',
-                            status: 'installed',
-                            progress: 100
-                        },
-                        {
-                            name: 'Dolphin',
-                            size: '500 MB',
-                            description: '专门针对方言优化的语音识别模型',
-                            status: 'not-installed',
-                            progress: 0
-                        }
                     ]
                 }
             },
 
-            async mounted() {
+            async created() {
                 await this.loadSettings();
                 await this.checkOllama();
+                await this.loadModels();
             },
 
             methods: {
@@ -921,35 +995,76 @@
 
                 async loadSettings() {
                     try {
-                        // 模拟加载设置
-                        // const response = await http.get('/api/settings');
-                        // if (response.success) {
-                        //     Object.assign(this.openaiConfig, response.data.openai);
-                        //     Object.assign(this.systemConfig, response.data.system);
-                        // }
+                        // 加载所有设置
+                        const data = await http.get('/api/settings/all');
+                        Object.assign(this.openaiConfig, data.openai);
+                        Object.assign(this.systemConfig, data.system);
                     } catch (error) {
                         console.error('加载设置失败:', error);
+                        this.showMessage('加载设置失败: ' + error.message, 'error');
                     }
                 },
 
                 async checkOllama() {
                     this.ollamaStatus = 'checking';
                     try {
-                        // 模拟检查Ollama状态
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        
-                        // const response = await http.get('/api/settings/ollama/status');
-                        // this.ollamaInstalled = response.data.installed;
-                        // this.ollamaStatus = response.data.running ? 'connected' : 'disconnected';
-                        
-                        // 模拟结果
-                        this.ollamaInstalled = Math.random() > 0.5;
-                        this.ollamaStatus = this.ollamaInstalled ? 
-                            (Math.random() > 0.3 ? 'connected' : 'disconnected') : 
-                            'disconnected';
+                        const data = await http.post('/api/settings/ollama/detect');
+                        this.ollamaInstalled = data.installed;
+                        this.ollamaStatus = data.running ? 'connected' : 'disconnected';
                     } catch (error) {
+                        console.error('检查Ollama失败:', error);
+                        this.ollamaInstalled = false;
                         this.ollamaStatus = 'disconnected';
-                        console.error('检查Ollama状态失败:', error);
+                    }
+                },
+
+                async loadModels() {
+                    try {
+                        const data = await http.get('/api/models');
+                        // 转换API数据格式为前端需要的格式
+                        this.whisperModels = [];
+                        
+                        // 处理Whisper模型
+                        if (data.whisper) {
+                            data.whisper.forEach(model => {
+                                    this.whisperModels.push({
+                                        name: `Whisper ${model.name}`,
+                                        size: model.size,
+                                        description: model.description,
+                                        status: model.installed ? 'installed' : 'not-installed',
+                                        progress: model.installed ? 100 : 0,
+                                        type: 'whisper',
+                                        modelName: model.name,
+                                        localPath: model.local_path
+                                    });
+                                });
+                            }
+                            
+                            // 处理其他模型
+                            ['sensevoice', 'dolphin'].forEach(engineType => {
+                                if (data[engineType]) {
+                                    data[engineType].forEach(model => {
+                                        this.whisperModels.push({
+                                            name: model.name,
+                                            size: model.size,
+                                            description: model.description,
+                                            status: model.installed ? 'installed' : 'not-installed',
+                                            progress: model.installed ? 100 : 0,
+                                            type: engineType,
+                                            modelName: model.name,
+                                            localPath: model.local_path || model.repo,
+                                            // 新增字段
+                                            languages: model.languages,
+                                            dialect_support: model.dialect_support,
+                                            features: model.features,
+                                            performance: model.performance
+                                        });
+                                    });
+                                }
+                            });
+                    } catch (error) {
+                        console.error('加载模型失败:', error);
+                        this.showMessage('加载模型失败: ' + error.message, 'error');
                     }
                 },
 
@@ -970,10 +1085,8 @@
                 async saveOpenAIConfig() {
                     this.isSaving = true;
                     try {
-                        const response = await http.post('/api/settings/openai', this.openaiConfig);
-                        if (response.success) {
-                            alert('OpenAI配置保存成功');
-                        }
+                        await http.post('/api/settings/openai', this.openaiConfig);
+                        alert('OpenAI配置保存成功');
                     } catch (error) {
                         console.error('保存OpenAI配置失败:', error);
                     } finally {
@@ -983,12 +1096,8 @@
 
                 async testOpenAIConfig() {
                     try {
-                        const response = await http.post('/api/settings/openai/test', this.openaiConfig);
-                        if (response.success) {
-                            alert('OpenAI连接测试成功');
-                        } else {
-                            alert('OpenAI连接测试失败: ' + response.message);
-                        }
+                        await http.post('/api/settings/openai/test', this.openaiConfig);
+                        alert('OpenAI连接测试成功');
                     } catch (error) {
                         alert('OpenAI连接测试失败: ' + error.message);
                     }
@@ -997,10 +1106,8 @@
                 async saveSystemConfig() {
                     this.isSaving = true;
                     try {
-                        const response = await http.post('/api/settings/system', this.systemConfig);
-                        if (response.success) {
-                            alert('系统设置保存成功');
-                        }
+                        await http.post('/api/settings/system', this.systemConfig);
+                        alert('系统设置保存成功');
                     } catch (error) {
                         console.error('保存系统设置失败:', error);
                     } finally {
@@ -1011,6 +1118,17 @@
                 chooseStoragePath() {
                     // 模拟选择路径
                     alert('请在终端中修改配置文件指定存储路径');
+                },
+
+                showMessage(message, type = 'info') {
+                    // 简单的消息显示，可以后续改为更好的UI组件
+                    if (type === 'error') {
+                        alert('错误: ' + message);
+                    } else if (type === 'success') {
+                        alert('成功: ' + message);
+                    } else {
+                        alert(message);
+                    }
                 },
 
                 getModelStatusText(status) {

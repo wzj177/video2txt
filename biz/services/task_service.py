@@ -4,168 +4,214 @@
 AI听世界 - 任务管理服务
 """
 
-from typing import Dict, List, Any
-from datetime import datetime
+import logging
 import asyncio
+from typing import Dict, List, Any, Optional
+from datetime import datetime
+
+from ..database.connection import get_database_manager
+from ..database.repositories import (
+    VideoTaskRepository,
+    MeetingTaskRepository,
+    TaskFileRepository,
+)
+from ..models.task import VideoTask, MeetingTask, TaskFile
+
+logger = logging.getLogger(__name__)
 
 
 class TaskService:
-    """任务管理服务 - 管理所有类型的任务"""
+    """任务管理服务 - 管理所有类型的任务（使用SQLite存储）"""
 
     def __init__(self):
-        self._storage = {"video_tasks": [], "meeting_tasks": []}
-        self._init_demo_data()
+        self.db_manager = get_database_manager()
+        self._initialized = False
 
-    def _init_demo_data(self):
-        """初始化演示数据"""
-        demo_video_tasks = [
-            {
-                "id": "video_20250821_100000_0",
-                "type": "video",
-                "status": "completed",
-                "progress": 100,
-                "created_at": "2025-08-21T10:00:00",
-                "updated_at": "2025-08-21T10:15:00",
-                "input": {
-                    "type": "file",
-                    "filename": "demo_video.mp4",
-                    "size": 50 * 1024 * 1024,
-                },
-                "config": {
-                    "language": "zh",
-                    "model": "whisper",
-                    "output_types": ["transcript", "summary"],
-                },
-                "results": {
-                    "transcript": "演示转录内容：这是一个关于AI技术发展的讲座，主要讨论了深度学习和自然语言处理的最新进展...",
-                    "summary": "演示摘要内容：讲座重点介绍了AI技术在各个领域的应用，包括语音识别、图像处理等...",
-                    "files": [
-                        {"name": "transcript.txt", "path": "/demo/transcript.txt"},
-                        {"name": "summary.md", "path": "/demo/summary.md"},
-                        {"name": "audio.wav", "path": "/demo/audio.wav"},
-                    ],
-                },
-            },
-            {
-                "id": "video_20250821_110000_1",
-                "type": "audio",
-                "status": "running",
-                "progress": 65,
-                "created_at": "2025-08-21T11:00:00",
-                "updated_at": "2025-08-21T11:10:00",
-                "current_step": "正在进行语音识别...",
-                "input": {
-                    "type": "file",
-                    "filename": "demo_audio.mp3",
-                    "size": 25 * 1024 * 1024,
-                },
-                "config": {
-                    "language": "auto",
-                    "model": "dolphin",
-                    "output_types": ["transcript", "flashcards"],
-                },
-                "results": {},
-                "partial_transcript": "大家好，欢迎来到今天的技术分享会议...",
-            },
-        ]
+    async def _ensure_initialized(self):
+        """确保数据库已初始化"""
+        if not self._initialized:
+            await self.db_manager.create_tables()
+            self._initialized = True
 
-        demo_meeting_tasks = [
-            {
-                "id": "meeting_20250821_090000_0",
-                "status": "completed",
-                "progress": 100,
-                "created_at": "2025-08-21T09:00:00",
-                "updated_at": "2025-08-21T09:30:00",
-                "config": {"language": "zh", "realtime": True},
-                "results": {
-                    "transcript": "会议转录内容：今天我们讨论产品迭代计划...",
-                    "summary": "会议纪要：确定了下一版本的功能优先级...",
-                    "duration": 1800,
-                },
-            }
-        ]
-
-        self._storage["video_tasks"].extend(demo_video_tasks)
-        self._storage["meeting_tasks"].extend(demo_meeting_tasks)
-
-    def get_tasks(self, task_type: str) -> List[Dict[str, Any]]:
+    async def get_tasks(
+        self, task_type: str, status: str = None, limit: int = 100
+    ) -> List[Dict[str, Any]]:
         """获取任务列表"""
-        key = f"{task_type}_tasks"
-        if key not in self._storage:
+        await self._ensure_initialized()
+
+        try:
+            async with self.db_manager.get_session() as session:
+                if task_type == "video":
+                    repo = VideoTaskRepository(session)
+                    if status:
+                        tasks = await repo.get_by_status(status, limit)
+                    else:
+                        tasks = await repo.get_all(limit)
+                elif task_type == "meeting":
+                    repo = MeetingTaskRepository(session)
+                    if status:
+                        tasks = await repo.get_by_status(status, limit)
+                    else:
+                        tasks = await repo.get_all(limit)
+                else:
+                    return []
+
+                return [task.to_dict() for task in tasks]
+        except Exception as e:
+            logger.error(f"获取任务列表失败: {e}")
             return []
 
-        # 按创建时间倒序排列
-        tasks = sorted(
-            self._storage[key],
-            key=lambda x: x.get("created_at", ""),
-            reverse=True,
-        )
-        return tasks
-
-    def get_task_by_id(self, task_type: str, task_id: str) -> Dict[str, Any]:
+    async def get_task_by_id(
+        self, task_type: str, task_id: str
+    ) -> Optional[Dict[str, Any]]:
         """根据ID获取任务"""
-        tasks = self.get_tasks(task_type)
-        for task in tasks:
-            if task["id"] == task_id:
-                return task
-        return None
+        await self._ensure_initialized()
 
-    def get_task_stats(self, task_type: str) -> Dict[str, int]:
+        try:
+            async with self.db_manager.get_session() as session:
+                if task_type == "video":
+                    repo = VideoTaskRepository(session)
+                elif task_type == "meeting":
+                    repo = MeetingTaskRepository(session)
+                else:
+                    return None
+
+                task = await repo.get_by_id(task_id)
+                return task.to_dict() if task else None
+        except Exception as e:
+            logger.error(f"获取任务失败: {e}")
+            return None
+
+    async def get_task(self, task_type: str, task_id: str) -> Optional[Dict[str, Any]]:
+        """兼容方法：根据ID获取单个任务"""
+        return await self.get_task_by_id(task_type, task_id)
+
+    async def get_task_stats(self, task_type: str) -> Dict[str, int]:
         """获取任务统计信息"""
-        tasks = self.get_tasks(task_type)
+        await self._ensure_initialized()
 
-        stats = {
-            "total": len(tasks),
-            "running": len([t for t in tasks if t.get("status") == "running"]),
-            "completed": len([t for t in tasks if t.get("status") == "completed"]),
-            "failed": len([t for t in tasks if t.get("status") == "failed"]),
-            "pending": len([t for t in tasks if t.get("status") == "pending"]),
-        }
+        try:
+            async with self.db_manager.get_session() as session:
+                if task_type == "video":
+                    repo = VideoTaskRepository(session)
+                    return await repo.get_stats()
+                elif task_type == "meeting":
+                    repo = MeetingTaskRepository(session)
+                    return await repo.get_stats()
+                else:
+                    return {}
+        except Exception as e:
+            logger.error(f"获取任务统计失败: {e}")
+            return {}
 
-        # 视频任务额外统计音频和视频数量
-        if task_type == "video":
-            stats.update(
-                {
-                    "audioCount": len([t for t in tasks if t.get("type") == "audio"]),
-                    "videoCount": len([t for t in tasks if t.get("type") == "video"]),
-                }
-            )
-
-        return stats
-
-    def create_task(self, task_type: str, task_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_task(
+        self, task_type: str, task_data: Dict[str, Any], task_id: str = None
+    ) -> Dict[str, Any]:
         """创建新任务"""
-        # 生成任务ID
-        task_id = f"{task_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self._storage[f'{task_type}_tasks'])}"
+        await self._ensure_initialized()
 
-        # 创建任务对象
-        task = {
-            "id": task_id,
-            "status": "pending",
-            "progress": 0,
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-            **task_data,
-        }
+        # 如果没有指定ID，生成一个
+        if not task_id:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            task_id = f"{task_type}_{timestamp}_{hash(str(task_data)) % 1000:03d}"
 
-        # 添加到存储
-        self._storage[f"{task_type}_tasks"].append(task)
+        try:
+            async with self.db_manager.get_session() as session:
+                if task_type == "video":
+                    repo = VideoTaskRepository(session)
+                    # 从task_data提取视频任务相关字段
+                    input_data = task_data.get("input", {})
+                    config_data = task_data.get("config", {})
 
-        return task
+                    task = await repo.create(
+                        id=task_id,
+                        task_type=task_data.get("type", "video"),
+                        status=task_data.get("status", "pending"),
+                        progress=task_data.get("progress", 0),
+                        current_step=task_data.get("current_step", ""),
+                        input_type=input_data.get("type", "file"),
+                        input_filename=input_data.get("filename"),
+                        input_size=input_data.get("size"),
+                        input_path=input_data.get("file_path"),
+                        input_url=input_data.get("url"),
+                        config=config_data,
+                        results=task_data.get("results", {}),
+                    )
+                elif task_type == "meeting":
+                    repo = MeetingTaskRepository(session)
+                    config_data = task_data.get("config", {})
 
-    def update_task(
+                    task = await repo.create(
+                        id=task_id,
+                        status=task_data.get("status", "pending"),
+                        progress=task_data.get("progress", 0),
+                        current_step=task_data.get("current_step", ""),
+                        meeting_app=config_data.get("meeting_app", "auto"),
+                        source_language=config_data.get("source_language", "auto"),
+                        target_language=config_data.get("target_language", "none"),
+                        engine=config_data.get("engine", "sensevoice"),
+                        capture_mode=config_data.get("capture_mode", "system"),
+                        realtime=config_data.get("realtime", True),
+                    )
+                else:
+                    raise ValueError(f"不支持的任务类型: {task_type}")
+
+                return task.to_dict()
+        except Exception as e:
+            logger.error(f"创建任务失败: {e}")
+            raise
+
+    async def update_task(
         self, task_type: str, task_id: str, updates: Dict[str, Any]
     ) -> bool:
         """更新任务"""
-        task = self.get_task_by_id(task_type, task_id)
-        if not task:
+        await self._ensure_initialized()
+
+        try:
+            async with self.db_manager.get_session() as session:
+                if task_type == "video":
+                    repo = VideoTaskRepository(session)
+                elif task_type == "meeting":
+                    repo = MeetingTaskRepository(session)
+                else:
+                    return False
+
+                task = await repo.update(task_id, **updates)
+                return task is not None
+        except Exception as e:
+            logger.error(f"更新任务失败: {e}")
             return False
 
-        # 更新字段
-        task.update(updates)
-        task["updated_at"] = datetime.now().isoformat()
+    async def delete_task(self, task_type: str, task_id: str) -> bool:
+        """删除任务"""
+        await self._ensure_initialized()
 
-        return True
+        try:
+            async with self.db_manager.get_session() as session:
+                if task_type == "video":
+                    repo = VideoTaskRepository(session)
+                elif task_type == "meeting":
+                    repo = MeetingTaskRepository(session)
+                else:
+                    return False
+
+                # 先删除相关文件记录
+                file_repo = TaskFileRepository(session)
+                task_files = await file_repo.get_by_task(task_id)
+                for task_file in task_files:
+                    await file_repo.delete(task_file.id)
+                    # TODO: 删除实际文件
+                    logger.info(f"删除任务文件: {task_file.file_path}")
+
+                # 删除任务
+                success = await repo.delete(task_id)
+                if success:
+                    logger.info(f"任务删除成功: {task_id}")
+
+                return success
+        except Exception as e:
+            logger.error(f"删除任务失败: {e}")
+            return False
 
 
 # 全局任务服务实例
