@@ -275,7 +275,7 @@ async def create_video_task(
             "validation_info": validation_result["info"],  # 传递验证信息，避免重复验证
         }
 
-        # 处理文件（验证通过后才创建任务）
+        # 处理文件（自动选择异步或同步模式）
         result = await video_service.process_file(file_data, config)
     else:
         # 处理URL或本地文件路径
@@ -314,10 +314,10 @@ async def create_video_task(
                 ],  # 传递验证信息，避免重复验证
             }
 
-            # 处理本地文件（验证通过后才创建任务）
+            # 处理本地文件（自动选择异步或同步模式）
             result = await video_service.process_file(file_data, config)
         else:
-            # 网络URL
+            # 网络URL - 自动选择异步或同步模式
             result = await video_service.process_url(url, config)
 
     if "error" in result:
@@ -381,12 +381,58 @@ async def delete_video_task(task_id: str) -> Dict[str, Any]:
     if not task:
         raise HTTPException(status_code=404, detail="任务未找到")
 
+    # 如果任务正在运行，尝试取消Celery任务
+    if task.get("status") in ["queued", "running"] and task.get("celery_task_id"):
+        try:
+            from app.celery_config import celery_app
+
+            celery_app.control.revoke(task["celery_task_id"], terminate=True)
+        except Exception as e:
+            # 取消失败不影响删除操作
+            pass
+
     # 删除任务和相关资源
     success = await task_service.delete_task("video", task_id)
     if not success:
         raise HTTPException(status_code=500, detail="删除任务失败")
 
     return create_success_response(None, "任务删除成功")
+
+
+@video_router.post("/{task_id}/cancel")
+async def cancel_video_task(task_id: str) -> Dict[str, Any]:
+    """取消视频任务"""
+    task = await task_service.get_task_by_id("video", task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务未找到")
+
+    # 只有排队中或运行中的任务可以取消
+    if task.get("status") not in ["queued", "running"]:
+        raise HTTPException(status_code=400, detail="任务不能取消")
+
+    # 取消Celery任务
+    if task.get("celery_task_id"):
+        try:
+            from app.celery_config import celery_app
+
+            celery_app.control.revoke(task["celery_task_id"], terminate=True)
+
+            # 更新任务状态
+            await task_service.update_task(
+                "video",
+                task_id,
+                {
+                    "status": "cancelled",
+                    "current_step": "任务已取消",
+                    "error": "用户取消了任务",
+                },
+            )
+
+            return create_success_response(None, "任务已取消")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"取消任务失败: {str(e)}")
+    else:
+        raise HTTPException(status_code=400, detail="无法取消任务：缺少Celery任务ID")
 
 
 async def validate_media_file_basic(file_path: str, filename: str) -> None:

@@ -37,10 +37,14 @@ class VideoService:
         # 初始化ASR模块
         self._initialize_asr()
 
+        # 队列系统检测缓存
+        self._queue_system = None
+        self._queue_checked = False
+
     async def process_file(
         self, file_data: Dict[str, Any], config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """处理上传的文件"""
+        """处理上传的文件（兼容同步和异步模式）"""
         try:
             # 创建任务
             task_data = {
@@ -53,16 +57,29 @@ class VideoService:
             task = await task_service.create_task("video", task_data)
             task_id = task["id"]
 
-            # 异步处理文件
-            asyncio.create_task(self._process_file_async(task_id, file_data, config))
+            # 检查队列系统可用性
+            queue_result = await self._try_queue_processing(
+                task_id, "process_video_file", (task_id, file_data, config)
+            )
 
+            if queue_result:
+                return queue_result
+
+            # 队列不可用，回退到同步处理
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning("队列系统不可用，回退到同步处理")
+
+            # 异步处理文件（在当前进程中）
+            asyncio.create_task(self._process_file_async(task_id, file_data, config))
             return {"task_id": task_id, "status": "created"}
 
         except Exception as e:
             return {"error": str(e)}
 
     async def process_url(self, url: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        """处理URL链接"""
+        """处理URL链接（兼容同步和异步模式）"""
         try:
             # 创建任务
             task_data = {
@@ -75,9 +92,22 @@ class VideoService:
             task = await task_service.create_task("video", task_data)
             task_id = task["id"]
 
-            # 异步处理URL
-            asyncio.create_task(self._process_url_async(task_id, url, config))
+            # 检查队列系统可用性
+            queue_result = await self._try_queue_processing(
+                task_id, "process_video_url", (task_id, url, config)
+            )
 
+            if queue_result:
+                return queue_result
+
+            # 队列不可用，回退到同步处理
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning("队列系统不可用，回退到同步处理")
+
+            # 异步处理URL（在当前进程中）
+            asyncio.create_task(self._process_url_async(task_id, url, config))
             return {"task_id": task_id, "status": "created"}
 
         except Exception as e:
@@ -328,6 +358,12 @@ class VideoService:
                 if isinstance(transcript, dict)
                 else str(transcript)
             )
+
+            # 调用大模型生成
+            ## 1. 生成内容卡片笔记，按照/Users/jiechengyang/src/py-app/ai-video2text/commands/beta/3.0/video2txt.py 里的 generate_xhs_note实现
+            ## 2. 生成markdown mmap思维导图，按照/Users/jiechengyang/src/py-app/ai-video2text/commands/beta/3.0/video2txt.py 里的 generate_markmap实现
+            ## 3. 生成学习闪卡并支持anki，按照/Users/jiechengyang/src/py-app/ai-video2text/commands/beta/3.0/video2txt.py 里的 generate_flashcards实现 和export_anki_format实现
+            ## 4. 生成XMind兼容的FreeMind格式的思维导图，按照/Users/jiechengyang/src/py-app/ai-video2text/commands/beta/3.0/video2txt.py 里的 export_xmind_format实现
 
             # 生成转录文件
             if "transcript" in output_types:
@@ -685,6 +721,144 @@ class VideoService:
             pass
 
         return {"has_audio": False, "info": "此视频文件没有音频内容"}
+
+    async def _detect_queue_system(self) -> Optional[str]:
+        """检测可用的队列系统"""
+        if self._queue_checked:
+            return self._queue_system
+
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        # 1. 首先检查Redis是否可用（端口6379）
+        try:
+            import socket
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(("localhost", 6379))
+            sock.close()
+
+            if result == 0:
+                # Redis可用，检查Celery
+                try:
+                    from ..tasks.video_tasks import process_video_file_task
+
+                    self._queue_system = "celery"
+                    logger.info("✅ 检测到Redis + Celery队列系统")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # 2. 如果Redis不可用，使用SQLite队列
+        if self._queue_system is None:
+            try:
+                from ..queue.task_manager import get_task_manager
+                from ..tasks.video_tasks_sqlite import process_video_file_task
+
+                self._queue_system = "sqlite"
+                logger.info("✅ 使用SQLite队列系统")
+            except Exception as e:
+                logger.warning(f"SQLite队列系统不可用: {e}")
+
+        self._queue_checked = True
+        return self._queue_system
+
+    async def _try_queue_processing(
+        self, task_id: str, task_name: str, args: tuple
+    ) -> Optional[Dict[str, Any]]:
+        """尝试使用队列处理任务"""
+        queue_system = await self._detect_queue_system()
+
+        if queue_system == "celery":
+            return await self._try_celery_processing(task_id, task_name, args)
+        elif queue_system == "sqlite":
+            return await self._try_sqlite_processing(task_id, task_name, args)
+        else:
+            return None
+
+    async def _try_celery_processing(
+        self, task_id: str, task_name: str, args: tuple
+    ) -> Optional[Dict[str, Any]]:
+        """尝试使用Celery处理"""
+        try:
+            from ..tasks.video_tasks import (
+                process_video_file_task,
+                process_video_url_task,
+            )
+
+            if task_name == "process_video_file":
+                celery_task = process_video_file_task.delay(*args)
+            else:
+                celery_task = process_video_url_task.delay(*args)
+
+            # 更新任务记录，保存Celery任务ID
+            await task_service.update_task(
+                "video",
+                task_id,
+                {
+                    "celery_task_id": celery_task.id,
+                    "status": "queued",
+                    "current_step": "任务已提交到Celery队列...",
+                },
+            )
+
+            return {
+                "task_id": task_id,
+                "status": "queued",
+                "celery_task_id": celery_task.id,
+            }
+
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Celery处理失败: {e}")
+            return None
+
+    async def _try_sqlite_processing(
+        self, task_id: str, task_name: str, args: tuple
+    ) -> Optional[Dict[str, Any]]:
+        """尝试使用SQLite队列处理"""
+        try:
+            from ..queue.task_manager import get_task_manager
+
+            manager = get_task_manager()
+
+            # 确保Worker正在运行
+            if not manager.running:
+                manager.start_workers(worker_count=1)
+
+            # 提交任务到SQLite队列
+            queue_task_id = manager.submit_task(
+                task_name=task_name, args=args, queue_name="video_processing"
+            )
+
+            # 更新任务记录
+            await task_service.update_task(
+                "video",
+                task_id,
+                {
+                    "queue_task_id": queue_task_id,
+                    "status": "queued",
+                    "current_step": "任务已提交到SQLite队列...",
+                },
+            )
+
+            return {
+                "task_id": task_id,
+                "status": "queued",
+                "queue_task_id": queue_task_id,
+            }
+
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"SQLite队列处理失败: {e}")
+            return None
 
 
 # 全局视频服务实例

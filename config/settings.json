@@ -1,8 +1,8 @@
 {
   "openai": {
-    "api_key": "sk-b4a1cde0146044baab660bc789c83790",
-    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "model": "qwen-max-2025-01-25",
+    "api_key": "211",
+    "base_url": "https://api.openai.com/v1",
+    "model": "gpt-3.5-turbo",
     "max_tokens": 2000
   },
   "ollama": {
