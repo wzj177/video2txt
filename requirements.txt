@@ -20,6 +20,7 @@ faster-whisper>=0.9.0
 # SenseVoice和FunASR (阿里达摩院)
 funasr>=1.0.0
 modelscope>=1.9.0
+onnxruntime>=1.15.0  # SenseVoice ONNX模型支持
 
 # 机器学习和深度学习
 transformers>=4.21.0
@@ -119,3 +120,9 @@ uvicorn>=0.20.0
 # Linux
 # python3-dev          # 系统包，需要apt安装
 # portaudio19-dev      # 系统包，需要apt安装
+
+
+psutil>=5.9.0
+GPUtil>=1.4.0
+
+git+https://github.com/wzj177/Dolphin.git

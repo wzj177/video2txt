@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI听世界 - 系统设置</title>
+    <title>听语AI - 系统设置</title>
     <link rel="icon" href="/favicon.ico">
     <link rel="stylesheet" href="/assets/css/common.css">
     <link rel="stylesheet" href="/assets/css/icons.css">
@@ -23,8 +23,8 @@
             --text-secondary: #595959;
             --text-tertiary: #8c8c8c;
             --border-light: #f0f0f0;
-            --shadow-light: 0 2px 8px rgba(0,0,0,0.06);
-            --shadow-medium: 0 4px 16px rgba(0,0,0,0.12);
+            --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.06);
+            --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
             --spacing-xs: 4px;
             --spacing-sm: 8px;
             --spacing-md: 16px;
@@ -51,9 +51,9 @@
 
         .settings-container {
             min-height: 100vh;
-            background: linear-gradient(135deg, 
-                rgba(0, 178, 106, 0.03) 0%, 
-                rgba(0, 161, 214, 0.03) 100%);
+            background: linear-gradient(135deg,
+            rgba(0, 178, 106, 0.03) 0%,
+            rgba(0, 161, 214, 0.03) 100%);
         }
 
         .header {
@@ -377,17 +377,44 @@
 
         .download-progress {
             width: 100%;
+            margin-top: var(--spacing-sm);
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+        }
+
+        .progress-text {
+            color: var(--text-secondary);
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .progress-percent {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-left: var(--spacing-sm);
+        }
+
+        .progress-bar {
+            width: 100%;
             height: 8px;
             background: var(--border-light);
             border-radius: 4px;
             overflow: hidden;
-            margin-top: var(--spacing-sm);
         }
 
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
             transition: width 0.3s ease;
+            border-radius: 4px;
         }
 
         .model-features {
@@ -480,8 +507,12 @@
         }
 
         @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .fade-in {
@@ -490,19 +521,25 @@
         }
 
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @media (max-width: 768px) {
             .settings-tabs {
                 flex-direction: column;
             }
-            
+
             .form-row {
                 grid-template-columns: 1fr;
             }
-            
+
             .main-content {
                 padding: var(--spacing-lg) var(--spacing-md);
             }
@@ -510,679 +547,785 @@
     </style>
 </head>
 <body>
-    <div id="app" class="settings-container">
-        <!-- 顶部导航 -->
-        <header class="header">
-            <div class="header-content">
-                <div class="header-left">
-                    <a href="./" class="logo">
-                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+<div id="app" class="settings-container">
+    <!-- 顶部导航 -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="./" class="logo">
+                    <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    听语AI
+                </a>
+                <nav class="nav-menu">
+                    <a href="/dashboard" class="nav-item">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
                         </svg>
-                        AI听世界
+                        仪表盘
                     </a>
-                    <nav class="nav-menu">
-                        <a href="/dashboard" class="nav-item">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
-                            </svg>
-                            仪表盘
-                        </a>
-                        <a href="/video2txt" class="nav-item">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
-                            </svg>
-                            音视频转文本
-                        </a>
-                        <a href="/meeting2txt" class="nav-item">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                            </svg>
-                            实时会议记录
-                        </a>
-                        <a href="/settings" class="nav-item active">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
-                            </svg>
-                            设置
-                        </a>
-                    </nav>
-                </div>
+                    <a href="/video2txt" class="nav-item">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+                        </svg>
+                        音视频转文本
+                    </a>
+                    <a href="/meeting2txt" class="nav-item">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        实时会议记录
+                    </a>
+                    <a href="/settings" class="nav-item active">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+                        </svg>
+                        设置
+                    </a>
+                </nav>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <!-- 主要内容 -->
-        <main class="main-content">
-            <div class="page-title">
-                <svg class="icon icon-lg" viewBox="0 0 24 24">
-                    <path d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+    <!-- 主要内容 -->
+    <main class="main-content">
+        <div class="page-title">
+            <svg class="icon icon-lg" viewBox="0 0 24 24">
+                <path d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+            </svg>
+            系统设置
+        </div>
+
+        <!-- 设置标签 -->
+        <div class="settings-tabs">
+            <button class="tab-btn" :class="{active: currentTab === 'ai'}" @click="setTab('ai')">
+                <svg class="icon icon-md" viewBox="0 0 24 24">
+                    <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                AI配置
+            </button>
+            <button class="tab-btn" :class="{active: currentTab === 'models'}" @click="setTab('models')">
+                <svg class="icon icon-md" viewBox="0 0 24 24">
+                    <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                </svg>
+                语音模型
+            </button>
+            <button class="tab-btn" :class="{active: currentTab === 'system'}" @click="setTab('system')">
+                <svg class="icon icon-md" viewBox="0 0 24 24">
+                    <path d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/>
                 </svg>
                 系统设置
-            </div>
+            </button>
+        </div>
 
-            <!-- 设置标签 -->
-            <div class="settings-tabs">
-                <button class="tab-btn" :class="{active: currentTab === 'ai'}" @click="setTab('ai')">
-                    <svg class="icon icon-md" viewBox="0 0 24 24">
-                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                    </svg>
-                    AI配置
-                </button>
-                <button class="tab-btn" :class="{active: currentTab === 'models'}" @click="setTab('models')">
-                    <svg class="icon icon-md" viewBox="0 0 24 24">
-                        <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
-                    </svg>
-                    语音模型
-                </button>
-                <button class="tab-btn" :class="{active: currentTab === 'system'}" @click="setTab('system')">
-                    <svg class="icon icon-md" viewBox="0 0 24 24">
-                        <path d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/>
-                    </svg>
-                    系统设置
-                </button>
-            </div>
+        <!-- 设置内容 -->
+        <div class="settings-content fade-in">
+            <!-- AI配置 -->
+            <div v-if="currentTab === 'ai'">
+                <!-- Ollama设置 -->
+                <div class="setting-section">
+                    <div class="section-title">
+                        <svg class="icon icon-md" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        Ollama配置
+                    </div>
 
-            <!-- 设置内容 -->
-            <div class="settings-content fade-in">
-                <!-- AI配置 -->
-                <div v-if="currentTab === 'ai'">
-                    <!-- Ollama设置 -->
-                    <div class="setting-section">
-                        <div class="section-title">
-                            <svg class="icon icon-md" viewBox="0 0 24 24">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                            </svg>
-                            Ollama配置
+                    <div v-if="!ollamaInstalled" class="ollama-install">
+                        <svg class="install-icon" viewBox="0 0 24 24">
+                            <path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4c0-1.11.89-2 2-2m0 18h12v-8H6v8z"/>
+                        </svg>
+                        <div class="install-title">Ollama 未安装</div>
+                        <div class="install-desc">
+                            Ollama 是运行本地大语言模型的工具，安装后可以使用本地AI进行内容分析
                         </div>
-                        
-                        <div v-if="!ollamaInstalled" class="ollama-install">
-                            <svg class="install-icon" viewBox="0 0 24 24">
-                                <path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4c0-1.11.89-2 2-2m0 18h12v-8H6v8z"/>
-                            </svg>
-                            <div class="install-title">Ollama 未安装</div>
-                            <div class="install-desc">
-                                Ollama 是运行本地大语言模型的工具，安装后可以使用本地AI进行内容分析
-                            </div>
-                            <div class="install-buttons">
-                                <button class="btn btn-primary" @click="downloadOllama">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
-                                    </svg>
-                                    下载安装
-                                </button>
-                                <button class="btn btn-secondary" @click="checkOllama">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
-                                    </svg>
-                                    重新检测
-                                </button>
-                            </div>
-                        </div>
-
-                        <div v-else class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-name">Ollama服务</div>
-                                <div class="setting-desc">本地AI模型运行环境</div>
-                            </div>
-                            <div class="setting-control">
-                                <div class="status-indicator" :class="ollamaStatus">
-                                    <svg v-if="ollamaStatus === 'connected'" class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                                    </svg>
-                                    <svg v-else-if="ollamaStatus === 'checking'" class="icon icon-sm icon-spin" viewBox="0 0 24 24">
-                                        <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
-                                    </svg>
-                                    <svg v-else class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/>
-                                    </svg>
-                                    {{ getOllamaStatusText() }}
-                                </div>
-                                <button class="btn btn-secondary" @click="checkOllama">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
-                                    </svg>
-                                    重新检测
-                                </button>
-                            </div>
+                        <div class="install-buttons">
+                            <button class="btn btn-primary" @click="downloadOllama">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
+                                </svg>
+                                下载安装
+                            </button>
+                            <button class="btn btn-secondary" @click="checkOllama">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                                </svg>
+                                重新检测
+                            </button>
                         </div>
                     </div>
 
-                    <!-- OpenAI设置 -->
-                    <div class="setting-section">
-                        <div class="section-title">
-                            <svg class="icon icon-md" viewBox="0 0 24 24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                            </svg>
-                            OpenAI配置
+                    <div v-else class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-name">Ollama服务</div>
+                            <div class="setting-desc">本地AI模型运行环境</div>
                         </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">API Key</label>
-                                <input type="password" 
-                                       v-model="openaiConfig.api_key" 
-                                       class="form-input" 
-                                       placeholder="sk-...">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Base URL</label>
-                                <input type="url" 
-                                       v-model="openaiConfig.base_url" 
-                                       class="form-input" 
-                                       placeholder="https://api.openai.com/v1">
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">默认模型</label>
-                                <div class="model-selector">
-                                    <select v-model="openaiConfig.model" class="form-select" @change="onModelChange">
-                                        <optgroup label="OpenAI (美国)">
-                                            <option value="gpt-4.5">GPT-4.5</option>
-                                            <option value="gpt-5-thinking">GPT-5 Thinking</option>
-                                            <option value="o3-pro">o3 Pro (推理模型)</option>
-                                            <option value="gpt-4o">GPT-4o</option>
-                                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                            <option value="gpt-4">GPT-4</option>
-                                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                        </optgroup>
-                                        <optgroup label="Anthropic (美国)">
-                                            <option value="claude-4-opus">Claude 4 Opus</option>
-                                            <option value="claude-4-sonnet">Claude 4 Sonnet</option>
-                                            <option value="claude-3.7-sonnet">Claude 3.7 Sonnet</option>
-                                            <option value="claude-3-opus">Claude 3 Opus</option>
-                                            <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                                        </optgroup>
-                                        <optgroup label="Google DeepMind (美国)">
-                                            <option value="gemini-2.0-ultra">Gemini 2.0 Ultra</option>
-                                            <option value="gemini-2.5-pro">Gemini-2.5-Pro</option>
-                                            <option value="gemini-2.0-experimental">Gemini 2.0 实验性模型</option>
-                                            <option value="gemini-pro">Gemini Pro</option>
-                                        </optgroup>
-                                        <optgroup label="阿里巴巴 (中国)">
-                                            <option value="qwen-max-2025-01-25">Qwen Max</option>
-                                            <option value="qwen-turbo">Qwen Turbo</option>
-                                            <option value="qwen-plus">Qwen Plus</option>
-                                        </optgroup>
-                                        <optgroup label="Meta (美国)">
-                                            <option value="llama-3.1">LLaMA 3.1</option>
-                                            <option value="llama-3">LLaMA 3</option>
-                                            <option value="llama-2">LLaMA 2</option>
-                                        </optgroup>
-                                        <optgroup label="百度 (中国)">
-                                            <option value="ernie-4.0">文心一言 4.0</option>
-                                            <option value="ernie-3.5">文心一言 3.5</option>
-                                        </optgroup>
-                                        <optgroup label="智谱AI (中国)">
-                                            <option value="chatglm-6b">ChatGLM-6B</option>
-                                            <option value="chatglm-130b">ChatGLM-130B</option>
-                                        </optgroup>
-                                        <optgroup label="DeepSeek (中国)">
-                                            <option value="deepseek-v3">DeepSeek V3</option>
-                                            <option value="deepseek-r1">DeepSeek-R1</option>
-                                        </optgroup>
-                                        <optgroup label="其他">
-                                            <option value="custom">自定义模型...</option>
-                                        </optgroup>
-                                    </select>
-                                    
-                                    <!-- 自定义模型输入 -->
-                                    <div v-if="openaiConfig.model === 'custom'" class="custom-model-input" style="margin-top: 8px;">
-                                        <input 
-                                            type="text" 
-                                            v-model="openaiConfig.customModel" 
-                                            placeholder="请输入自定义模型名称，如：gpt-4-1106-preview"
-                                            class="form-input"
-                                            style="width: 100%;"
-                                        />
-                                        <div class="form-hint">
-                                            输入完整的模型名称，确保与API提供商的模型名称完全一致
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">最大Tokens</label>
-                                <input type="number" 
-                                       v-model="openaiConfig.max_tokens" 
-                                       class="form-input" 
-                                       min="100" 
-                                       max="4000">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <button class="btn btn-primary" @click="saveOpenAIConfig" :disabled="isSaving">
-                                <svg v-if="isSaving" class="icon icon-sm icon-spin" viewBox="0 0 24 24">
+                        <div class="setting-control">
+                            <div class="status-indicator" :class="ollamaStatus">
+                                <svg v-if="ollamaStatus === 'connected'" class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                                <svg v-else-if="ollamaStatus === 'checking'" class="icon icon-sm icon-spin"
+                                     viewBox="0 0 24 24">
                                     <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
                                 </svg>
                                 <svg v-else class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/>
                                 </svg>
-                                保存配置
-                            </button>
-                            <button class="btn btn-secondary" @click="testOpenAIConfig" style="margin-left: 12px;">
+                                {{ getOllamaStatusText() }}
+                            </div>
+                            <button class="btn btn-secondary" @click="checkOllama">
                                 <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                    <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
                                 </svg>
-                                测试连接
+                                重新检测
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- 语音模型管理 -->
-                <div v-if="currentTab === 'models'">
-                    <div class="setting-section">
-                        <div class="section-title">
-                            <svg class="icon icon-md" viewBox="0 0 24 24">
-                                <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                <!-- OpenAI设置 -->
+                <div class="setting-section">
+                    <div class="section-title">
+                        <svg class="icon icon-md" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        OpenAI配置
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">API Key</label>
+                            <input type="password"
+                                   v-model="openaiConfig.api_key"
+                                   class="form-input"
+                                   placeholder="sk-...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Base URL</label>
+                            <input type="url"
+                                   v-model="openaiConfig.base_url"
+                                   class="form-input"
+                                   placeholder="https://api.openai.com/v1">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">默认模型</label>
+                            <div class="model-selector">
+                                <select v-model="openaiConfig.model" class="form-select" @change="onModelChange">
+                                    <optgroup label="OpenAI (美国)">
+                                        <option value="gpt-4.5">GPT-4.5</option>
+                                        <option value="gpt-5-thinking">GPT-5 Thinking</option>
+                                        <option value="o3-pro">o3 Pro (推理模型)</option>
+                                        <option value="gpt-4o">GPT-4o</option>
+                                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                        <option value="gpt-4">GPT-4</option>
+                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    </optgroup>
+                                    <optgroup label="Anthropic (美国)">
+                                        <option value="claude-4-opus">Claude 4 Opus</option>
+                                        <option value="claude-4-sonnet">Claude 4 Sonnet</option>
+                                        <option value="claude-3.7-sonnet">Claude 3.7 Sonnet</option>
+                                        <option value="claude-3-opus">Claude 3 Opus</option>
+                                        <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                                    </optgroup>
+                                    <optgroup label="Google DeepMind (美国)">
+                                        <option value="gemini-2.0-ultra">Gemini 2.0 Ultra</option>
+                                        <option value="gemini-2.5-pro">Gemini-2.5-Pro</option>
+                                        <option value="gemini-2.0-experimental">Gemini 2.0 实验性模型</option>
+                                        <option value="gemini-pro">Gemini Pro</option>
+                                    </optgroup>
+                                    <optgroup label="阿里巴巴 (中国)">
+                                        <option value="qwen-max-2025-01-25">Qwen Max</option>
+                                        <option value="qwen-turbo">Qwen Turbo</option>
+                                        <option value="qwen-plus">Qwen Plus</option>
+                                    </optgroup>
+                                    <optgroup label="Meta (美国)">
+                                        <option value="llama-3.1">LLaMA 3.1</option>
+                                        <option value="llama-3">LLaMA 3</option>
+                                        <option value="llama-2">LLaMA 2</option>
+                                    </optgroup>
+                                    <optgroup label="百度 (中国)">
+                                        <option value="ernie-4.0">文心一言 4.0</option>
+                                        <option value="ernie-3.5">文心一言 3.5</option>
+                                    </optgroup>
+                                    <optgroup label="智谱AI (中国)">
+                                        <option value="chatglm-6b">ChatGLM-6B</option>
+                                        <option value="chatglm-130b">ChatGLM-130B</option>
+                                    </optgroup>
+                                    <optgroup label="DeepSeek (中国)">
+                                        <option value="deepseek-v3">DeepSeek V3</option>
+                                        <option value="deepseek-r1">DeepSeek-R1</option>
+                                    </optgroup>
+                                    <optgroup label="其他">
+                                        <option value="custom">自定义模型...</option>
+                                    </optgroup>
+                                </select>
+
+                                <!-- 自定义模型输入 -->
+                                <div v-if="openaiConfig.model === 'custom'" class="custom-model-input"
+                                     style="margin-top: 8px;">
+                                    <input
+                                            type="text"
+                                            v-model="openaiConfig.customModel"
+                                            placeholder="请输入自定义模型名称，如：gpt-4-1106-preview"
+                                            class="form-input"
+                                            style="width: 100%;"
+                                    />
+                                    <div class="form-hint">
+                                        输入完整的模型名称，确保与API提供商的模型名称完全一致
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">最大Tokens</label>
+                            <input type="number"
+                                   v-model="openaiConfig.max_tokens"
+                                   class="form-input"
+                                   min="100"
+                                   max="4000">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <button class="btn btn-primary" @click="saveOpenAIConfig" :disabled="isSaving">
+                            <svg v-if="isSaving" class="icon icon-sm icon-spin" viewBox="0 0 24 24">
+                                <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
                             </svg>
-                            语音模型
+                            <svg v-else class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                            </svg>
+                            保存配置
+                        </button>
+                        <button class="btn btn-secondary" @click="testOpenAIConfig" style="margin-left: 12px;">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            测试连接
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 语音模型管理 -->
+            <div v-if="currentTab === 'models'">
+                <div class="setting-section">
+                    <div class="section-title">
+                        <svg class="icon icon-md" viewBox="0 0 24 24">
+                            <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                        </svg>
+                        语音模型
+                    </div>
+
+                    <div v-for="model in whisperModels" :key="model.name" class="model-card">
+                        <div class="model-header">
+                            <div>
+                                <div class="model-name">{{ model.name }}</div>
+                                <div class="model-size">{{ model.size }}</div>
+                            </div>
+                            <div class="model-status" :class="model.status">
+                                {{ getModelStatusText(model.status) }}
+                            </div>
+                        </div>
+                        <div class="model-desc">{{ model.description }}</div>
+
+                        <!-- 语言支持信息 -->
+                        <div v-if="model.languages || model.dialect_support || model.features" class="model-features">
+                            <div v-if="model.languages" class="feature-item">
+                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                    <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.01-4.65 1.73-6.53C11.87 5.5 11.45 5 10.95 5s-.92.5-1.14 1c-.28 1.88-.01 4.59 1.73 6.53l.03.03-2.54 2.51c-.42.42-.42 1.1 0 1.52s1.1.42 1.52 0L12 15.14l1.45 1.45c.42.42 1.1.42 1.52 0s.42-1.1 0-1.52z"/>
+                                </svg>
+                                <span class="feature-label">支持语言:</span>
+                                <span class="feature-value">{{ Array.isArray(model.languages) ? model.languages.join('、') : model.languages
+                                    }}</span>
+                            </div>
+                            <div v-if="model.dialect_support" class="feature-item">
+                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                    <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.89-1.99 2L3 20c0 1.11.89 2 2 2h14c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 16H5V9h14v11z"/>
+                                </svg>
+                                <span class="feature-label">方言支持:</span>
+                                <span class="feature-value">{{ model.dialect_support }}</span>
+                            </div>
+                            <div v-if="model.features" class="feature-item">
+                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                                <span class="feature-label">特色功能:</span>
+                                <span class="feature-value">{{ Array.isArray(model.features) ? model.features.join('、') : model.features
+                                    }}</span>
+                            </div>
+                            <div v-if="model.performance" class="feature-item">
+                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                    <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+                                </svg>
+                                <span class="feature-label">性能优势:</span>
+                                <span class="feature-value">{{ model.performance }}</span>
+                            </div>
                         </div>
 
-                        <div v-for="model in whisperModels" :key="model.name" class="model-card">
-                            <div class="model-header">
-                                <div>
-                                    <div class="model-name">{{ model.name }}</div>
-                                    <div class="model-size">{{ model.size }}</div>
-                                </div>
-                                <div class="model-status" :class="model.status">
-                                    {{ getModelStatusText(model.status) }}
-                                </div>
+                        <div v-if="model.status === 'installed' && model.localPath" class="model-path">
+                            <small style="color: var(--text-tertiary); font-size: 0.8em;">
+                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                    <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                                </svg>
+                                {{ model.localPath }}
+                            </small>
+                        </div>
+                        <div v-if="model.status === 'downloading'" class="download-progress">
+                            <div class="progress-info">
+                                <span class="progress-text">{{ model.currentStep || '下载中...' }}</span>
+                                <span class="progress-percent">{{ Math.round(model.progress || 0) }}%</span>
                             </div>
-                            <div class="model-desc">{{ model.description }}</div>
-                            
-                            <!-- 语言支持信息 -->
-                            <div v-if="model.languages || model.dialect_support || model.features" class="model-features">
-                                <div v-if="model.languages" class="feature-item">
-                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                        <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.01-4.65 1.73-6.53C11.87 5.5 11.45 5 10.95 5s-.92.5-1.14 1c-.28 1.88-.01 4.59 1.73 6.53l.03.03-2.54 2.51c-.42.42-.42 1.1 0 1.52s1.1.42 1.52 0L12 15.14l1.45 1.45c.42.42 1.1.42 1.52 0s.42-1.1 0-1.52z"/>
-                                    </svg>
-                                    <span class="feature-label">支持语言:</span>
-                                    <span class="feature-value">{{ Array.isArray(model.languages) ? model.languages.join('、') : model.languages }}</span>
-                                </div>
-                                <div v-if="model.dialect_support" class="feature-item">
-                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                        <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.89-1.99 2L3 20c0 1.11.89 2 2 2h14c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 16H5V9h14v11z"/>
-                                    </svg>
-                                    <span class="feature-label">方言支持:</span>
-                                    <span class="feature-value">{{ model.dialect_support }}</span>
-                                </div>
-                                <div v-if="model.features" class="feature-item">
-                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                    </svg>
-                                    <span class="feature-label">特色功能:</span>
-                                    <span class="feature-value">{{ Array.isArray(model.features) ? model.features.join('、') : model.features }}</span>
-                                </div>
-                                <div v-if="model.performance" class="feature-item">
-                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                        <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
-                                    </svg>
-                                    <span class="feature-label">性能优势:</span>
-                                    <span class="feature-value">{{ model.performance }}</span>
-                                </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" :style="{width: (model.progress || 0) + '%'}"></div>
                             </div>
-                            
-                            <div v-if="model.status === 'installed' && model.localPath" class="model-path">
-                                <small style="color: var(--text-tertiary); font-size: 0.8em;">
-                                    <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                        <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
-                                    </svg>
-                                    {{ model.localPath }}
-                                </small>
-                            </div>
-                            <div v-if="model.status === 'downloading'" class="download-progress">
-                                <div class="progress-fill" :style="{width: model.progress + '%'}"></div>
-                            </div>
-                            <div class="model-actions">
-                                <button v-if="model.status === 'not-installed'" 
-                                        class="btn btn-primary" 
-                                        @click="downloadModel(model)">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
-                                    </svg>
-                                    下载
-                                </button>
-                                <button v-else-if="model.status === 'installed'" 
-                                        class="btn btn-secondary" 
-                                        @click="deleteModel(model)">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                                    </svg>
-                                    删除
-                                </button>
-                                <button v-else-if="model.status === 'downloading'" 
-                                        class="btn btn-secondary" 
-                                        @click="cancelDownload(model)">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                                    </svg>
-                                    取消
-                                </button>
-                            </div>
+                        </div>
+                        <div class="model-actions">
+                            <button v-if="model.status === 'not-installed'"
+                                    class="btn btn-primary"
+                                    @click="downloadModel(model)">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
+                                </svg>
+                                下载
+                            </button>
+                            <button v-else-if="model.status === 'installed'"
+                                    class="btn btn-secondary"
+                                    @click="deleteModel(model)">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                </svg>
+                                删除
+                            </button>
+                            <button v-else-if="model.status === 'downloading'"
+                                    class="btn btn-secondary"
+                                    @click="cancelDownload(model)">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                </svg>
+                                取消
+                            </button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- 系统设置 -->
-                <div v-if="currentTab === 'system'">
-                    <div class="setting-section">
-                        <div class="section-title">
-                            <svg class="icon icon-md" viewBox="0 0 24 24">
-                                <path d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/>
-                            </svg>
-                            基础设置
-                        </div>
+            <!-- 系统设置 -->
+            <div v-if="currentTab === 'system'">
+                <div class="setting-section">
+                    <div class="section-title">
+                        <svg class="icon icon-md" viewBox="0 0 24 24">
+                            <path d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/>
+                        </svg>
+                        基础设置
+                    </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">默认语言</label>
-                                <select v-model="systemConfig.defaultLanguage" class="form-select">
-                                    <option value="auto">自动检测</option>
-                                    <option value="zh">中文</option>
-                                    <option value="en">英语</option>
-                                    <option value="dialect">方言</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">存储路径</label>
-                                <input type="text" 
-                                       v-model="systemConfig.storagePath" 
-                                       class="form-input" 
-                                       placeholder="请输入存储路径，如：/path/to/storage">
-                                <!-- <button class="btn btn-secondary" style="margin-top: 8px;" @click="chooseStoragePath">
-                                    选择路径
-                                </button> -->
-                            </div>
+                    <div class="form-row">
+                        <!--                            <div class="form-group">-->
+                        <!--                                <label class="form-label">默认语言</label>-->
+                        <!--                                <select v-model="systemConfig.defaultLanguage" class="form-select">-->
+                        <!--                                    <option value="auto">自动检测</option>-->
+                        <!--                                    <option value="zh">中文</option>-->
+                        <!--                                    <option value="en">英语</option>-->
+                        <!--                                    <option value="dialect">方言</option>-->
+                        <!--                                </select>-->
+                        <!--                            </div>-->
+                        <div class="form-group">
+                            <label class="form-label">存储路径</label>
+                            <input type="text"
+                                   v-model="systemConfig.storagePath"
+                                   class="form-input"
+                                   placeholder="请输入存储路径，如：/path/to/storage">
+                            <!-- <button class="btn btn-secondary" style="margin-top: 8px;" @click="chooseStoragePath">
+                                选择路径
+                            </button> -->
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">并发处理数</label>
-                            <input type="number" 
-                                   v-model="systemConfig.maxConcurrent" 
-                                   class="form-input" 
-                                   min="1" 
+                            <input type="number"
+                                   v-model="systemConfig.maxConcurrent"
+                                   class="form-input"
+                                   min="1"
                                    max="10">
                         </div>
-
-                        <div class="form-group">
-                            <button class="btn btn-primary" @click="saveSystemConfig" :disabled="isSaving">
-                                <svg v-if="isSaving" class="icon icon-sm icon-spin" viewBox="0 0 24 24">
-                                    <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
-                                </svg>
-                                <svg v-else class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
-                                </svg>
-                                保存设置
-                            </button>
-                        </div>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" @click="saveSystemConfig" :disabled="isSaving">
+                            <svg v-if="isSaving" class="icon icon-sm icon-spin" viewBox="0 0 24 24">
+                                <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                            </svg>
+                            <svg v-else class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                            </svg>
+                            保存设置
+                        </button>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
+</div>
 
-    <script src="/assets/js/vue.global.js"></script>
-    <script src="/assets/js/axios/axios.min.js"></script>
-    <script src="/assets/js/http.js"></script>
-    <script type="module">
-        const { createApp } = Vue;
-        
-        createApp({
-            data() {
-                return {
-                    currentTab: 'ai',
-                    isSaving: false,
-                    ollamaInstalled: false,
-                    ollamaStatus: 'disconnected', // connected, disconnected, checking
-                    openaiConfig: {
-                        api_key: '',
-                        base_url: 'https://api.openai.com/v1',
-                        model: 'gpt-3.5-turbo',
-                        max_tokens: 2000
+<script src="/assets/js/vue.global.js"></script>
+<script src="/assets/js/axios/axios.min.js"></script>
+<script src="/assets/js/http.js"></script>
+<script type="module">
+    const {createApp} = Vue;
+
+    createApp({
+        data() {
+            return {
+                currentTab: 'ai',
+                isSaving: false,
+                ollamaInstalled: false,
+                ollamaStatus: 'disconnected', // connected, disconnected, checking
+                openaiConfig: {
+                    api_key: '',
+                    base_url: 'https://api.openai.com/v1',
+                    model: 'gpt-3.5-turbo',
+                    max_tokens: 2000
+                },
+                systemConfig: {
+                    defaultLanguage: 'auto',
+                    storagePath: './data/outputs',
+                    maxConcurrent: 3
+                },
+                whisperModels: [
+                    {
+                        name: 'Whisper Tiny',
+                        size: '39 MB',
+                        description: '最小模型，速度快但精度较低，适合快速预览',
+                        status: 'not-installed',
+                        progress: 0
                     },
-                    systemConfig: {
-                        defaultLanguage: 'auto',
-                        storagePath: './data/outputs',
-                        maxConcurrent: 3
+                    {
+                        name: 'Whisper Small',
+                        size: '244 MB',
+                        description: '小型模型，平衡速度和精度，适合日常使用',
+                        status: 'installed',
+                        progress: 100
                     },
-                    whisperModels: [
-                        {
-                            name: 'Whisper Tiny',
-                            size: '39 MB',
-                            description: '最小模型，速度快但精度较低，适合快速预览',
-                            status: 'not-installed',
-                            progress: 0
-                        },
-                        {
-                            name: 'Whisper Small',
-                            size: '244 MB',
-                            description: '小型模型，平衡速度和精度，适合日常使用',
-                            status: 'installed',
-                            progress: 100
-                        },
-                        {
-                            name: 'Whisper Medium',
-                            size: '769 MB',
-                            description: '中型模型，更高精度，适合重要内容处理',
-                            status: 'not-installed',
-                            progress: 0
-                        },
-                        {
-                            name: 'Whisper Large',
-                            size: '1550 MB',
-                            description: '大型模型，最高精度，适合专业用途',
-                            status: 'not-installed',
-                            progress: 0
-                        }
-                    ]
+                    {
+                        name: 'Whisper Medium',
+                        size: '769 MB',
+                        description: '中型模型，更高精度，适合重要内容处理',
+                        status: 'not-installed',
+                        progress: 0
+                    },
+                    {
+                        name: 'Whisper Large',
+                        size: '1550 MB',
+                        description: '大型模型，最高精度，适合专业用途',
+                        status: 'not-installed',
+                        progress: 0
+                    }
+                ]
+            }
+        },
+
+        async created() {
+            await this.loadSettings();
+            await this.checkOllama();
+            await this.loadModels();
+        },
+
+        methods: {
+            setTab(tab) {
+                this.currentTab = tab;
+            },
+
+            async loadSettings() {
+                try {
+                    // 加载所有设置
+                    const data = await http.get('/api/settings/all');
+                    Object.assign(this.openaiConfig, data.openai);
+
+                    // 映射系统配置字段（API使用下划线，前端使用驼峰）
+                    if (data.system) {
+                        this.systemConfig.defaultLanguage = data.system.default_language || 'auto';
+                        this.systemConfig.storagePath = data.system.storage_path || './data/outputs';
+                        this.systemConfig.maxConcurrent = data.system.max_concurrent || 3;
+                    }
+                } catch (error) {
+                    console.error('加载设置失败:', error);
+                    this.showMessage('加载设置失败: ' + error.message, 'error');
                 }
             },
 
-            async created() {
-                await this.loadSettings();
-                await this.checkOllama();
-                await this.loadModels();
+            async checkOllama() {
+                this.ollamaStatus = 'checking';
+                try {
+                    const data = await http.post('/api/settings/ollama/detect');
+                    this.ollamaInstalled = data.installed;
+                    this.ollamaStatus = data.running ? 'connected' : 'disconnected';
+                } catch (error) {
+                    console.error('检查Ollama失败:', error);
+                    this.ollamaInstalled = false;
+                    this.ollamaStatus = 'disconnected';
+                }
             },
 
-            methods: {
-                setTab(tab) {
-                    this.currentTab = tab;
-                },
+            async loadModels() {
+                try {
+                    const data = await http.get('/api/models');
+                    // 转换API数据格式为前端需要的格式
+                    this.whisperModels = [];
 
-                async loadSettings() {
-                    try {
-                        // 加载所有设置
-                        const data = await http.get('/api/settings/all');
-                        Object.assign(this.openaiConfig, data.openai);
-                        Object.assign(this.systemConfig, data.system);
-                    } catch (error) {
-                        console.error('加载设置失败:', error);
-                        this.showMessage('加载设置失败: ' + error.message, 'error');
-                    }
-                },
-
-                async checkOllama() {
-                    this.ollamaStatus = 'checking';
-                    try {
-                        const data = await http.post('/api/settings/ollama/detect');
-                        this.ollamaInstalled = data.installed;
-                        this.ollamaStatus = data.running ? 'connected' : 'disconnected';
-                    } catch (error) {
-                        console.error('检查Ollama失败:', error);
-                        this.ollamaInstalled = false;
-                        this.ollamaStatus = 'disconnected';
-                    }
-                },
-
-                async loadModels() {
-                    try {
-                        const data = await http.get('/api/models');
-                        // 转换API数据格式为前端需要的格式
-                        this.whisperModels = [];
-                        
-                        // 处理Whisper模型
-                        if (data.whisper) {
-                            data.whisper.forEach(model => {
-                                    this.whisperModels.push({
-                                        name: `Whisper ${model.name}`,
-                                        size: model.size,
-                                        description: model.description,
-                                        status: model.installed ? 'installed' : 'not-installed',
-                                        progress: model.installed ? 100 : 0,
-                                        type: 'whisper',
-                                        modelName: model.name,
-                                        localPath: model.local_path
-                                    });
-                                });
-                            }
-                            
-                            // 处理其他模型
-                            ['sensevoice', 'dolphin'].forEach(engineType => {
-                                if (data[engineType]) {
-                                    data[engineType].forEach(model => {
-                                        this.whisperModels.push({
-                                            name: model.name,
-                                            size: model.size,
-                                            description: model.description,
-                                            status: model.installed ? 'installed' : 'not-installed',
-                                            progress: model.installed ? 100 : 0,
-                                            type: engineType,
-                                            modelName: model.name,
-                                            localPath: model.local_path || model.repo,
-                                            // 新增字段
-                                            languages: model.languages,
-                                            dialect_support: model.dialect_support,
-                                            features: model.features,
-                                            performance: model.performance
-                                        });
-                                    });
-                                }
+                    // 处理Whisper模型
+                    if (data.whisper) {
+                        data.whisper.forEach(model => {
+                            this.whisperModels.push({
+                                name: `Whisper ${model.name}`,
+                                size: model.size,
+                                description: model.description,
+                                status: model.installed ? 'installed' : 'not-installed',
+                                progress: model.installed ? 100 : 0,
+                                type: 'whisper',
+                                modelName: model.config_key || model.name, // 使用配置键名
+                                localPath: model.local_path,
+                                currentStep: '',
+                                taskId: null,
+                                eventSource: null
                             });
-                    } catch (error) {
-                        console.error('加载模型失败:', error);
-                        this.showMessage('加载模型失败: ' + error.message, 'error');
+                        });
                     }
-                },
 
-                getOllamaStatusText() {
-                    const statusMap = {
-                        connected: '已连接',
-                        disconnected: '未连接',
-                        checking: '检测中...'
+                    // 处理其他模型
+                    ['sensevoice', 'dolphin'].forEach(engineType => {
+                        if (data[engineType]) {
+                            data[engineType].forEach(model => {
+                                this.whisperModels.push({
+                                    name: model.name,
+                                    size: model.size,
+                                    description: model.description,
+                                    status: model.installed ? 'installed' : 'not-installed',
+                                    progress: model.installed ? 100 : 0,
+                                    type: engineType,
+                                    modelName: model.config_key || model.name, // 使用配置键名
+                                    localPath: model.local_path || model.repo,
+                                    // 新增字段
+                                    languages: model.languages,
+                                    dialect_support: model.dialect_support,
+                                    features: model.features,
+                                    performance: model.performance,
+                                    currentStep: '',
+                                    taskId: null,
+                                    eventSource: null
+                                });
+                            });
+                        }
+                    });
+                } catch (error) {
+                    console.error('加载模型失败:', error);
+                    this.showMessage('加载模型失败: ' + error.message, 'error');
+                }
+            },
+
+            getOllamaStatusText() {
+                const statusMap = {
+                    connected: '已连接',
+                    disconnected: '未连接',
+                    checking: '检测中...'
+                };
+                return statusMap[this.ollamaStatus] || '未知';
+            },
+
+            async downloadOllama() {
+                // 打开Ollama官网
+                window.open('https://ollama.ai/download', '_blank');
+            },
+
+            async saveOpenAIConfig() {
+                this.isSaving = true;
+                try {
+                    await http.post('/api/settings/openai', this.openaiConfig);
+                    alert('OpenAI配置保存成功');
+                } catch (error) {
+                    console.error('保存OpenAI配置失败:', error);
+                } finally {
+                    this.isSaving = false;
+                }
+            },
+
+            async testOpenAIConfig() {
+                try {
+                    await http.post('/api/settings/openai/test', this.openaiConfig);
+                    alert('OpenAI连接测试成功');
+                } catch (error) {
+                    alert('OpenAI连接测试失败: ' + error.message);
+                }
+            },
+
+            async saveSystemConfig() {
+                this.isSaving = true;
+                try {
+                    // 将驼峰命名转换为下划线命名
+                    const systemData = {
+                        default_language: this.systemConfig.defaultLanguage,
+                        storage_path: this.systemConfig.storagePath,
+                        max_concurrent: this.systemConfig.maxConcurrent
                     };
-                    return statusMap[this.ollamaStatus] || '未知';
-                },
 
-                async downloadOllama() {
-                    // 打开Ollama官网
-                    window.open('https://ollama.ai/download', '_blank');
-                },
+                    await http.post('/api/settings/system', systemData);
+                    alert('系统设置保存成功');
+                } catch (error) {
+                    console.error('保存系统设置失败:', error);
+                    alert('保存系统设置失败: ' + error.message);
+                } finally {
+                    this.isSaving = false;
+                }
+            },
 
-                async saveOpenAIConfig() {
-                    this.isSaving = true;
-                    try {
-                        await http.post('/api/settings/openai', this.openaiConfig);
-                        alert('OpenAI配置保存成功');
-                    } catch (error) {
-                        console.error('保存OpenAI配置失败:', error);
-                    } finally {
-                        this.isSaving = false;
-                    }
-                },
+            chooseStoragePath() {
+                // 模拟选择路径
+                alert('请在终端中修改配置文件指定存储路径');
+            },
 
-                async testOpenAIConfig() {
-                    try {
-                        await http.post('/api/settings/openai/test', this.openaiConfig);
-                        alert('OpenAI连接测试成功');
-                    } catch (error) {
-                        alert('OpenAI连接测试失败: ' + error.message);
-                    }
-                },
+            showMessage(message, type = 'info') {
+                // 简单的消息显示，可以后续改为更好的UI组件
+                if (type === 'error') {
+                    alert('错误: ' + message);
+                } else if (type === 'success') {
+                    alert('成功: ' + message);
+                } else {
+                    alert(message);
+                }
+            },
 
-                async saveSystemConfig() {
-                    this.isSaving = true;
-                    try {
-                        await http.post('/api/settings/system', this.systemConfig);
-                        alert('系统设置保存成功');
-                    } catch (error) {
-                        console.error('保存系统设置失败:', error);
-                    } finally {
-                        this.isSaving = false;
-                    }
-                },
+            getModelStatusText(status) {
+                const statusMap = {
+                    installed: '已安装',
+                    downloading: '下载中',
+                    'not-installed': '未安装'
+                };
+                return statusMap[status] || status;
+            },
 
-                chooseStoragePath() {
-                    // 模拟选择路径
-                    alert('请在终端中修改配置文件指定存储路径');
-                },
+            async downloadModel(model) {
+                if (model.status === 'downloading') {
+                    return; // 防止重复下载
+                }
 
-                showMessage(message, type = 'info') {
-                    // 简单的消息显示，可以后续改为更好的UI组件
-                    if (type === 'error') {
-                        alert('错误: ' + message);
-                    } else if (type === 'success') {
-                        alert('成功: ' + message);
-                    } else {
-                        alert(message);
-                    }
-                },
+                model.status = 'downloading';
+                model.progress = 0;
+                model.currentStep = '准备下载...';
 
-                getModelStatusText(status) {
-                    const statusMap = {
-                        installed: '已安装',
-                        downloading: '下载中',
-                        'not-installed': '未安装'
-                    };
-                    return statusMap[status] || status;
-                },
+                try {
+                    // 调用后端下载API
+                    const result = await http.post(`/api/models/${model.type}/${model.modelName}/download`);
+                    const taskId = result.task_id;
+                    model.taskId = taskId;
 
-                async downloadModel(model) {
-                    model.status = 'downloading';
-                    model.progress = 0;
-
-                    try {
-                        // 模拟下载进度
-                        const progressInterval = setInterval(() => {
-                            model.progress += Math.random() * 10;
-                            if (model.progress >= 100) {
-                                model.progress = 100;
-                                model.status = 'installed';
-                                clearInterval(progressInterval);
-                            }
-                        }, 500);
-
-                        // 实际应该调用API
-                        // const response = await http.post('/api/models/download', { name: model.name });
-                    } catch (error) {
-                        model.status = 'not-installed';
-                        model.progress = 0;
-                        console.error('下载模型失败:', error);
-                    }
-                },
-
-                async deleteModel(model) {
-                    if (!confirm(`确定要删除模型 ${model.name} 吗？`)) return;
-
-                    try {
-                        // const response = await http.delete('/api/models/' + model.name);
-                        model.status = 'not-installed';
-                        model.progress = 0;
-                    } catch (error) {
-                        console.error('删除模型失败:', error);
-                    }
-                },
-
-                cancelDownload(model) {
+                    // 开始监听下载进度
+                    this.listenDownloadProgress(model, taskId);
+                } catch (error) {
                     model.status = 'not-installed';
                     model.progress = 0;
-                    // 实际应该调用取消下载的API
+                    model.currentStep = '';
+                    console.error('下载模型失败:', error);
+                    alert(`下载失败: ${error.message}`);
                 }
+            },
+
+            // 监听下载进度 (SSE)
+            listenDownloadProgress(model, taskId) {
+                const eventSource = new EventSource(`/api/models/download/${taskId}/stream`);
+
+                eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+
+                        // 更新模型状态
+                        model.progress = data.progress || 0;
+                        model.currentStep = data.current_step || '';
+
+                        if (data.status === 'completed') {
+                            model.status = 'installed';
+                            model.progress = 100;
+                            model.currentStep = '下载完成';
+                            eventSource.close();
+
+                            // 刷新模型列表以获取最新状态
+                            setTimeout(() => {
+                                this.loadModels();
+                            }, 1000);
+                        } else if (data.status === 'failed') {
+                            model.status = 'not-installed';
+                            model.progress = 0;
+                            model.currentStep = data.current_step || '下载失败';
+                            eventSource.close();
+                            alert(`下载失败: ${data.current_step}`);
+                        }
+                    } catch (error) {
+                        console.error('解析进度数据失败:', error);
+                        model.status = 'not-installed';
+                        model.progress = 0;
+                        model.currentStep = '';
+                        eventSource.close();
+                        alert(`下载失败: ${error.message}`);
+                    }
+                };
+
+                eventSource.onerror = (error) => {
+                    console.error('SSE连接错误:', error);
+                    model.status = 'not-installed';
+                    model.progress = 0;
+                    model.currentStep = '';
+                    eventSource.close();
+                    alert('下载连接中断');
+                };
+
+                // 保存EventSource引用用于取消下载
+                model.eventSource = eventSource;
+            },
+
+            async deleteModel(model) {
+                if (!confirm(`确定要删除模型 ${model.name} 吗？`)) return;
+
+                try {
+                    const response = await http.delete(`/api/models/${model.type}/${model.modelName}`);
+
+                    if (response.data.success) {
+                        model.status = 'not-installed';
+                        model.progress = 0;
+                        model.currentStep = '';
+                        alert('模型删除成功');
+                    } else {
+                        throw new Error(response.data.error || '删除失败');
+                    }
+                } catch (error) {
+                    console.error('删除模型失败:', error);
+                    alert(`删除失败: ${error.message}`);
+                }
+            },
+
+            cancelDownload(model) {
+                // 关闭SSE连接
+                if (model.eventSource) {
+                    model.eventSource.close();
+                    model.eventSource = null;
+                }
+
+                // 重置模型状态
+                model.status = 'not-installed';
+                model.progress = 0;
+                model.currentStep = '';
+                model.taskId = null;
+
+                // TODO: 调用后端取消下载API（如果需要的话）
+                // await http.post(`/api/models/download/${model.taskId}/cancel`);
             }
-        }).mount('#app');
-    </script>
+        }
+    }).mount('#app');
+</script>
 </body>
 </html>

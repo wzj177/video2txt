@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 任务管理器
+听语AI - 任务管理器
 管理SQLite队列和Worker
 """
 

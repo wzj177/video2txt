@@ -106,6 +106,7 @@ class FasterWhisperEngine(BaseVoiceEngine):
                 beam_size=5,
                 best_of=5,
                 temperature=0.0,
+                initial_prompt="请使用简体中文输出",
             )
 
             # 处理结果

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 基于SQLite的轻量级任务队列
+听语AI - 基于SQLite的轻量级任务队列
 适合本地个人使用，无需Redis依赖
 """
 
@@ -30,20 +30,24 @@ class TaskStatus(Enum):
 
 
 class SQLiteTaskQueue:
-    """基于SQLite的任务队列"""
+    """基于SQLite的任务队列（使用统一数据库）"""
 
-    def __init__(self, db_path: str = None):
-        if db_path is None:
-            # 默认使用项目数据目录
-            project_root = Path(__file__).parent.parent.parent
-            data_dir = project_root / "data"
-            data_dir.mkdir(exist_ok=True)
-            db_path = str(data_dir / "task_queue.db")
+    def __init__(self, db_manager=None):
+        """
+        初始化队列系统
 
-        self.db_path = db_path
+        Args:
+            db_manager: 数据库管理器实例，如果为None则使用默认的app.db
+        """
+        if db_manager is None:
+            from ..database.connection import get_database_manager
+
+            self.db_manager = get_database_manager()
+        else:
+            self.db_manager = db_manager
+
         self.workers = {}  # worker_id -> WorkerThread
         self.running = False
-        self._init_database()
 
     def _init_database(self):
         """初始化数据库表"""

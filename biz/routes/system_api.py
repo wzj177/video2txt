@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 系统API路由
+听语AI - 系统API路由
 """
 
 from fastapi import APIRouter
@@ -28,7 +28,7 @@ async def health_check() -> Dict[str, Any]:
     """健康检查"""
     return {
         "success": True,
-        "data": {"status": "healthy", "service": "AI听世界", "version": "3.0.0"},
+        "data": {"status": "healthy", "service": "听语AI", "version": "3.0.0"},
     }
 
 
@@ -40,6 +40,6 @@ async def get_version() -> Dict[str, Any]:
         "data": {
             "version": "3.0.0",
             "build_date": "2025-08-21",
-            "description": "AI听世界 - 智能语音文字转换系统",
+            "description": "听语AI - 智能语音文字转换系统",
         },
     }

@@ -1,246 +1,215 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-AI聊天客户端 - 统一AI接口
-支持OpenAI、Claude、本地模型等多种后端
+AI聊天客户端 - 统一封装多种大模型
+支持OpenAI、阿里通义、智谱等，统一使用OpenAI接口
+支持Chat和SSE流式响应
 """
 
-import logging
 import os
-from typing import Optional, Dict, Any
 import json
+import logging
+import asyncio
+from typing import Dict, List, Any, Optional, AsyncGenerator, Union
+from dataclasses import dataclass
+from pathlib import Path
+
+# OpenAI库
+from openai import OpenAI, AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class ModelConfig:
+    """模型配置 - 对应settings.json结构"""
+
+    api_key: str
+    base_url: str
+    model: str
+    max_tokens: int = 4096
+    temperature: float = 0.7
+    timeout: int = 60
+
+
 class AIChatClient:
-    """AI聊天客户端 - 统一多种AI服务的接口"""
+    """AI聊天客户端 - 统一接口"""
 
-    def __init__(
-        self,
-        backend: str = "openai",
-        model: str = "gpt-4o-mini",
-        api_key: Optional[str] = None,
-        api_base: Optional[str] = None,
-    ):
-        self.backend = backend.lower()
-        self.model = model
-        self.api_key = api_key or self._get_api_key()
-        self.api_base = api_base
-        self.client = None
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        self.client = self._create_client()
 
-        # 初始化客户端
-        self._init_client()
-        logger.info(f"✅ AI客户端初始化完成: {self.backend}/{self.model}")
+    def _create_client(self) -> Union[OpenAI, AsyncOpenAI]:
+        """创建OpenAI客户端"""
+        client_kwargs = {
+            "api_key": self.config.api_key,
+            "base_url": self.config.base_url,
+            "timeout": self.config.timeout,
+        }
 
-    def _get_api_key(self) -> Optional[str]:
-        """获取API密钥"""
-        if self.backend == "openai":
-            return os.getenv("OPENAI_API_KEY")
-        elif self.backend == "claude":
-            return os.getenv("ANTHROPIC_API_KEY")
-        elif self.backend == "deepseek":
-            return os.getenv("DEEPSEEK_API_KEY")
-        return None
+        # 根据是否异步创建客户端
+        if asyncio.iscoroutinefunction(self._chat_completion):
+            return AsyncOpenAI(**client_kwargs)
+        else:
+            return OpenAI(**client_kwargs)
 
-    def _init_client(self):
-        """初始化AI客户端"""
+    async def chat_completion(
+        self, messages: List[Dict[str, str]], stream: bool = False, **kwargs
+    ) -> Union[str, AsyncGenerator[str, None]]:
+        """
+        聊天完成 - 统一接口
+
+        Args:
+            messages: 消息列表 [{"role": "user", "content": "..."}]
+            stream: 是否流式响应
+            **kwargs: 其他参数
+
+        Returns:
+            同步模式返回字符串，流式模式返回生成器
+        """
         try:
-            if self.backend == "openai":
-                self._init_openai_client()
-            elif self.backend == "claude":
-                self._init_claude_client()
-            elif self.backend == "deepseek":
-                self._init_deepseek_client()
-            else:
-                logger.warning(f"⚠️ 不支持的后端: {self.backend}，将使用模拟模式")
-
-        except Exception as e:
-            logger.error(f"❌ AI客户端初始化失败: {e}")
-            logger.info("🔄 将使用模拟模式")
-
-    def _init_openai_client(self):
-        """初始化OpenAI客户端"""
-        try:
-            import openai
-
-            if self.api_key:
-                self.client = openai.OpenAI(
-                    api_key=self.api_key, base_url=self.api_base
-                )
-                logger.info("✅ OpenAI客户端初始化成功")
-            else:
-                logger.warning("⚠️ 未找到OpenAI API密钥")
-
-        except ImportError:
-            logger.error("❌ 未安装openai库，请运行: pip install openai")
-        except Exception as e:
-            logger.error(f"❌ OpenAI客户端初始化失败: {e}")
-
-    def chat(
-        self,
-        message: str,
-        system_prompt: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4000,
-    ) -> str:
-        """发送聊天消息"""
-        try:
-            if not self.client:
-                return self._simulate_response(message)
-
-            if self.backend == "openai" or self.backend == "deepseek":
-                return self._chat_openai_style(
-                    message, system_prompt, temperature, max_tokens
-                )
-            elif self.backend == "claude":
-                return self._chat_claude_style(
-                    message, system_prompt, temperature, max_tokens
-                )
-            else:
-                return self._simulate_response(message)
-
-        except Exception as e:
-            logger.error(f"❌ AI聊天失败: {e}")
-            return self._simulate_response(message)
-
-    def _chat_openai_style(
-        self,
-        message: str,
-        system_prompt: Optional[str],
-        temperature: float,
-        max_tokens: int,
-    ) -> str:
-        """OpenAI风格的聊天"""
-        try:
-            messages = []
-
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-
-            messages.append({"role": "user", "content": message})
-
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-
-            return response.choices[0].message.content.strip()
-
-        except Exception as e:
-            logger.error(f"❌ OpenAI聊天失败: {e}")
-            return self._simulate_response(message)
-
-    def _chat_claude_style(
-        self,
-        message: str,
-        system_prompt: Optional[str],
-        temperature: float,
-        max_tokens: int,
-    ) -> str:
-        """Claude风格的聊天"""
-        try:
-            kwargs = {
-                "model": self.model,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-                "messages": [{"role": "user", "content": message}],
+            # 合并配置参数
+            request_params = {
+                "model": self.config.model,
+                "messages": messages,
+                "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+                "temperature": kwargs.get("temperature", self.config.temperature),
+                "stream": stream,
             }
 
-            if system_prompt:
-                kwargs["system"] = system_prompt
-
-            response = self.client.messages.create(**kwargs)
-            return response.content[0].text.strip()
+            if stream:
+                return await self._stream_chat_completion(request_params)
+            else:
+                return await self._chat_completion(request_params)
 
         except Exception as e:
-            logger.error(f"❌ Claude聊天失败: {e}")
-            return self._simulate_response(message)
+            logger.error(f"聊天完成失败: {e}")
+            raise
 
-    def _simulate_response(self, message: str) -> str:
-        """模拟AI响应 - 用于测试和备用"""
-        logger.info("🤖 使用模拟AI响应")
+    async def _chat_completion(self, params: Dict[str, Any]) -> str:
+        """同步聊天完成"""
+        try:
+            response = await self.client.chat.completions.create(**params)
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"同步聊天完成失败: {e}")
+            raise
 
-        # 根据消息内容生成相应的模拟响应
-        if "闪卡" in message or "flashcard" in message.lower():
-            return self._simulate_flashcards()
-        elif "思维导图" in message or "mindmap" in message.lower():
-            return self._simulate_mindmap()
-        elif "总结" in message or "summary" in message.lower():
-            return self._simulate_summary()
-        else:
-            return f"这是一个模拟的AI响应。原始消息长度: {len(message)} 字符。"
+    async def _stream_chat_completion(
+        self, params: Dict[str, Any]
+    ) -> AsyncGenerator[str, None]:
+        """流式聊天完成 - SSE"""
+        try:
+            async for chunk in self.client.chat.completions.create(**params):
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception as e:
+            logger.error(f"流式聊天完成失败: {e}")
+            raise
 
-    def _simulate_flashcards(self) -> str:
-        """模拟闪卡响应"""
-        return """[
-  {
-    "question": "什么是人工智能？",
-    "answer": "人工智能(AI)是计算机科学的一个分支，致力于创建能够执行通常需要人类智能的任务的系统。",
-    "type": "concept",
-    "difficulty": 1
-  },
-  {
-    "question": "机器学习的主要类型有哪些？",
-    "answer": "机器学习主要分为三类：监督学习、无监督学习和强化学习。",
-    "type": "definition",
-    "difficulty": 2
-  },
-  {
-    "question": "深度学习与传统机器学习的区别是什么？",
-    "answer": "深度学习使用多层神经网络自动学习特征，而传统机器学习通常需要手工设计特征。",
-    "type": "comparison",
-    "difficulty": 2
-  }
-]"""
+    async def generate_content(
+        self, prompt: str, system_prompt: str = "", stream: bool = False, **kwargs
+    ) -> Union[str, AsyncGenerator[str, None]]:
+        """
+        生成内容 - 简化接口
 
-    def _simulate_mindmap(self) -> str:
-        """模拟思维导图响应"""
-        return """# 人工智能概述
-## 基础概念
-### 定义与发展
-### 核心技术
-## 机器学习
-### 监督学习
-### 无监督学习
-### 强化学习
-## 深度学习
-### 神经网络
-### 卷积神经网络
-### 循环神经网络
-## 应用领域
-### 自然语言处理
-### 计算机视觉
-### 语音识别"""
+        Args:
+            prompt: 用户提示
+            system_prompt: 系统提示
+            stream: 是否流式
+            **kwargs: 其他参数
 
-    def _simulate_summary(self) -> str:
-        """模拟总结响应"""
-        return """## 内容总结
+        Returns:
+            内容字符串或流式生成器
+        """
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
 
-### 主要观点
-1. 核心概念和定义
-2. 关键技术和方法
-3. 实际应用案例
+        return await self.chat_completion(messages, stream=stream, **kwargs)
 
-### 重要结论
-- 技术发展趋势
-- 实践经验总结
-- 未来发展方向
 
-### 行动建议
-- 学习重点
-- 实践方向
-- 进一步研究"""
+class AIClientFactory:
+    """AI客户端工厂"""
 
-    def is_available(self) -> bool:
-        """检查AI客户端是否可用"""
-        return self.client is not None or True  # 模拟模式总是可用
+    @staticmethod
+    def create_client_from_settings(
+        provider: str, settings: Dict[str, Any]
+    ) -> AIChatClient:
+        """从settings.json创建AI客户端"""
+        provider_config = settings.get(provider, {})
 
-    def get_model_info(self) -> Dict[str, Any]:
-        """获取模型信息"""
-        return {
-            "backend": self.backend,
-            "model": self.model,
-            "available": self.is_available(),
-            "api_key_set": bool(self.api_key),
+        config = ModelConfig(
+            api_key=provider_config.get("api_key", ""),
+            base_url=provider_config.get("base_url", ""),
+            model=provider_config.get("model", ""),
+            max_tokens=provider_config.get("max_tokens", 4096),
+            temperature=provider_config.get("temperature", 0.7),
+            timeout=provider_config.get("timeout", 60),
+        )
+
+        return AIChatClient(config)
+
+    @staticmethod
+    def create_openai_client(settings: Dict[str, Any]) -> AIChatClient:
+        """创建OpenAI客户端"""
+        return AIClientFactory.create_client_from_settings("openai", settings)
+
+    @staticmethod
+    def create_ollama_client(settings: Dict[str, Any]) -> AIChatClient:
+        """创建Ollama客户端"""
+        return AIClientFactory.create_client_from_settings("ollama", settings)
+
+
+# 便捷函数
+def create_ai_client(provider: str, settings: Dict[str, Any]) -> AIChatClient:
+    """创建AI客户端的便捷函数"""
+    return AIClientFactory.create_client_from_settings(provider, settings)
+
+
+async def generate_content(
+    prompt: str,
+    provider: str,
+    settings: Dict[str, Any],
+    system_prompt: str = "",
+    stream: bool = False,
+    **kwargs,
+) -> Union[str, AsyncGenerator[str, None]]:
+    """生成内容的便捷函数"""
+    client = create_ai_client(provider, settings)
+    return await client.generate_content(prompt, system_prompt, stream, **kwargs)
+
+
+# 使用示例
+if __name__ == "__main__":
+
+    async def test_ai_client():
+        # 模拟settings.json配置
+        settings = {
+            "openai": {
+                "api_key": "your_openai_key",
+                "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                "model": "qwen-plus",
+                "max_tokens": 2000,
+            },
+            "ollama": {
+                "api_key": "",  # Ollama通常不需要API key
+                "base_url": "http://localhost:11434",
+                "model": "qwen3:1.7b",
+                "max_tokens": 4096,
+            },
         }
+
+        # 创建OpenAI客户端
+        openai_client = create_ai_client("openai", settings)
+        response = await openai_client.generate_content("你好，请介绍一下自己")
+        print(f"OpenAI响应: {response}")
+
+        # 创建Ollama客户端
+        ollama_client = create_ai_client("ollama", settings)
+        response = await ollama_client.generate_content("写一个Python函数")
+        print(f"Ollama响应: {response}")
+
+    # 运行测试
+    asyncio.run(test_ai_client())

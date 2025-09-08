@@ -35,7 +35,7 @@ class DolphinEngine(BaseVoiceEngine):
             super().__init__({})
 
         self.model = None
-        self.model_path = "/data/models/dolphin"  # 默认模型路径
+        self.model_path = self._get_model_path()  # 动态获取模型路径
 
         # 支持的模型尺寸
         self.supported_sizes = ["base", "small", "medium", "large"]
@@ -57,6 +57,29 @@ class DolphinEngine(BaseVoiceEngine):
 
         self.device = "cuda" if self._check_cuda() else "cpu"
 
+    def _get_model_path(self) -> str:
+        """动态获取模型路径"""
+        try:
+            # 尝试从model_api获取正确的路径
+            from pathlib import Path
+
+            # 获取项目根目录下的模型路径
+            project_root = Path(__file__).parent.parent.parent.parent
+            models_path = project_root / "data" / "models" / "dolphin"
+            models_path.mkdir(parents=True, exist_ok=True)
+
+            return str(models_path)
+
+        except Exception as e:
+            logger.warning(f"获取模型路径失败，使用默认路径: {e}")
+            # 回退到默认路径
+            from pathlib import Path
+
+            project_root = Path(__file__).parent.parent.parent.parent
+            default_path = project_root / "data" / "models" / "dolphin"
+            default_path.mkdir(parents=True, exist_ok=True)
+            return str(default_path)
+
     def _check_cuda(self) -> bool:
         """检查CUDA是否可用"""
         try:
@@ -66,10 +89,199 @@ class DolphinEngine(BaseVoiceEngine):
         except ImportError:
             return False
 
+    def _configure_nltk_offline(self):
+        """配置NLTK使用离线数据，避免网络下载"""
+        try:
+            import nltk
+            import ssl
+            import os
+
+            # 设置环境变量禁用NLTK网络下载
+            os.environ["NLTK_DATA_PATH"] = str(
+                Path(__file__).parent.parent.parent.parent / "data" / "nltk_data"
+            )
+
+            # 禁用SSL证书验证（临时解决方案）
+            try:
+                _create_unverified_https_context = ssl._create_unverified_context
+            except AttributeError:
+                pass
+            else:
+                ssl._create_default_https_context = _create_unverified_https_context
+
+            # 设置NLTK数据路径到项目目录
+            project_root = Path(__file__).parent.parent.parent.parent
+            nltk_data_path = project_root / "data" / "nltk_data"
+            nltk_data_path.mkdir(parents=True, exist_ok=True)
+
+            # 添加到NLTK数据路径（优先使用本地路径）
+            nltk.data.path.insert(0, str(nltk_data_path))
+
+            # 检查是否需要下载NLTK数据包
+            required_packages = [
+                ("averaged_perceptron_tagger", "taggers/averaged_perceptron_tagger"),
+                ("cmudict", "corpora/cmudict"),
+            ]
+
+            missing_packages = []
+            for package_name, package_path in required_packages:
+                try:
+                    nltk.data.find(package_path)
+                    logger.debug(f"✅ NLTK数据包已存在: {package_name}")
+                except LookupError:
+                    missing_packages.append(package_name)
+
+            # 如果有缺失的包，尝试下载（只在首次运行时）
+            if missing_packages:
+                logger.info(f"📦 检测到缺失的NLTK数据包: {missing_packages}")
+                logger.info("💡 首次运行需要下载NLTK数据包，这可能需要一些时间...")
+
+                for package_name in missing_packages:
+                    try:
+                        logger.info(f"📥 下载NLTK数据包: {package_name}")
+                        success = nltk.download(
+                            package_name, download_dir=str(nltk_data_path), quiet=False
+                        )
+                        if success:
+                            logger.info(f"✅ {package_name} 下载成功")
+                        else:
+                            logger.warning(f"⚠️ {package_name} 下载失败")
+                    except Exception as e:
+                        logger.warning(f"⚠️ NLTK数据包 {package_name} 下载异常: {e}")
+                        # 继续执行，不阻止模型初始化
+                        pass
+            else:
+                logger.info("✅ 所有NLTK数据包已就绪")
+
+        except ImportError:
+            logger.info("📝 NLTK未安装，跳过NLTK配置")
+        except Exception as e:
+            logger.warning(f"⚠️ NLTK配置失败: {e}")
+            # 不抛出异常，允许继续初始化
+
+    def _parse_dolphin_output(self, raw_text: str) -> Dict[str, Any]:
+        """
+        解析Dolphin模型的原始输出，提取纯文本和时间戳信息
+
+        输入格式示例：
+        <zh><CN><asr><0.00> 安全帽的佩戴方法戴上安全帽一只手稳定帽檐另一只手旋转脑后的极轮调整至合适的松紧度之后调整下颗带长度到合适位置并拉紧扣号调整安全帽松紧并确保防滑条贴住额头<30.00>
+
+        Args:
+            raw_text: Dolphin模型的原始输出文本
+
+        Returns:
+            dict: 包含clean_text和segments的解析结果
+        """
+        import re
+        from datetime import timedelta
+
+        try:
+            logger.debug(f"🔍 解析Dolphin原始输出: {raw_text[:100]}...")
+
+            # 移除语言和地区标签 <zh><CN><asr>
+            text = re.sub(r"<[a-zA-Z]+>", "", raw_text)
+
+            # 提取时间戳和对应的文本内容
+            # 匹配模式：<时间戳> 文本内容 <时间戳>
+            timestamp_pattern = r"<(\d+\.?\d*)>"
+            segments = []
+            clean_text = ""
+
+            # 分割文本，找到所有时间戳
+            parts = re.split(timestamp_pattern, text)
+            logger.debug(f"🔍 分割结果: {parts}")
+
+            if len(parts) >= 3:
+                # 对于格式 <0.00> 文本内容 <30.00>
+                # parts[0] = '' (空字符串或前缀)
+                # parts[1] = '0.00' (开始时间)
+                # parts[2] = ' 文本内容 ' (实际内容)
+                # parts[3] = '30.00' (结束时间)
+                # parts[4] = '' (可能为空)
+
+                # 检查是否是标准的开始-内容-结束格式
+                if len(parts) == 4 and parts[0] == "" and parts[3] != "":
+                    # 标准格式: <开始时间> 内容 <结束时间>
+                    start_time = float(parts[1])
+                    content = parts[2].strip()
+                    end_time = float(parts[3])
+
+                    if content:
+                        segment = {
+                            "start": start_time,
+                            "end": end_time,
+                            "text": content,
+                        }
+                        segments.append(segment)
+                        clean_text = content
+
+                        logger.debug(
+                            f"📝 提取标准片段: {start_time:.2f}s-{end_time:.2f}s: {content[:50]}..."
+                        )
+                else:
+                    # 复杂格式，可能有多个时间段
+                    i = 1  # 从第一个时间戳开始
+                    while i < len(parts) - 1:
+                        if i + 2 < len(parts):
+                            # 有开始时间、内容和结束时间
+                            start_time = float(parts[i])
+                            content = parts[i + 1].strip()
+                            end_time = float(parts[i + 2])
+
+                            if content:
+                                segment = {
+                                    "start": start_time,
+                                    "end": end_time,
+                                    "text": content,
+                                }
+                                segments.append(segment)
+                                clean_text += content
+
+                                logger.debug(
+                                    f"📝 提取多段片段: {start_time:.2f}s-{end_time:.2f}s: {content[:50]}..."
+                                )
+
+                            i += 2  # 跳到下一个时间戳对
+                        else:
+                            break
+
+            # 如果没有找到时间戳，直接清理文本
+            if not segments:
+                clean_text = re.sub(r"<[^>]*>", "", raw_text).strip()
+                if clean_text:
+                    segments = [
+                        {"start": 0.0, "end": 0.0, "text": clean_text}  # 未知结束时间
+                    ]
+
+            # 最终清理文本
+            clean_text = clean_text.strip()
+
+            logger.info(
+                f"✅ Dolphin输出解析完成: 提取了{len(segments)}个片段，总长度{len(clean_text)}字符"
+            )
+
+            return {"clean_text": clean_text, "segments": segments}
+
+        except Exception as e:
+            logger.warning(f"⚠️ Dolphin输出解析失败: {e}")
+            # 回退到简单的标签移除
+            fallback_text = re.sub(r"<[^>]*>", "", raw_text).strip()
+            return {
+                "clean_text": fallback_text,
+                "segments": (
+                    [{"start": 0.0, "end": 0.0, "text": fallback_text}]
+                    if fallback_text
+                    else []
+                ),
+            }
+
     def initialize(self) -> bool:
         """初始化Dolphin"""
         try:
             logger.info("🐬 初始化Dolphin方言识别模型...")
+
+            # 配置NLTK使用离线数据，避免网络下载
+            self._configure_nltk_offline()
 
             # 尝试导入Dolphin
             try:
@@ -79,22 +291,8 @@ class DolphinEngine(BaseVoiceEngine):
                 logger.info("💡 请安装Dolphin: pip install dolphin")
                 return False
 
-            # 检查模型路径
-            model_path = Path(self.model_path)
-            if not model_path.exists():
-                logger.warning(f"⚠️ Dolphin模型路径不存在: {self.model_path}")
-                # 尝试使用项目内的模型路径
-                project_model_path = (
-                    Path(__file__).parent.parent.parent.parent
-                    / "data"
-                    / "models"
-                    / "dolphin"
-                )
-                if project_model_path.exists():
-                    self.model_path = str(project_model_path)
-                    logger.info(f"🔄 使用项目模型路径: {self.model_path}")
-                else:
-                    logger.warning("⚠️ 未找到Dolphin模型文件，将尝试在线加载")
+            # 检查模型路径（路径已通过_get_model_path动态获取并创建）
+            logger.info(f"🔧 使用Dolphin模型路径: {self.model_path}")
 
             # 加载模型
             logger.info(f"📥 加载Dolphin模型: {self.model_size}")
@@ -136,10 +334,13 @@ class DolphinEngine(BaseVoiceEngine):
 
             processing_time = time.time() - start_time
 
+            # 解析Dolphin输出，提取纯文本和时间戳信息
+            parsed_result = self._parse_dolphin_output(result.text)
+
             # 构建返回结果
             return {
-                "text": result.text,
-                "segments": getattr(result, "segments", []),
+                "text": parsed_result["clean_text"],
+                "segments": parsed_result["segments"],
                 "language": getattr(result, "language", language),
                 "confidence": getattr(result, "confidence", 0.9),
                 "processing_time": processing_time,
@@ -147,6 +348,7 @@ class DolphinEngine(BaseVoiceEngine):
                 "device": self.device,
                 "sample_rate": getattr(result, "sample_rate", 16000),
                 "audio_length": getattr(result, "audio_length", 0.0),
+                "raw_text": result.text,  # 保留原始输出用于调试
             }
 
         except ImportError:
@@ -242,3 +444,38 @@ class DolphinEngine(BaseVoiceEngine):
                 "comparison": "base/small/medium模型可达到Whisper large-v3的性能",
             },
         }
+
+
+def test_dolphin_parser():
+    """测试Dolphin输出解析器"""
+    engine = DolphinEngine()
+
+    # 测试用例1: 标准格式
+    test_input1 = "<zh><CN><asr><0.00> 安全帽的佩戴方法戴上安全帽一只手稳定帽檐另一只手旋转脑后的极轮调整至合适的松紧度之后调整下颗带长度到合适位置并拉紧扣号调整安全帽松紧并确保防滑条贴住额头<30.00>"
+
+    result1 = engine._parse_dolphin_output(test_input1)
+    print("🧪 测试用例1:")
+    print(f"  原始文本: {test_input1}")
+    print(f"  解析结果: {result1}")
+    print()
+
+    # 测试用例2: 多个时间段
+    test_input2 = "<zh><CN><asr><0.00> 第一段内容<10.00><10.00> 第二段内容<20.00><20.00> 第三段内容<30.00>"
+
+    result2 = engine._parse_dolphin_output(test_input2)
+    print("🧪 测试用例2:")
+    print(f"  原始文本: {test_input2}")
+    print(f"  解析结果: {result2}")
+    print()
+
+    # 测试用例3: 没有时间戳
+    test_input3 = "<zh><CN><asr> 纯文本内容没有时间戳"
+
+    result3 = engine._parse_dolphin_output(test_input3)
+    print("🧪 测试用例3:")
+    print(f"  原始文本: {test_input3}")
+    print(f"  解析结果: {result3}")
+
+
+if __name__ == "__main__":
+    test_dolphin_parser()

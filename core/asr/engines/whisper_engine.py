@@ -22,7 +22,7 @@ class WhisperEngine(BaseVoiceEngine):
             import whisper
             import ssl
 
-            logger.info(f"🎤 初始化Whisper - 模型: {self.config.whisper_model}")
+            logger.info(f"🎤 初始化Whisper - 模型: {self.config}")
 
             # 创建不验证SSL证书的上下文
             ssl_context = ssl.create_default_context()
@@ -39,7 +39,7 @@ class WhisperEngine(BaseVoiceEngine):
                 urllib.request.HTTPSHandler = lambda: urllib.request.HTTPSHandler(
                     context=ssl_context
                 )
-                self.model = whisper.load_model(self.config.whisper_model)
+                self.model = whisper.load_model(self.config["model_size"])
             finally:
                 # 恢复原始handler
                 urllib.request.HTTPSHandler = original_https_handler
@@ -53,6 +53,8 @@ class WhisperEngine(BaseVoiceEngine):
             return False
         except Exception as e:
             logger.error(f"❌ Whisper初始化失败: {e}")
+            # 打印错误的行号
+            logger.error(f"❌ Whisper初始化行: {e.__traceback__.tb_lineno}")
             # 尝试离线模式
             try:
                 import whisper
@@ -63,7 +65,7 @@ class WhisperEngine(BaseVoiceEngine):
 
                 # 尝试从本地缓存加载
                 self.model = whisper.load_model(
-                    self.config.whisper_model, download_root=os.environ["WHISPER_CACHE"]
+                    self.config["model_size"], download_root=os.environ["WHISPER_CACHE"]
                 )
                 self.initialized = True
                 logger.info("✅ Whisper从本地缓存初始化成功")
@@ -82,7 +84,7 @@ class WhisperEngine(BaseVoiceEngine):
 
             # 语言处理：如果配置了中文优化，使用中文
             transcribe_language = None
-            if self.config.chinese_optimized or language == "zh":
+            if self.config.get("chinese_optimized", False) or language == "zh":
                 transcribe_language = "zh"
             elif language != "auto":
                 transcribe_language = language
@@ -95,17 +97,19 @@ class WhisperEngine(BaseVoiceEngine):
                 beam_size=5,
                 best_of=5,
                 patience=1,
+                initial_prompt="请使用简体中文输出",
             )
 
             processing_time = time.time() - start_time
+            model_size = self.config["model_size"]
 
             return {
                 "text": result["text"].strip(),
                 "segments": result.get("segments", []),
                 "language": result.get("language", "unknown"),
                 "processing_time": processing_time,
-                "model": f"whisper-{self.config.whisper_model}",
-                "device": self.config.device,
+                "model": f"whisper-{model_size}",
+                "device": self.config.get("device", "auto"),
             }
 
         except Exception as e:
@@ -129,8 +133,8 @@ class WhisperEngine(BaseVoiceEngine):
                 "es",
                 "ru",
             ],
-            "model_size": getattr(self.config, "whisper_model", "small"),
-            "device": getattr(self.config, "device", "auto"),
+            "model_size": self.config.get("model_size", "small"),
+            "device": self.config.get("device", "auto"),
             "initialized": self.initialized,
             "features": ["多语言支持", "高精度识别", "开源模型"],
         }

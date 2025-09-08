@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 应用配置
+听语AI - 应用配置
 """
 
 import os

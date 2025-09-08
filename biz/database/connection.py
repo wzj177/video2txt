@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 数据库连接管理
+听语AI - 数据库连接管理
 """
 
 import os

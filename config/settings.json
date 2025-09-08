@@ -1,13 +1,13 @@
 {
   "openai": {
-    "api_key": "211",
-    "base_url": "https://api.openai.com/v1",
-    "model": "gpt-3.5-turbo",
+    "api_key": "sk-b4a1cde0146044baab660bc789c83790",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "model": "qwen-plus",
     "max_tokens": 2000
   },
   "ollama": {
     "installed": true,
-    "version": "ollama version is 0.11.7",
+    "version": "ollama version is 0.11.10",
     "running": true,
     "base_url": "http://localhost:11434",
     "models": [

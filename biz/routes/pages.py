@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 页面路由模块
+听语AI - 页面路由模块
 """
 
 from fastapi import APIRouter
@@ -22,7 +22,7 @@ async def root():
     if index_file.exists():
         return FileResponse(index_file)
     else:
-        return HTMLResponse("<h1>AI听世界 - 首页文件未找到</h1>", status_code=404)
+        return HTMLResponse("<h1>听语AI - 首页文件未找到</h1>", status_code=404)
 
 
 @pages_router.get("/index", response_class=HTMLResponse)
@@ -32,7 +32,7 @@ async def index():
     if index_file.exists():
         return FileResponse(index_file)
     else:
-        return HTMLResponse("<h1>AI听世界 - 首页文件未找到</h1>", status_code=404)
+        return HTMLResponse("<h1>听语AI - 首页文件未找到</h1>", status_code=404)
 
 
 @pages_router.get("/dashboard", response_class=HTMLResponse)
@@ -42,7 +42,7 @@ async def dashboard():
     if dashboard_file.exists():
         return FileResponse(dashboard_file)
     else:
-        return HTMLResponse("<h1>AI听世界 - 仪表板页面未找到</h1>", status_code=404)
+        return HTMLResponse("<h1>听语AI - 仪表板页面未找到</h1>", status_code=404)
 
 
 @pages_router.get("/video2txt", response_class=HTMLResponse)
@@ -52,7 +52,17 @@ async def video2txt():
     if video2txt_file.exists():
         return FileResponse(video2txt_file)
     else:
-        return HTMLResponse("<h1>AI听世界 - 视频转文字页面未找到</h1>", status_code=404)
+        return HTMLResponse("<h1>听语AI - 视频转文字页面未找到</h1>", status_code=404)
+
+
+@pages_router.get("/task_create", response_class=HTMLResponse)
+async def task_create():
+    """创建任务页面"""
+    task_create_file = PUBLIC_DIR / "pages" / "task_create.html"
+    if task_create_file.exists():
+        return FileResponse(task_create_file)
+    else:
+        return HTMLResponse("<h1>听语AI - 创建任务页面未找到</h1>", status_code=404)
 
 
 @pages_router.get("/task_detail", response_class=HTMLResponse)
@@ -62,7 +72,7 @@ async def task_detail(task_id: str):
     if task_detail_file.exists():
         return FileResponse(task_detail_file)
     else:
-        return HTMLResponse("<h1>AI听世界 - 任务详情页面未找到</h1>", status_code=404)
+        return HTMLResponse("<h1>听语AI - 任务详情页面未找到</h1>", status_code=404)
 
 
 @pages_router.get("/meeting2txt", response_class=HTMLResponse)
@@ -72,7 +82,7 @@ async def meeting2txt():
     if meeting2txt_file.exists():
         return FileResponse(meeting2txt_file)
     else:
-        return HTMLResponse("<h1>AI听世界 - 会议转文字页面未找到</h1>", status_code=404)
+        return HTMLResponse("<h1>听语AI - 会议转文字页面未找到</h1>", status_code=404)
 
 
 @pages_router.get("/settings", response_class=HTMLResponse)
@@ -82,7 +92,7 @@ async def settings():
     if settings_file.exists():
         return FileResponse(settings_file)
     else:
-        return HTMLResponse("<h1>AI听世界 - 设置页面未找到</h1>", status_code=404)
+        return HTMLResponse("<h1>听语AI - 设置页面未找到</h1>", status_code=404)
 
 
 # 静态资源路由

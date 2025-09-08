@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 设置API路由
+听语AI - 设置API路由
 """
 
 from fastapi import APIRouter, HTTPException

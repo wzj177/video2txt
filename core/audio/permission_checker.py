@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 音频权限检查模块
+听语AI - 音频权限检查模块
 检查和申请系统音频访问权限
 """
 
@@ -355,7 +355,7 @@ class AudioPermissionChecker:
             help_info["microphone_help"] = (
                 "1. 打开Windows设置 > 隐私 > 麦克风\n"
                 "2. 确保'允许应用访问麦克风'已开启\n"
-                "3. 在应用列表中找到AI听世界并允许访问"
+                "3. 在应用列表中找到听语AI并允许访问"
             )
             help_info["system_audio_help"] = (
                 "1. 右键点击任务栏音量图标 > 声音设置\n"
@@ -373,7 +373,7 @@ class AudioPermissionChecker:
             help_info["microphone_help"] = (
                 "1. 打开系统偏好设置 > 安全性与隐私 > 隐私\n"
                 "2. 选择左侧的'麦克风'\n"
-                "3. 确保AI听世界已勾选并允许访问"
+                "3. 确保听语AI已勾选并允许访问"
             )
             help_info["system_audio_help"] = (
                 "1. 安装BlackHole虚拟音频设备\n"

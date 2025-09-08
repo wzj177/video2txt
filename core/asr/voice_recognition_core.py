@@ -78,8 +78,11 @@ class VoiceRecognitionCore:
         self.current_engine = None
         self.initialized = False
         self.preferred_engine = "auto"
+        self.model_size = "small"
 
-    def initialize(self, preferred_engine: str = "auto") -> bool:
+    def initialize(
+        self, preferred_engine: str = "auto", model_size: str = "small"
+    ) -> bool:
         """初始化语音识别核心（延迟加载）"""
         global VOICE_RECOGNITION_INITIALIZED
 
@@ -87,6 +90,13 @@ class VoiceRecognitionCore:
 
         # 设置首选引擎，但不立即加载
         self.preferred_engine = preferred_engine
+        self.model_size = model_size
+
+        # 更新配置以支持不同引擎的模型大小
+        if hasattr(self.config, "whisper_model"):
+            self.config.whisper_model = model_size
+
+        logger.info(f"🎯 设置引擎: {preferred_engine}, 模型大小: {model_size}")
 
         # 标记为已初始化（准备状态）
         self.initialized = True
@@ -171,14 +181,37 @@ class VoiceRecognitionCore:
 
     def _create_engine(self, engine_name: str) -> Optional[BaseVoiceEngine]:
         """创建指定引擎"""
-        if engine_name == "faster_whisper":
-            return FasterWhisperEngine(self.config)
-        elif engine_name == "whisper":
-            return WhisperEngine(self.config)
+        # 创建引擎配置，包含模型大小信息
+        engine_config = {
+            "model_name": engine_name,
+            "model_size": self.model_size,
+            "device": getattr(self.config, "device", "auto"),
+            "language": getattr(self.config, "language", "auto"),
+        }
+
+        # print(f"engine_config: {engine_config}")
+
+        # 根据引擎类型添加特定配置
+        if engine_name in ["whisper", "faster_whisper"]:
+            engine_config["whisper_model"] = self.model_size
         elif engine_name == "sensevoice":
-            return SenseVoiceEngine(self.config)
+            # SenseVoice目前主要是small模型
+            engine_config["model_name"] = "iic/SenseVoiceSmall"
         elif engine_name == "dolphin":
-            return DolphinEngine(self.config)
+            # Dolphin引擎直接使用model_size参数，不需要额外的model_name
+            # engine_config["model_size"] 已经在上面设置了
+            pass
+
+        logger.info(f"🔧 创建{engine_name}引擎，配置: {engine_config}")
+
+        if engine_name == "faster_whisper":
+            return FasterWhisperEngine(engine_config)
+        elif engine_name == "whisper":
+            return WhisperEngine(engine_config)
+        elif engine_name == "sensevoice":
+            return SenseVoiceEngine(engine_config)
+        elif engine_name == "dolphin":
+            return DolphinEngine(engine_config)
         else:
             logger.warning(f"⚠️ 未知引擎: {engine_name}")
             return None
@@ -215,8 +248,9 @@ class VoiceRecognitionCore:
         try:
             logger.info(f"🎤 开始识别: {Path(audio_path).name}")
 
-            # 根据语言提示自动选择最佳引擎
-            self.auto_select_best_engine(language_hint=language)
+            # 自动模式下，根据语言提示自动选择最佳引擎
+            if language == "auto":
+                self.auto_select_best_engine(language_hint=language)
 
             # 执行转录
             result = self.current_engine.recognize_file(audio_path, language=language)
@@ -400,9 +434,21 @@ class VoiceRecognitionCore:
 voice_core = VoiceRecognitionCore()
 
 
-def initialize_voice_recognition(preferred_engine: str = "auto") -> bool:
+def initialize_voice_recognition(
+    model: str = "whisper", model_size: str = "small"
+) -> bool:
     """初始化语音识别系统"""
-    return voice_core.initialize(preferred_engine)
+    # 解析模型格式：支持 "engine-size" 格式或传统的单独参数
+    if "-" in model and model != "auto":
+        # 新格式：engine-size (如 "sensevoice-small", "whisper-medium")
+        parts = model.split("-", 1)  # 只分割第一个 "-"
+        engine_name = parts[0]
+        model_size = parts[1] if len(parts) > 1 else "small"
+        logger.info(f"🔧 解析模型格式: 引擎={engine_name}, 大小={model_size}")
+        return voice_core.initialize(engine_name, model_size)
+    else:
+        # 传统格式：分别传递引擎和大小
+        return voice_core.initialize(model, model_size)
 
 
 def get_voice_core() -> VoiceRecognitionCore:

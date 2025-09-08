@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 模型管理API路由
+听语AI - 模型管理API路由
 """
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -16,7 +16,7 @@ import requests
 import hashlib
 from datetime import datetime
 
-from ..services.task_service import task_service
+from ..services.download_manager import download_manager
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +56,15 @@ MODEL_CONFIGS = {
             "name": "SenseVoice-Small",
             "size": "1.2GB",
             "description": "阿里达摩院快速语音理解模型，支持多语言识别、情感识别和事件检测",
-            "url": "https://modelscope.cn/models/iic/SenseVoiceSmall/resolve/master/model.pt",
             "repo": "iic/SenseVoiceSmall",
+            "model_type": "funasr",  # 指定使用FunASR
             "languages": ["中文", "英语", "粤语", "日语", "韩语"],
-            "features": ["ASR", "LID", "SER", "AED"],
+            "features": ["ASR", "LID", "SER", "AED", "VAD"],
             "performance": "比Whisper-small快7倍，比Whisper-large快17倍",
+            "install_guide": "需要安装FunASR: pip install funasr modelscope",
+            "vad_support": True,  # 支持语音活动检测
+            "trust_remote_code": True,  # 需要信任远程代码
+            "supported_devices": ["cpu", "cuda:0"],  # 支持的设备
         }
     },
     "dolphin": {
@@ -159,6 +163,9 @@ def get_model_info(model_type: str, model_name: str) -> Dict[str, Any]:
 
     model_config = MODEL_CONFIGS[model_type][model_name].copy()
 
+    # 添加配置键名，供前端API调用使用
+    model_config["config_key"] = model_name
+
     # 检查模型是否已安装
     models_path = get_model_storage_path()
 
@@ -172,13 +179,24 @@ def get_model_info(model_type: str, model_name: str) -> Dict[str, Any]:
         model_config["local_path"] = str(model_file)
 
     elif model_type == "sensevoice":
-        # SenseVoice使用HuggingFace/ModelScope缓存
+        # SenseVoice使用HuggingFace/ModelScope/FunASR缓存
         hf_cache = Path.home() / ".cache" / "huggingface" / "transformers"
-        modelscope_cache = Path.home() / ".cache" / "modelscope" / "hub"
+        modelscope_cache = (
+            Path.home()
+            / ".cache"
+            / "modelscope"
+            / "hub"
+            / "models"
+            / "iic"
+            / "SenseVoiceSmall"
+        )
+        funasr_cache = Path("./data/models/funasr_cache")
 
-        # 检查是否存在（简化检查）
-        installed = (hf_cache.exists() and any(hf_cache.glob("*SenseVoice*"))) or (
-            modelscope_cache.exists() and any(modelscope_cache.glob("*SenseVoice*"))
+        # 检查是否存在
+        installed = (
+            (hf_cache.exists() and any(hf_cache.glob("*SenseVoice*")))
+            or modelscope_cache.exists()
+            or (funasr_cache.exists() and any(funasr_cache.glob("*SenseVoice*")))
         )
         model_config["installed"] = installed
 
@@ -268,8 +286,7 @@ async def download_model(
         )
 
         # 创建任务记录
-        task_service.create_task(
-            "download",
+        download_manager.create_task(
             task_id,
             {
                 "status": "pending",
@@ -278,7 +295,6 @@ async def download_model(
                 "model_type": model_type,
                 "model_name": model_name,
                 "model_info": model_info,
-                "created_at": datetime.now().isoformat(),
             },
         )
 
@@ -335,7 +351,7 @@ async def get_download_progress_stream(task_id: str):
         while True:
             try:
                 # 获取任务当前状态
-                task = task_service.get_task_by_id("download", task_id)
+                task = download_manager.get_task_by_id(task_id)
                 if not task:
                     yield f"data: {json.dumps({'error': '任务不存在'})}\n\n"
                     break
@@ -384,8 +400,7 @@ async def download_model_task(
         logger.info(f"开始下载模型: {model_type}/{model_name}")
 
         # 更新任务状态
-        task_service.update_task(
-            "download",
+        download_manager.update_task(
             task_id,
             {"status": "downloading", "progress": 0, "current_step": "正在下载模型..."},
         )
@@ -403,8 +418,7 @@ async def download_model_task(
             await download_dolphin_model(task_id, model_name, model_info)
 
         # 更新任务为完成状态
-        task_service.update_task(
-            "download",
+        download_manager.update_task(
             task_id,
             {
                 "status": "completed",
@@ -420,8 +434,7 @@ async def download_model_task(
         logger.error(f"模型下载失败: {e}")
 
         # 更新任务为失败状态
-        task_service.update_task(
-            "download",
+        download_manager.update_task(
             task_id,
             {
                 "status": "failed",
@@ -441,8 +454,7 @@ async def download_whisper_model(
         import whisper
 
         # 更新进度
-        task_service.update_task(
-            "download",
+        download_manager.update_task(
             task_id,
             {"progress": 50, "current_step": "正在下载Whisper模型..."},
         )
@@ -452,7 +464,7 @@ async def download_whisper_model(
 
         # 模拟下载进度更新
         for i in range(50, 100, 10):
-            task_service.update_task("download", task_id, {"progress": i})
+            download_manager.update_task(task_id, {"progress": i})
             await asyncio.sleep(0.5)
 
         logger.info(f"Whisper {model_name} 模型下载完成")
@@ -466,32 +478,151 @@ async def download_sensevoice_model(
 ):
     """下载SenseVoice模型"""
     try:
-        from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
-
         # 更新进度
-        task_service.update_task(
-            "download",
+        download_manager.update_task(
             task_id,
-            {"progress": 30, "current_step": "正在下载SenseVoice处理器..."},
+            {"progress": 10, "current_step": "正在准备SenseVoice模型下载..."},
         )
 
-        # 下载处理器和模型
+        # 获取仓库ID
         repo_id = model_info.get("repo", "iic/SenseVoiceSmall")
 
-        processor = AutoProcessor.from_pretrained(repo_id)
+        # 方法1: 优先使用ModelScope + FunASR (推荐)
+        try:
+            logger.info("尝试使用FunASR + ModelScope下载SenseVoice模型")
 
-        task_service.update_task(
-            "download",
-            task_id,
-            {"progress": 70, "current_step": "正在下载SenseVoice模型..."},
+            # 检查FunASR是否可用
+            try:
+                from funasr import AutoModel as FunASRAutoModel
+
+                download_manager.update_task(
+                    task_id,
+                    {
+                        "progress": 30,
+                        "current_step": "正在通过FunASR下载SenseVoice模型...",
+                    },
+                )
+
+                # 使用FunASR下载SenseVoice (按照官方demo)
+                model = FunASRAutoModel(
+                    model=repo_id,
+                    trust_remote_code=True,
+                    vad_model="fsmn-vad",
+                    vad_kwargs={"max_single_segment_time": 30000},
+                    cache_dir="./data/models/funasr_cache",
+                    device="cpu",  # 默认使用CPU，可根据需要改为cuda:0
+                )
+
+                download_manager.update_task(
+                    task_id,
+                    {
+                        "progress": 90,
+                        "current_step": "SenseVoice模型下载完成，正在验证...",
+                    },
+                )
+
+                logger.info(f"SenseVoice {model_name} 模型通过FunASR下载完成")
+                return
+
+            except ImportError:
+                logger.warning("FunASR库未安装，尝试其他方法")
+                raise
+
+        except Exception as e:
+            logger.warning(f"FunASR下载失败: {e}")
+
+        # 方法2: 使用ModelScope直接下载
+        try:
+            logger.info("尝试使用ModelScope直接下载")
+            from modelscope import snapshot_download
+
+            download_manager.update_task(
+                task_id,
+                {"progress": 40, "current_step": "正在通过ModelScope下载模型文件..."},
+            )
+
+            # 直接下载模型文件
+            model_dir = snapshot_download(
+                repo_id, cache_dir="./data/models/modelscope_cache", revision="master"
+            )
+
+            download_manager.update_task(
+                task_id,
+                {"progress": 90, "current_step": "模型文件下载完成，正在验证..."},
+            )
+
+            logger.info(
+                f"SenseVoice {model_name} 模型文件通过ModelScope下载完成: {model_dir}"
+            )
+            return
+
+        except ImportError:
+            logger.warning("ModelScope库未安装")
+        except Exception as e:
+            logger.warning(f"ModelScope直接下载失败: {e}")
+
+        # 方法3: 手动下载模型文件 (最后备选)
+        try:
+            logger.info("尝试手动下载SenseVoice模型文件")
+            import requests
+            import zipfile
+            from pathlib import Path
+
+            # 创建模型目录
+            model_dir = Path("./data/models/sensevoice")
+            model_dir.mkdir(parents=True, exist_ok=True)
+
+            download_manager.update_task(
+                task_id,
+                {"progress": 50, "current_step": "正在从GitHub下载模型文件..."},
+            )
+
+            # SenseVoice的GitHub Release URL (如果可用)
+            # 这里可以根据实际情况调整下载链接
+            download_urls = [
+                "https://github.com/FunAudioLLM/SenseVoice/releases/download/v1.0/model.onnx",  # 示例
+            ]
+
+            success = False
+            for url in download_urls:
+                try:
+                    response = requests.get(url, stream=True, timeout=30)
+                    response.raise_for_status()
+
+                    filename = model_dir / url.split("/")[-1]
+                    with open(filename, "wb") as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+
+                    logger.info(f"下载文件成功: {filename}")
+                    success = True
+                    break
+                except Exception as e:
+                    logger.warning(f"从 {url} 下载失败: {e}")
+                    continue
+
+            if success:
+                download_manager.update_task(
+                    task_id,
+                    {"progress": 90, "current_step": "模型文件下载完成..."},
+                )
+                logger.info(f"SenseVoice {model_name} 模型文件手动下载完成")
+                return
+            else:
+                raise RuntimeError("所有下载方法都失败")
+
+        except Exception as e:
+            logger.error(f"手动下载也失败: {e}")
+
+        # 如果所有方法都失败，给出安装建议
+        raise RuntimeError(
+            "SenseVoice模型下载失败。建议安装FunASR库：pip install funasr modelscope"
         )
 
-        model = AutoModelForSpeechSeq2Seq.from_pretrained(repo_id)
-
-        logger.info(f"SenseVoice {model_name} 模型下载完成")
-
-    except ImportError:
-        raise RuntimeError("transformers 库未安装")
+    except Exception as e:
+        logger.error(f"SenseVoice模型下载失败: {e}")
+        raise
 
 
 async def download_dolphin_model(
@@ -509,8 +640,7 @@ async def download_dolphin_model(
             # 从URL下载
             url = model_info["url"]
 
-            task_service.update_task(
-                "download",
+            download_manager.update_task(
                 task_id,
                 {"progress": 10, "current_step": "正在连接下载服务器..."},
             )
@@ -529,8 +659,7 @@ async def download_dolphin_model(
 
                         if total_size > 0:
                             progress = 10 + int((downloaded_size / total_size) * 80)
-                            task_service.update_task(
-                                "download",
+                            download_manager.update_task(
                                 task_id,
                                 {
                                     "progress": progress,

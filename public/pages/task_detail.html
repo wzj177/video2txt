@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI听世界 - 任务详情</title>
+    <title>听语AI - 任务详情</title>
     <link rel="icon" href="/favicon.ico">
     <link rel="stylesheet" href="/assets/css/common.css">
     <link rel="stylesheet" href="/assets/css/icons.css">
@@ -39,7 +39,6 @@
 
         .task-detail-container {
             padding: var(--spacing-lg);
-            max-width: 800px;
             margin: 0 auto;
         }
 
@@ -111,11 +110,37 @@
         }
 
         .task-results {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* 双列布局 */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 单独的结果卡片 */
+        .result-card {
             background: var(--card-bg);
             border-radius: var(--radius-medium);
             padding: var(--spacing-lg);
-            margin-bottom: var(--spacing-lg);
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: all 0.2s ease;
+        }
+
+        .result-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
         }
 
         .result-section {
@@ -178,18 +203,51 @@
         .file-item {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: var(--spacing-sm);
             padding: var(--spacing-md);
             background: var(--bg-color);
             border: 1px solid var(--border-light);
             border-radius: 4px;
-            cursor: pointer;
             transition: all 0.2s ease;
         }
 
         .file-item:hover {
             border-color: var(--primary-color);
             background: rgba(0, 178, 106, 0.05);
+        }
+
+        .file-main {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .anki-help-btn {
+            background: var(--info-color);
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            margin-left: var(--spacing-sm);
+        }
+
+        .anki-help-btn:hover {
+            background: #40a9ff;
+            transform: scale(1.1);
+        }
+
+        .anki-help-btn svg {
+            width: 16px;
+            height: 16px;
         }
 
         .file-icon {
@@ -273,6 +331,150 @@
             margin-right: var(--spacing-sm);
             font-size: 16px;
         }
+
+        /* 处理报告样式 */
+        .processing-report h1, .processing-report h2, .processing-report h3 {
+            margin-top: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-primary);
+        }
+
+        .processing-report h1 {
+            font-size: 18px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 4px;
+        }
+
+        .processing-report h2 {
+            font-size: 16px;
+            color: var(--primary-color);
+        }
+
+        .processing-report ul {
+            margin: var(--spacing-sm) 0;
+            padding-left: 20px;
+        }
+
+        .processing-report li {
+            margin-bottom: 4px;
+        }
+
+        /* AI分析结果样式 */
+        .ai-analysis {
+            padding: 0;
+        }
+
+        .analysis-item {
+            display: flex;
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .analysis-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .analysis-label {
+            flex: 0 0 100px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .analysis-value {
+            flex: 1;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .analysis-value .score {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .analysis-value ul {
+            margin: 0;
+            padding-left: 16px;
+        }
+
+        .analysis-value li {
+            margin-bottom: 4px;
+        }
+
+        .analysis-value .tag {
+            display: inline-block;
+            background: rgba(0, 178, 106, 0.1);
+            color: var(--primary-color);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+
+        /* 关键帧展示样式 */
+        .frame-count {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            background: var(--border-light);
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .keyframes-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-sm);
+        }
+
+        .keyframe-item {
+            cursor: pointer;
+            border-radius: var(--radius-medium);
+            overflow: hidden;
+            transition: all 0.2s ease;
+            background: var(--card-bg);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .keyframe-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .keyframe-thumb {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .keyframe-label {
+            padding: var(--spacing-sm);
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            background: var(--card-bg);
+        }
+
+        /* 特殊文件项样式 */
+        .special-item {
+            background: linear-gradient(135deg, rgba(0, 178, 106, 0.05), rgba(0, 161, 214, 0.05));
+            border: 1px solid rgba(0, 178, 106, 0.2);
+        }
+
+        .special-item:hover {
+            background: linear-gradient(135deg, rgba(0, 178, 106, 0.1), rgba(0, 161, 214, 0.1));
+            border-color: var(--primary-color);
+        }
+
+        .special-item .file-name {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
     </style>
 </head>
 
@@ -324,6 +526,14 @@
                         <div class="meta-label">识别模型</div>
                         <div class="meta-value">{{ task.config?.model || 'auto' }}</div>
                     </div>
+                    <div class="meta-item" v-if="task.task_type === 'video'">
+                        <div class="meta-label">视频时长</div>
+                        <div class="meta-value">{{ formatDuration(task.media_duration || task.video_duration || task.audio_duration) }}</div>
+                    </div>
+                    <div class="meta-item" v-if="task.task_type === 'audio'">
+                        <div class="meta-label">音频时长</div>
+                        <div class="meta-value">{{ formatDuration(task.media_duration || task.audio_duration) }}</div>
+                    </div>
                 </div>
 
                 <!-- 处理进度 -->
@@ -344,73 +554,183 @@
             </div>
 
             <!-- 处理结果 -->
-            <div v-if="Object.keys(task.results).length > 0" class="task-results">
+            <div v-if="task.results && Object.keys(task.results).length > 0" class="task-results">
+                <!-- 第一行：处理报告和AI分析结果 -->
+                <div class="result-section">
+
+                    <!-- AI分析结果 -->
+                    <div v-if="aiAnalysis" class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">🤖 AI分析结果</div>
+                        </div>
+                        <div class="result-content ai-analysis">
+                            <div class="analysis-item">
+                                <div class="analysis-label">主题</div>
+                                <div class="analysis-value">{{ aiAnalysis.theme }}</div>
+                            </div>
+                            <div class="analysis-item">
+                                <div class="analysis-label">质量评分</div>
+                                <div class="analysis-value">
+                                    <span class="score">{{ aiAnalysis.quality_score }}</span>/10
+                                </div>
+                            </div>
+                            <div class="analysis-item">
+                                <div class="analysis-label">关键要点</div>
+                                <div class="analysis-value">
+                                    <ul>
+                                        <li v-for="point in aiAnalysis.key_points" :key="point">{{ point }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="analysis-item" v-if="aiAnalysis.applications && aiAnalysis.applications.length">
+                                <div class="analysis-label">应用场景</div>
+                                <div class="analysis-value">
+                                    <span v-for="(app, index) in aiAnalysis.applications" :key="app" class="tag">
+                                        {{ app }}
+                                        <span v-if="index < aiAnalysis.applications.length - 1">, </span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="analysis-item" v-if="aiAnalysis.suggestions && aiAnalysis.suggestions.length">
+                                <div class="analysis-label">改进建议</div>
+                                <div class="analysis-value">
+                                    <ul>
+                                        <li v-for="suggestion in aiAnalysis.suggestions" :key="suggestion">{{ suggestion }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
                 <!-- 转录结果 -->
-                <div v-if="task.results.transcript" class="result-section">
+                <div v-if="task.results.transcript" class="result-card">
                     <div class="result-header">
-                        <div class="result-title">转录文本</div>
-                        <button class="download-btn" @click="downloadTranscript">下载</button>
+                        <div class="result-title">📝 转录文本</div>
                     </div>
                     <div class="result-content">{{ task.results.transcript }}</div>
                 </div>
 
-                <!-- 内容摘要 -->
-                <div v-if="task.results.summary" class="result-section">
-                    <div class="result-header">
-                        <div class="result-title">内容摘要</div>
-                        <button class="download-btn" @click="downloadSummary">下载</button>
+                <!-- 第二行：内容摘要和思维导图 -->
+                <div class="results-section">
+                    <!-- 内容摘要 -->
+                    <div v-if="task.results.summary" class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">📄 内容摘要</div>
+                        </div>
+                        <div class="result-content">{{ task.results.summary }}</div>
                     </div>
-                    <div class="result-content">{{ task.results.summary }}</div>
-                </div>
 
-                <!-- 思维导图 -->
-                <div v-if="task.results.mindmap" class="result-section">
-                    <div class="result-header">
-                        <div class="result-title">思维导图</div>
-                        <button class="download-btn" @click="downloadMindmap">下载</button>
+                    <!-- 思维导图 -->
+                    <div v-if="task.results.mindmap" class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">🧠 思维导图</div>
+                            <button class="download-btn" @click="downloadMindmap">下载</button>
+                        </div>
+                        <div class="result-content">{{ task.results.mindmap }}</div>
                     </div>
-                    <div class="result-content">{{ task.results.mindmap }}</div>
                 </div>
 
                 <!-- 学习闪卡 -->
-                <div v-if="task.results.flashcards" class="result-section">
+                <div v-if="task.results.flashcards" class="result-card">
                     <div class="result-header">
-                        <div class="result-title">学习闪卡</div>
+                        <div class="result-title">📚 学习闪卡</div>
                         <button class="download-btn" @click="downloadFlashcards">下载</button>
                     </div>
                     <div class="result-content">{{ task.results.flashcards }}</div>
                 </div>
 
                 <!-- 输出文件 -->
-                <div v-if="task.results.files && task.results.files.length" class="result-section">
+                <div v-if="displayFiles && displayFiles.length > 0" class="result-card">
                     <div class="result-header">
-                        <div class="result-title">输出文件</div>
+                        <div class="result-title">📁 输出文件</div>
                         <button class="download-btn" @click="downloadAll">下载全部</button>
                     </div>
                     <div class="file-list">
-                        <div v-for="file in task.results.files" 
-                             :key="file.name" 
-                             class="file-item"
-                             @click="downloadFile(file)">
-                            <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                            </svg>
-                            <span class="file-name">{{ file.name }}</span>
+                        <!-- 普通文件 -->
+                        <div v-for="file in displayFiles.regular" 
+                             :key="'file-' + file.name" 
+                             class="file-item">
+                            <div class="file-main" @click="downloadOutputFile(file.name)">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                                </svg>
+                                <span class="file-name">{{ file.name }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 闪卡文件组合按钮 -->
+                        <div v-if="displayFiles.flashcards.length > 0" class="file-item special-item">
+                            <div class="file-main" @click="downloadFlashcardFiles">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3M19,19H5V5H19V19M17,12H7V10H17V12M15,16H7V14H15V16M17,8H7V6H17V8Z"/>
+                                </svg>
+                                <span class="file-name">📚 学习闪卡 ({{ displayFiles.flashcards.length }}个格式)</span>
+                            </div>
+                            <button class="anki-help-btn" 
+                                    @click.stop="showAnkiHelp"
+                                    title="Anki导入帮助">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C7.59,4 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- 思维导图文件组合按钮 -->
+                        <div v-if="displayFiles.mindmaps.length > 0" class="file-item special-item">
+                            <div class="file-main" @click="downloadMindmapFiles">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"/>
+                                </svg>
+                                <span class="file-name">🧠 思维导图 ({{ displayFiles.mindmaps.length }}个格式)</span>
+                            </div>
+                        </div>
+
+                        <!-- 音频文件 -->
+                        <div v-if="displayFiles.audio.length > 0" class="file-item">
+                            <div class="file-main" @click="downloadOutputFile(displayFiles.audio[0].name)">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/>
+                                </svg>
+                                <span class="file-name">🎵 提取音频</span>
+                            </div>
+                        </div>
+
+                        <!-- 视频关键帧查看按钮 -->
+                        <div v-if="displayFiles.keyframes.length > 0" class="file-item special-item">
+                            <div class="file-main" @click="showKeyframeGallery(0)">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z"/>
+                                </svg>
+                                <span class="file-name">🖼️ 查看视频帧 ({{ displayFiles.keyframes.length }}张)</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- 未完成状态 -->
-            <div v-else class="task-results">
-                <div class="result-section">
+            <div v-else-if="task.status !== 'completed'" class="task-results">
+                <div class="result-card">
                     <div class="result-header">
-                        <div class="result-title">处理状态</div>
+                        <div class="result-title">📋 处理状态</div>
                     </div>
                     <div class="result-content">
                         {{ task.status === 'pending' ? '任务等待中...' : 
                            task.status === 'running' ? '任务处理中...' : 
                            task.status === 'failed' ? '任务处理失败' : '未知状态' }}
+                    </div>
+                </div>
+            </div>
+            <div v-else class="task-results">
+                <div class="result-card">
+                    <div class="result-header">
+                        <div class="result-title">⚠️ 处理状态</div>
+                    </div>
+                    <div class="result-content">
+                        任务处理结果生成失败，请联系技术支持或重新创建任务。
                     </div>
                 </div>
             </div>
@@ -433,7 +753,64 @@
                         task: null,
                         loading: true,
                         error: null,
-                        taskId: null
+                        taskId: null,
+                        outputFiles: [],
+                        processingReport: null,
+                        processingReportHtml: '',
+                        aiAnalysis: null
+                    }
+                },
+
+                computed: {
+                    displayFiles() {
+                        const files = this.outputFiles || [];
+                        console.log('📁 原始输出文件列表:', files);
+                        
+                        // 过滤掉在其他区域显示的文件
+                        const excludeFiles = ['处理报告.md', 'AI分析结果.json', 'audio_visuals/waveform.jpg'];
+                        const filteredFiles = files.filter(file => 
+                            !excludeFiles.includes(file.name)
+                        );
+                        console.log('🔍 过滤后的文件列表:', filteredFiles);
+                        
+                        const result = {
+                            regular: [],
+                            flashcards: [],
+                            mindmaps: [],
+                            audio: [],
+                            keyframes: [],
+                            length: 0
+                        };
+
+                        filteredFiles.forEach(file => {
+                            console.log('📄 处理文件:', file.name);
+                            
+                            if (file.name.includes('学习闪卡') || file.name.includes('flashcards') || file.name.includes('Anki')) {
+                                console.log('  ➡️ 归类为闪卡文件');
+                                result.flashcards.push(file);
+                            } else if (file.name.includes('思维导图') || file.name.endsWith('.mm')) {
+                                console.log('  ➡️ 归类为思维导图文件');
+                                result.mindmaps.push(file);
+                            } else if (file.name.includes('_audio.wav') || file.name.endsWith('.wav') || file.name.endsWith('.mp3')) {
+                                console.log('  ➡️ 归类为音频文件');
+                                result.audio.push(file);
+                            } else if (file.name.startsWith('keyframes/') || file.name.endsWith('.jpg') || file.name.endsWith('.png')) {
+                                console.log('  ➡️ 归类为关键帧文件');
+                                result.keyframes.push(file);
+                            } else {
+                                console.log('  ➡️ 归类为常规文件');
+                                result.regular.push(file);
+                            }
+                        });
+
+                        result.length = result.regular.length + 
+                                       (result.flashcards.length > 0 ? 1 : 0) + 
+                                       (result.mindmaps.length > 0 ? 1 : 0) + 
+                                       result.audio.length +
+                                       result.keyframes.length;
+                        
+                        console.log('📊 文件分类结果:', result);
+                        return result;
                     }
                 },
 
@@ -461,8 +838,18 @@
                             this.loading = true;
                             this.error = null;
                             
-                            const response = await http.get(`/api/tasks/video/${this.taskId}`);
-                            this.task = response;
+                            this.task  = await http.get(`/api/tasks/video/${this.taskId}`);
+                            console.log('task:', this.task);
+                            
+                            // 如果任务已完成，尝试加载输出文件列表和详细内容
+                            if (this.task.status === 'completed') {
+                                await Promise.all([
+                                    this.loadOutputFiles(),
+                                    this.loadProcessingReport(),
+                                    this.loadAiAnalysis()
+                                ]);
+                            }
+                            
                             this.loading = false;
                         } catch (error) {
                             console.error('加载任务详情失败:', error);
@@ -471,18 +858,78 @@
                         }
                     },
 
+                    // 加载输出文件列表
+                    async loadOutputFiles() {
+                        try {
+                            this.outputFiles = await http.get(`/api/tasks/video/${this.taskId}/outputs`);
+
+                            console.log('📁 加载的输出文件列表:', this.outputFiles);
+                            
+
+                        } catch (error) {
+                            console.error('❌ 加载输出文件列表失败:', error);
+                            this.outputFiles = [];
+                        }
+                    },
+
+                    // 加载处理报告
+                    async loadProcessingReport() {
+                        try {
+                            const response = await http.get(`/api/tasks/video/${this.taskId}/files/处理报告.md`, {
+                                responseType: 'text'
+                            });
+                            this.processingReport = response;
+                            this.processingReportHtml = this.markdownToHtml(response);
+                        } catch (error) {
+                            console.warn('加载处理报告失败:', error);
+                            this.processingReport = null;
+                        }
+                    },
+
+                    // 加载AI分析结果
+                    async loadAiAnalysis() {
+                        if (this.task && this.task.config.ai_output_types.includes('ai_analysis')) {
+                            return
+                        }
+
+                        try {
+                            const response = await http.get(`/api/tasks/video/${this.taskId}/files/AI分析结果.json`);
+                            this.aiAnalysis = response;
+                        } catch (error) {
+                            console.warn('加载AI分析结果失败:', error);
+                            this.aiAnalysis = null;
+                        }
+                    },
+
+
+
+                    // 简单的Markdown转HTML
+                    markdownToHtml(markdown) {
+                        return markdown
+                            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                            .replace(/^\- (.*$)/gm, '<li>$1</li>')
+                            .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                            .replace(/\n/g, '<br>');
+                    },
+
                     // 安全获取任务标题
                     getTaskTitle(task) {
                         if (!task) return '未知任务';
-                        if (task.input?.filename) return task.input.filename;
-                        if (task.input?.url) return task.input.url;
+                        // 优先显示用户设置的任务名称
+                        if (task.name) return task.name;
+                        if (task.input_filename) return task.input_filename;
+                        if (task.input_url) return task.input_url;
                         return task.id || '未知任务';
                     },
 
                     // 安全获取任务类型
                     getTaskType(task) {
                         if (!task) return '未知';
-                        return task.type === 'video' ? '视频' : '音频';
+                        return task.task_type === 'video' ? '视频' : '音频';
                     },
 
                     // 获取状态文本
@@ -501,6 +948,14 @@
                         if (!dateString) return '';
                         const date = new Date(dateString);
                         return date.toLocaleString('zh-CN');
+                    },
+
+                    // 格式化时长（秒转为分:秒格式）
+                    formatDuration(seconds) {
+                        if (!seconds || seconds <= 0) return '';
+                        const minutes = Math.floor(seconds / 60);
+                        const remainingSeconds = Math.floor(seconds % 60);
+                        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
                     },
 
                     // 下载转录文本
@@ -535,10 +990,185 @@
                         }
                     },
 
+                    // 下载处理报告
+                    downloadProcessingReport() {
+                        if (this.processingReport) {
+                            const blob = new Blob([this.processingReport], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_处理报告.md`);
+                        }
+                    },
+
+                    // 下载AI分析结果
+                    downloadAiAnalysis() {
+                        if (this.aiAnalysis) {
+                            const blob = new Blob([JSON.stringify(this.aiAnalysis, null, 2)], { type: 'application/json' });
+                            this.downloadBlob(blob, `${this.task.id}_AI分析结果.json`);
+                        }
+                    },
+
+                    // 获取帧标签（从文件名提取时间）
+                    getFrameLabel(filename) {
+                        const match = filename.match(/(\d{2})_(\d{2})\.jpg$/);
+                        if (match) {
+                            return `${match[1]}:${match[2]}`;
+                        }
+                        return filename;
+                    },
+
+                    // 显示关键帧图片库
+                    showKeyframeGallery(startIndex) {
+                        const photos = this.displayFiles.keyframes.map(frame => ({
+                            src: frame.download_url,
+                            alt: frame.name
+                        }));
+
+                        layer.photos({
+                            photos: {
+                            title: '视频关键帧',
+                            data: photos,
+                            start: startIndex,
+                            anim: 5
+                        }
+                        });
+                    },
+
+
+
+                    // 下载闪卡文件（多格式）
+                    async downloadFlashcardFiles() {
+                        const flashcardFiles = this.displayFiles.flashcards;
+                        
+                        if (flashcardFiles.length === 1) {
+                            // 只有一个文件，直接下载
+                            await this.downloadOutputFile(flashcardFiles[0].name);
+                        } else {
+                            // 多个文件，显示选择菜单
+                            const options = flashcardFiles.map(file => {
+                                const ext = file.name.split('.').pop().toLowerCase();
+                                const formatMap = {
+                                    'md': 'Markdown格式',
+                                    'csv': 'Anki CSV格式',
+                                    'json': 'JSON格式'
+                                };
+                                return {
+                                    title: formatMap[ext] || file.name,
+                                    file: file
+                                };
+                            });
+
+                            let menuContent = '<div style="padding: 10px;">';
+                            menuContent += '<p style="margin-bottom: 15px; color: #666;">选择要下载的闪卡格式：</p>';
+                            options.forEach((option, index) => {
+                                menuContent += `<div style="margin-bottom: 8px;">
+                                    <button onclick="downloadFlashcard('${option.file.name}')" 
+                                            style="width: 100%; padding: 8px; border: 1px solid #ddd; background: #f9f9f9; cursor: pointer; border-radius: 4px;">
+                                        ${option.title}
+                                    </button>
+                                </div>`;
+                            });
+                            menuContent += '<div style="margin-top: 15px; text-align: center;">';
+                            menuContent += '<button onclick="downloadAllFlashcards()" style="padding: 8px 16px; background: #00B26A; color: white; border: none; border-radius: 4px; cursor: pointer;">下载全部格式</button>';
+                            menuContent += '</div></div>';
+
+                            // 临时添加全局方法
+                            window.downloadFlashcard = (fileName) => {
+                                this.downloadOutputFile(fileName);
+                                layer.closeAll();
+                            };
+
+                            window.downloadAllFlashcards = async () => {
+                                for (const file of flashcardFiles) {
+                                    await this.downloadOutputFile(file.name);
+                                }
+                                layer.closeAll();
+                            };
+
+                            layer.open({
+                                type: 1,
+                                title: '📚 下载学习闪卡',
+                                area: ['300px', 'auto'],
+                                content: menuContent,
+                                btn: false,
+                                closeBtn: 1
+                            });
+                        }
+                    },
+
+                    // 下载思维导图文件（多格式）
+                    async downloadMindmapFiles() {
+                        const mindmapFiles = this.displayFiles.mindmaps;
+                        
+                        if (mindmapFiles.length === 1) {
+                            await this.downloadOutputFile(mindmapFiles[0].name);
+                        } else {
+                            // 下载所有思维导图格式
+                            for (const file of mindmapFiles) {
+                                await this.downloadOutputFile(file.name);
+                            }
+                            layer.msg(`已下载 ${mindmapFiles.length} 个思维导图文件`, {icon: 1});
+                        }
+                    },
+
+                    // 显示Anki导入帮助
+                    showAnkiHelp() {
+                        layer.open({
+                            type: 1,
+                            title: '📚 Anki导入帮助',
+                            area: ['780px', '540px'],
+                            content: `
+                                <div style="padding: 20px; line-height: 1.6;">
+                                    <h3>🎯 什么是Anki？</h3>
+                                    <p>Anki是一款基于间隔重复算法的记忆软件，能够帮助您高效记忆学习内容。</p>
+                                    
+                                    <h3>📥 如何导入我们的闪卡？</h3>
+                                    <ol style="margin-left: 20px;">
+                                        <li><strong>下载闪卡文件</strong>：点击"学习闪卡-Anki格式.csv"文件下载</li>
+                                        <li><strong>打开Anki软件</strong>：在电脑上启动Anki应用</li>
+                                        <li><strong>创建牌组</strong>：点击"创建牌组"，命名为您的学习主题</li>
+                                        <li><strong>导入文件</strong>：
+                                            <ul style="margin-left: 20px; margin-top: 8px;">
+                                                <li>点击"文件" → "导入"</li>
+                                                <li>选择下载的CSV文件</li>
+                                                <li>选择目标牌组</li>
+                                                <li>确认导入设置后点击"导入"</li>
+                                            </ul>
+                                        </li>
+                                    </ol>
+                                    
+                                    <h3>💡 学习建议</h3>
+                                    <ul style="margin-left: 20px;">
+                                        <li>每天坚持复习，利用Anki的间隔重复算法</li>
+                                        <li>根据难度调整复习间隔</li>
+                                        <li>可以在手机端同步，随时随地学习</li>
+                                    </ul>
+                                    
+                                    <h3>🔗 相关链接</h3>
+                                    <p>
+                                        <a href="https://apps.ankiweb.net/" target="_blank" style="color: #1890ff;">Anki官网下载</a> | 
+                                        <a href="https://docs.ankiweb.net/" target="_blank" style="color: #1890ff;">Anki使用文档</a>
+                                    </p>
+                                </div>
+                            `,
+                            btn: ['知道了'],
+                            yes: function(index) {
+                                layer.close(index);
+                            }
+                        });
+                    },
+
                     // 下载单个文件
                     async downloadFile(file) {
                         try {
                             await http.download(`/api/tasks/video/${this.task.id}/files/${file.name}`, file.name);
+                        } catch (error) {
+                            layer.msg('下载文件失败', {icon: 2});
+                        }
+                    },
+
+                    // 下载输出文件
+                    async downloadOutputFile(fileName) {
+                        try {
+                            await http.download(`/api/tasks/video/${this.task.id}/files/${fileName}`, fileName);
                         } catch (error) {
                             layer.msg('下载文件失败', {icon: 2});
                         }

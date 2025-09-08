@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建任务 - 听语AI</title>
+    <link rel="icon" href="/favicon.ico">
+    <link href="/assets/js/layui/css/layui.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/common.css">
+    <link rel="stylesheet" href="/assets/css/icons.css">
+    <link rel="stylesheet" href="/assets/css/video2txt.css">
+    <link rel="stylesheet" href="/assets/css/task_create.css">
+</head>
+
+<body>
+    <div id="app" class="task-create-container">
+        
+        <!-- 创建任务表单 -->
+        <div class="create-task-form" v-show="!chatMode">
+            <div class="form-section">
+                <div class="form-section-title">
+                    <svg class="icon icon-md" viewBox="0 0 24 24">
+                        <path
+                            d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" />
+                    </svg>
+                    基础设置
+                </div>
+                <div class="form-row">
+                    <!-- 任务名称 -->
+                    <div class="form-group">
+                        <label class="form-label">任务名称</label>
+                        <input type="text" v-model="formData.name" class="form-input" placeholder="非必填，默认文件名：解析+`上传文件名`">
+                    </div>
+                    <!-- 语言选择 -->
+                    <div class="form-group">
+                        <label class="form-label">语言选择</label>
+                        <select v-model="formData.language" class="form-select" @change="onLanguageChange">
+                            <option v-for="option in languageOptions" :key="option.value" :value="option.value"
+                                :selected="option.value === formData.language">
+                                {{ option.label }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">识别模型</label>
+                        <select class="form-select" @change="onModelChange">
+                            <template v-if="models.length > 0">
+                                <!-- 自动选择选项 -->
+                                <option value="auto">自动选择</option>
+                                <!-- 按引擎类型分组显示 -->
+                                <optgroup v-for="(engineModels, engineType) in groupedModelsByEngine"
+                                    :key="engineType" :label="getEngineDisplayName(engineType)">
+                                    <option v-for="model in engineModels" :key="model.id" :value="model.id"
+                                        :selected="model.id === `${formData.model}-${formData.modelSize}`"
+                                        :class="{'recommended': model.recommended, 'not-installed': !model.installed}">
+                                        {{ model.displayName || model.name }}{{ model.recommended ? ' (推荐)' : '' }}{{
+                                        !model.installed ? ' (未安装)' : '' }}
+                                    </option>
+                                </optgroup>
+                            </template>
+                            <!-- 模型未加载时的备用选项 -->
+                            <template v-else>
+                                <option v-for="model in availableModels" :key="model.value"
+                                    :value="model.value">
+                                    {{ model.label }}
+                                </option>
+                            </template>
+                        </select>
+                    </div>
+                </div>                 
+
+                <!-- 语言选择智能推荐提示 -->
+                <div v-if="languageRecommendation.show" class="model-recommendation show">
+                    <div class="recommendation-text">{{ languageRecommendation.text }}</div>
+                    <div class="recommendation-model">{{ languageRecommendation.model }}</div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <svg class="icon icon-md" viewBox="0 0 24 24">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    AI内容生成选择
+                </div>
+                <div class="form-hint" style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                    💡 基础文件（转录文本、摘要、字幕）将自动生成，无需选择
+                </div>
+                <div class="checkbox-group">
+                    <label class="checkbox-item">
+                        <input type="checkbox" v-model="formData.aiOutputTypes" value="content_card"
+                            @change="onAIOutputTypeChange('content_card')">
+                        <span>内容卡片</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" v-model="formData.aiOutputTypes" value="mind_map"
+                            @change="onAIOutputTypeChange('mind_map')">
+                        <span>思维导图</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" v-model="formData.aiOutputTypes" value="flashcards"
+                            @change="onAIOutputTypeChange('flashcards')">
+                        <span>学习闪卡</span>
+                    </label>
+<!--                    <label class="checkbox-item">-->
+<!--                        <input type="checkbox" v-model="formData.aiOutputTypes" value="ai_analysis"-->
+<!--                            @change="onAIOutputTypeChange('ai_analysis')">-->
+<!--                        <span>AI分析</span>-->
+<!--                    </label>-->
+                    <label class="checkbox-item"
+                        style="border: 2px solid var(--primary-color); background: rgba(0, 178, 106, 0.05);">
+                        <input type="checkbox" :checked="isAllAISelected" @change="onAllAIToggle">
+                        <span style="font-weight: 600; color: var(--primary-color);">全部AI内容 (All in)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <svg class="icon icon-md" viewBox="0 0 24 24">
+                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/>
+                    </svg>
+                    其他选项
+                </div>
+<!--                <div class="form-hint" style="margin-bottom: 15px; color: #666; font-size: 14px;">-->
+<!--                    ⚡ 选择任务处理方式：异步处理（推荐）或同步等待-->
+<!--                </div>-->
+                <div class="checkbox-group">
+<!--                    <label class="checkbox-item">-->
+<!--                        <input type="checkbox" v-model="formData.forceSync">-->
+<!--                        <span>同步处理模式</span>-->
+<!--                        <small style="color: #999; margin-left: 8px;">（等待任务完成后返回结果，适合测试）</small>-->
+<!--                    </label>-->
+                    <label class="checkbox-item">
+                        <input type="checkbox" v-model="formData.aiCorrection">
+                        <span>🤖 AI智能纠错</span>
+                        <small style="color: #999; margin-left: 8px;">（结合内嵌字幕进行智能纠错，提升准确性）</small>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <svg class="icon icon-md" viewBox="0 0 24 24">
+                        <path
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    文件上传
+                </div>
+                <div class="upload-area" @click="triggerFileSelect" @dragover.prevent="onDragOver"
+                    @drop.prevent="onDrop" @dragleave="onDragLeave" :class="{ dragover: isDragOver }">
+                    <div class="upload-progress" :style="{ width: uploadProgress + '%' }"></div>
+                    <svg class="upload-icon" viewBox="0 0 24 24">
+                        <path
+                            d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                    </svg>
+                    <div class="upload-text">
+                        <span v-if="!selectedFile">拖拽文件到此处或点击上传</span>
+                        <span v-else>已选择: {{ selectedFile.name }}</span>
+                    </div>
+                    <div class="upload-hint">支持 MP4, AVI, MOV, MP3, WAV 等格式，最大 500MB</div>
+                    <input type="file" ref="fileInput" @change="onFileSelect" accept="video/*,audio/*"
+                        style="display: none;">
+                </div>
+
+                <div class="url-input-section">
+                    <div class="form-group">
+                        <label class="form-label">或输入音视频链接/本地文件路径</label>
+                        <div class="url-input-group">
+                            <input type="text" v-model="formData.url" class="url-input"
+                                placeholder="https://example.com/video.mp4 或 /path/to/video.mp4">
+                            <button type="button" class="browse-btn" @click="showFileBrowser = true"
+                                title="浏览本地文件">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path
+                                        d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="submit-btn" @click="createTask" :disabled="!canSubmit || isSubmitting">
+                <svg v-if="isSubmitting" class="icon icon-md icon-spin" viewBox="0 0 24 24"
+                    style="margin-right: 8px;">
+                    <path
+                        d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" />
+                </svg>
+                {{ isSubmitting ? '正在创建...' : '开始处理' }}
+            </button>
+        </div>
+
+        <!-- 聊天处理界面 -->
+        <div class="chat-container" v-show="chatMode">
+            <!-- 总进度条 -->
+            <div v-if="isProcessing || taskProgress > 0" class="overall-progress">
+                <div class="progress-info">
+                    <span class="progress-label">{{ currentStep || '准备中...' }}</span>
+                    <span class="progress-percent">{{ taskProgress }}%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" :style="{width: taskProgress + '%'}"></div>
+                </div>
+            </div>
+
+            <div class="chat-body">
+                <div class="chat-messages" ref="chatMessages">
+                    <div v-for="(message, index) in chatMessages" :key="index" 
+                         class="message" :class="[message.type, { 'typing': message.isTyping }]">
+                        <div class="message-avatar">
+                            <svg v-if="message.type === 'system'" class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            <svg v-else class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-text" v-html="message.content"></div>
+                            <div class="message-time">{{ message.time }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 处理中的动画 -->
+                    <div v-if="isProcessing" class="message system">
+                        <div class="message-avatar">
+                            <div class="processing-spinner"></div>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-text">正在处理中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/js/vue.global.js"></script>
+    <script src="/assets/js/axios/axios.min.js"></script>
+    <script src="/assets/js/layui/layui.js"></script>
+    <script src="/assets/js/http.js"></script>
+    <script type="module">
+        const { createApp } = Vue;
+        layui.use(['layer'], () => {
+            createApp({
+                data() {
+                    return {
+                        // 聊天模式状态
+                        chatMode: false,
+                        currentTaskId: null,
+                        chatMessages: [],
+                        isProcessing: false,
+                        taskProgress: 0,
+                        currentStep: '',
+                        
+                        // 表单数据
+                        formData: {
+                            language: 'zh',
+                            name: '', // 任务名称
+                            model: 'whisper',
+                            modelSize: 'medium',
+                            basicOutputTypes: ['transcript', 'summary', 'subtitle'],
+                            aiOutputTypes: [],
+                            url: '',
+                            forceSync: false,  // 强制同步处理选项
+                            aiCorrection: false  // AI智能纠错选项
+                        },
+                        
+                        // 文件上传相关
+                        selectedFile: null,
+                        isDragOver: false,
+                        isSubmitting: false,
+                        uploadProgress: 0,
+                        
+                        // 模型和语言选项
+                        models: [],
+                        languageOptions: [
+                            { label: '自动检测', value: 'auto' },
+                            { label: '中文', value: 'zh' },
+                            { label: '英语', value: 'en' },
+                            { label: '方言', value: 'dialect' }
+                        ],
+                        languageRecommendation: {
+                            text: '',
+                            model: '',
+                            show: false
+                        },
+                        modelOptions: {
+                            auto: [
+                                { label: '自动选择', value: 'auto' },
+                                { label: 'Whisper Large', value: 'whisper-large' },
+                                { label: 'SenseVoice', value: 'sensevoice' }
+                            ],
+                            zh: [
+                                { label: 'SenseVoice (推荐)', value: 'sensevoice' },
+                                { label: 'Whisper Large', value: 'whisper-large' }
+                            ],
+                            en: [
+                                { label: 'Whisper Large (推荐)', value: 'whisper-large' },
+                                { label: 'SenseVoice', value: 'sensevoice' }
+                            ],
+                            dialect: [
+                                { label: 'Dolphin (推荐)', value: 'dolphin' },
+                                { label: 'SenseVoice', value: 'sensevoice' }
+                            ]
+                        }
+                    }
+                },
+
+                computed: {
+                    canSubmit() {
+                        return (this.selectedFile || this.formData.url.trim());
+                    },
+
+                    isAllAISelected() {
+                        const allAITypes = ['content_card', 'mind_map', 'flashcards', 'ai_analysis'];
+                        const aiOutputTypes = this.formData.aiOutputTypes;
+                        return allAITypes.every(type => aiOutputTypes.includes(type));
+                    },
+
+                    availableModels() {
+                        if (this.models.length === 0) {
+                            return this.modelOptions[this.formData.language] || this.modelOptions.auto;
+                        }
+                        return this.filterModelsByLanguage(this.models, this.formData.language);
+                    },
+
+                    groupedModelsByEngine() {
+                        if (this.models.length === 0) return {};
+
+                        const grouped = {};
+                        this.models.forEach(model => {
+                            if (!grouped[model.engineType]) {
+                                grouped[model.engineType] = [];
+                            }
+                            grouped[model.engineType].push({
+                                ...model,
+                                recommended: this.isModelRecommended(model, this.formData.language),
+                                displayName: this.getModelDisplayName(model, model.engineType)
+                            });
+                        });
+
+                        Object.keys(grouped).forEach(engineType => {
+                            grouped[engineType].sort((a, b) => {
+                                if (a.installed !== b.installed) {
+                                    return b.installed - a.installed;
+                                }
+                                return a.name.localeCompare(b.name);
+                            });
+                        });
+
+                        return grouped;
+                    }
+                },
+
+                async mounted() {
+                    await this.loadModels();
+                },
+
+                methods: {
+                    // === 模型相关方法 ===
+                    async loadModels() {
+                        try {
+                            const data = await http.get('/api/models');
+                            this.models = [];
+
+                            Object.entries(data).forEach(([engineType, models]) => {
+                                if (Array.isArray(models)) {
+                                    models.forEach((model) => {
+                                        // 使用config_key而不是name来构建ID，确保与后端一致
+                                        const modelKey = model.config_key || model.name;
+                                        this.models.push({
+                                            ...model,
+                                            id: `${engineType}-${modelKey}`,
+                                            engineType,
+                                            displayName: model.name, // 显示用的名称
+                                            installed: model.installed || false
+                                        });
+                                    });
+                                }
+                            });
+                        } catch (error) {
+                            console.error('加载模型列表失败:', error);
+                        }
+                    },
+
+                    getEngineDisplayName(engineType) {
+                        const engineMap = {
+                            'whisper': 'Whisper (OpenAI)',
+                            'sensevoice': 'SenseVoice (阿里)',
+                            'dolphin': 'Dolphin (方言专用)',
+                            'funasr': 'FunASR (达摩院)'
+                        };
+                        return engineMap[engineType] || engineType;
+                    },
+
+                    getModelDisplayName(model, engineType) {
+                        const sizeMap = {
+                            'tiny': '极小',
+                            'small': '小型',
+                            'medium': '中型',
+                            'large': '大型',
+                            'turbo': '快速'
+                        };
+
+                        let modelName = model.name;
+                        if (engineType === 'whisper') {
+                            modelName = `Whisper(${modelName})`;
+                        }
+                        const sizeName = sizeMap[model.size] || model.size || '';
+                        return `${modelName} ${sizeName}`.trim();
+                    },
+
+                    isModelRecommended(model, language) {
+                        const recommendations = {
+                            'zh': ['sensevoice'],
+                            'en': ['whisper'],
+                            'dialect': ['dolphin'],
+                            'auto': ['whisper', 'sensevoice']
+                        };
+                        
+                        const recommended = recommendations[language] || recommendations['auto'];
+                        return recommended.some(rec => model.name.toLowerCase().includes(rec));
+                    },
+
+                    filterModelsByLanguage(models, language) {
+                        // 简单的语言过滤逻辑，实际可以根据需要调整
+                        return models.filter(model => {
+                            if (language === 'zh') {
+                                return model.engineType === 'sensevoice' || model.engineType === 'whisper';
+                            } else if (language === 'en') {
+                                return model.engineType === 'whisper';
+                            } else if (language === 'dialect') {
+                                return model.engineType === 'dolphin' || model.engineType === 'sensevoice';
+                            }
+                            return true; // auto 显示所有
+                        });
+                    },
+
+                    onLanguageChange() {
+                        const models = this.availableModels;
+                        if (models.length > 0) {
+                            const recommended = models.find(m => m.label && m.label.includes('推荐'));
+                            this.formData.model = recommended ? recommended.value : models[0].value;
+                        }
+                        this.showLanguageRecommendation();
+                    },
+
+                    onModelChange(e) {
+                        const modelValue = e.target.value;
+                        if (modelValue.includes('-')) {
+                            const [model, modelSize] = modelValue.split('-');
+                            this.formData.model = model;
+                            this.formData.modelSize = modelSize;
+                        } else {
+                            this.formData.model = modelValue;
+                            this.formData.modelSize = 'small';
+                        }
+                    },
+
+                    showLanguageRecommendation() {
+                        const languageMap = {
+                            'zh': { text: '已切换到中文模式', model: '推荐使用 SenseVoice 模型，对中文识别效果更佳' },
+                            'en': { text: '已切换到英文模式', model: '推荐使用 Whisper Large 模型，对英文识别效果更佳' },
+                            'dialect': { text: '已切换到方言模式', model: '推荐使用 Dolphin 模型，对方言识别效果更佳' },
+                            'auto': { text: '已切换到自动检测模式', model: '系统将自动选择最适合的识别模型' }
+                        };
+
+                        const recommendation = languageMap[this.formData.language];
+                        if (recommendation) {
+                            this.languageRecommendation = {
+                                text: recommendation.text,
+                                model: recommendation.model,
+                                show: true
+                            };
+
+                            setTimeout(() => {
+                                this.languageRecommendation.show = false;
+                            }, 3000);
+                        }
+                    },
+
+                    // === AI输出类型相关 ===
+                    onAIOutputTypeChange(type) {
+                        // Vue的双向绑定会自动处理
+                    },
+
+                    onAllAIToggle(event) {
+                        const allAITypes = ['content_card', 'mind_map', 'flashcards', 'ai_analysis'];
+                        if (event.target.checked) {
+                            this.formData.aiOutputTypes = [...allAITypes];
+                        } else {
+                            this.formData.aiOutputTypes = [];
+                        }
+                    },
+
+                    // === 文件上传相关 ===
+                    triggerFileSelect() {
+                        this.$refs.fileInput.click();
+                    },
+
+                    onFileSelect(event) {
+                        const file = event.target.files[0];
+                        if (file) {
+                            this.selectedFile = file;
+                            if (!this.formData.name) {
+                                this.formData.name = `解析${file.name}任务`;
+                            }
+                            this.formData.url = '';
+                        }
+                    },
+
+                    onDragOver(event) {
+                        this.isDragOver = true;
+                    },
+
+                    onDragLeave(event) {
+                        this.isDragOver = false;
+                    },
+
+                    onDrop(event) {
+                        this.isDragOver = false;
+                        const files = event.dataTransfer.files;
+                        if (files.length > 0) {
+                            this.selectedFile = files[0];
+                            if (!this.formData.name) {
+                                this.formData.name = `解析${files[0].name}任务`;
+                            }
+                            this.formData.url = '';
+                        }
+                    },
+
+                    // === 任务创建相关 ===
+                    async createTask() {
+                        if (!this.canSubmit || this.isSubmitting) return;
+
+                        this.isSubmitting = true;
+                        this.uploadProgress = 0;
+
+                        try {
+                            // 切换到聊天模式
+                            this.switchToChatMode();
+                            
+                            // 添加初始消息
+                            this.addChatMessage('user', `开始处理${this.selectedFile ? '文件: ' + this.selectedFile.name : 'URL: ' + this.formData.url}`);
+                            this.addChatMessage('system', '正在创建任务，请稍候...');
+
+                            // 检查引擎可用性
+                            const engines = await http.get('/api/tasks/video/engines');
+                            
+                            if (this.formData.model === 'auto') {
+                                const hasAvailableEngine = Object.values(engines).some(engine => engine.available);
+                                if (!hasAvailableEngine) {
+                                    throw new Error('没有可用的语音识别引擎');
+                                }
+                            } else if (!engines[this.formData.model]?.available) {
+                                throw new Error(`语音识别引擎 ${this.formData.model} 不可用`);
+                            }
+
+                            const formData = new FormData();
+
+                            if (this.selectedFile) {
+                                formData.append('file', this.selectedFile);
+                            } else {
+                                formData.append('url', this.formData.url);
+                            }
+
+                            formData.append('name', this.formData.name);
+                            formData.append('language', this.formData.language);
+                            formData.append('model', this.formData.model);
+                            formData.append('model_size', this.formData.modelSize);
+                            formData.append('output_types', this.formData.basicOutputTypes.join(','));
+                            formData.append('ai_output_types', this.formData.aiOutputTypes.join(','));
+                            formData.append('force_sync', this.formData.forceSync);
+                            formData.append('ai_correction', this.formData.aiCorrection);
+                            // 打印 formData values
+                            console.log(JSON.stringify(Object.fromEntries(formData)))
+
+                            // 创建任务
+                            const data = await this.uploadWithProgress('/api/tasks/video', formData);
+
+                            // 保存任务ID
+                            this.currentTaskId = data.task_id;
+                            
+                            // 更新聊天消息
+                            this.updateLastChatMessage(`任务创建成功！任务ID: ${data.task_id}`, 'system');
+                            
+                            // 开始监听任务进度
+                            this.startTaskProgressStream(data.task_id);
+
+                        } catch (error) {
+                            console.error('创建任务失败:', error);
+                            this.addChatMessage('system', `❌ 创建任务失败: ${error.message}`, undefined);
+                        } finally {
+                            this.isSubmitting = false;
+                        }
+                    },
+
+                    uploadWithProgress(url, formData) {
+                        return new Promise((resolve, reject) => {
+                            const xhr = new XMLHttpRequest();
+
+                            xhr.upload.addEventListener('progress', (event) => {
+                                if (event.lengthComputable) {
+                                    this.uploadProgress = Math.round((event.loaded / event.total) * 100);
+                                }
+                            });
+
+                            xhr.addEventListener('load', () => {
+                                if (xhr.status >= 200 && xhr.status < 300) {
+                                    try {
+                                        const response = JSON.parse(xhr.responseText);
+                                        if (response.success && response.data) {
+                                            resolve(response.data);
+                                        } else {
+                                            resolve(response);
+                                        }
+                                    } catch (e) {
+                                        reject(new Error('响应解析失败'));
+                                    }
+                                } else {
+                                    try {
+                                        const errorResponse = JSON.parse(xhr.responseText);
+                                        const errorMessage = errorResponse.message || errorResponse.detail || `HTTP ${xhr.status}: ${xhr.statusText}`;
+                                        reject(new Error(errorMessage));
+                                    } catch (e) {
+                                        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                                    }
+                                }
+                            });
+
+                            xhr.addEventListener('error', () => {
+                                reject(new Error('网络错误'));
+                            });
+
+                            xhr.open('POST', url);
+                            xhr.send(formData);
+                        });
+                    },
+
+                    // === 聊天模式相关方法 ===
+                    switchToChatMode() {
+                        this.chatMode = true;
+                        this.chatMessages = [];
+                        this.isProcessing = false;
+                        this.taskProgress = 0;
+                        this.currentStep = '';
+                    },
+                    
+                    closeChatMode() {
+                        this.chatMode = false;
+                        this.currentTaskId = null;
+                        this.chatMessages = [];
+                        this.isProcessing = false;
+                        this.taskProgress = 0;
+                        this.currentStep = '';
+                        
+                        // 刷新父页面的任务列表
+                        if (parent && parent.refreshTaskList) {
+                            parent.refreshTaskList();
+                        }
+                        
+                        // 关闭当前窗口
+                        if (parent && parent.layer) {
+                            parent.layer.closeAll();
+                        }
+                    },
+                    
+                    goToTaskDetail() {
+                        if (this.currentTaskId && parent) {
+                            // 关闭当前层
+                            if (parent.layer) {
+                                parent.layer.closeAll();
+                            }
+                            
+                            // 打开任务详情页
+                            if (parent.layer) {
+                                parent.layer.open({
+                                    type: 2,
+                                    title: '任务详情',
+                                    offset: 'auto',
+                                    shade: 0.3,
+                                    shadeClose: true,
+                                    content: `/task_detail?task_id=${this.currentTaskId}`,
+                                    area: ['90%', '90%']
+                                });
+                            }
+                        }
+                    },
+                    
+                    addChatMessage(type, content) {
+                        const message = {
+                            type: type,
+                            content: content,
+                            time: new Date().toLocaleTimeString()
+                        };
+                        this.chatMessages.push(message);
+                        this.$nextTick(() => {
+                            this.scrollToBottom();
+                        });
+                    },
+                    
+                    updateLastChatMessage(content, type = null) {
+                        if (this.chatMessages.length > 0) {
+                            const lastMessage = this.chatMessages[this.chatMessages.length - 1];
+                            lastMessage.content = content;
+                            if (type) lastMessage.type = type;
+                        }
+                    },
+                    
+                    scrollToBottom() {
+                        if (this.$refs.chatMessages) {
+                            this.$refs.chatMessages.scrollTop = this.$refs.chatMessages.scrollHeight;
+                        }
+                    },
+                    
+                    startTaskProgressStream(taskId) {
+                        this.isProcessing = true;
+                        
+                        const eventSource = new EventSource(`/api/tasks/video/${taskId}/stream`);
+                        
+                        eventSource.onmessage = (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleProgressUpdate(data);
+                            } catch (e) {
+                                console.error('解析SSE数据失败:', e);
+                            }
+                        };
+                        
+                        eventSource.addEventListener('progress', (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleProgressUpdate(data);
+                            } catch (e) {
+                                console.error('解析进度数据失败:', e);
+                            }
+                        });
+                        
+                        eventSource.addEventListener('complete', (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleTaskComplete(data);
+                                eventSource.close();
+                            } catch (e) {
+                                console.error('解析完成数据失败:', e);
+                                this.isProcessing = false;
+                                eventSource.close();
+                            }
+                        });
+                        
+                        eventSource.addEventListener('error', (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleTaskError(data);
+                                eventSource.close();
+                            } catch (e) {
+                                console.error('解析错误数据失败:', e);
+                                this.isProcessing = false;
+                                eventSource.close();
+                            }
+                        });
+
+                        // AI内容生成事件
+                        eventSource.addEventListener('ai_generating', (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleAIGenerating(data);
+                            } catch (e) {
+                                console.error('解析AI生成开始事件失败:', e);
+                            }
+                        });
+
+                        eventSource.addEventListener('ai_content_chunk', (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleAIContentChunk(data);
+                            } catch (e) {
+                                console.error('解析AI内容片段失败:', e);
+                            }
+                        });
+
+                        eventSource.addEventListener('ai_content_complete', (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleAIContentComplete(data);
+                            } catch (e) {
+                                console.error('解析AI内容完成事件失败:', e);
+                            }
+                        });
+                        
+                        eventSource.addEventListener('error', (event) => {
+                            console.error('SSE连接错误:', event);
+                            this.addChatMessage('system', '❌ 连接中断，任务可能仍在后台处理...');
+                            this.isProcessing = false;
+                            eventSource.close();
+                        });
+                        
+                        eventSource.onerror = () => {
+                            console.error('SSE连接失败');
+                            this.isProcessing = false;
+                            eventSource.close();
+                        };
+                    },
+                    
+                    handleProgressUpdate(data) {
+                        const { progress, current_step, status } = data;
+                        
+                        // 更新总进度条
+                        if (progress !== undefined) {
+                            this.taskProgress = progress;
+                        }
+                        
+                        if (current_step) {
+                            this.currentStep = current_step;
+                            this.addChatMessage('system', `📝 ${current_step}`);
+                        }
+                    },
+                    
+                    handleTaskComplete(data) {
+                        this.isProcessing = false;
+                        this.taskProgress = 100;
+                        this.currentStep = '处理完成';
+                        
+                        this.addChatMessage('system', '🎉 任务处理完成！');
+                        
+                        if (data.output_files && data.output_files.length > 0) {
+                            this.addChatMessage('system', '📁 已生成以下文件:');
+                            data.output_files.forEach(file => {
+                                this.addChatMessage('system', `• ${file.name} (${file.type})`);
+                            });
+                        }
+                        
+                        if (data.results && data.results.summary) {
+                            this.addChatMessage('system', `📋 内容摘要: ${data.results.summary.substring(0, 200)}...`);
+                        }
+                        
+                        // this.addChatMessage('system', '点击"关闭"返回任务列表查看详细结果');
+                    },
+                    
+                    handleTaskError(data) {
+                        this.isProcessing = false;
+                        
+                        this.addChatMessage('system', `❌ 任务处理失败: ${data.error || '未知错误'}`);
+                        
+                        if (data.current_step) {
+                            this.addChatMessage('system', `📝 失败阶段: ${data.current_step}`);
+                        }
+                    },
+
+                    // AI内容生成事件处理
+                    handleAIGenerating(data) {
+                        const typeNames = {
+                            'content_card': '内容卡片',
+                            'mind_map': '思维导图', 
+                            'flashcards': '学习闪卡',
+                            'ai_analysis': 'AI分析'
+                        };
+                        
+                        const typeName = typeNames[data.type] || data.type;
+                        this.addChatMessage('system', data.message || `🤖 开始生成${typeName}...`);
+                    },
+
+                    handleAIContentChunk(data) {
+                        // 添加AI生成的内容，使用打字机效果
+                        const typeNames = {
+                            'content_card': '📝 内容卡片',
+                            'mind_map': '🧠 思维导图',
+                            'flashcards': '📚 学习闪卡', 
+                            'ai_analysis': '🤖 AI分析'
+                        };
+                        
+                        const typeName = typeNames[data.type] || data.type;
+                        
+                        // 添加标题
+                        this.addChatMessage('assistant', `${typeName}:`);
+                        
+                        // 添加内容并启动打字机效果
+                        this.addChatMessageWithTypewriter('assistant', data.content);
+                    },
+
+                    handleAIContentComplete(data) {
+                        this.addChatMessage('system', data.message || '✅ 内容生成完成');
+                    },
+
+                    // 打字机效果添加消息
+                    addChatMessageWithTypewriter(sender, content) {
+                        const messageId = Date.now();
+                        const message = {
+                            id: messageId,
+                            type: sender,
+                            content: '',
+                            time: new Date().toLocaleTimeString(),
+                            isTyping: true
+                        };
+                        
+                        this.chatMessages.push(message);
+                        this.scrollToBottom();
+                        
+                        // 打字机效果
+                        let index = 0;
+                        const typeInterval = setInterval(() => {
+                            if (index < content.length) {
+                                const messageIndex = this.chatMessages.findIndex(m => m.id === messageId);
+                                if (messageIndex !== -1) {
+                                    this.chatMessages[messageIndex].content += content[index];
+                                    this.scrollToBottom();
+                                }
+                                index++;
+                            } else {
+                                clearInterval(typeInterval);
+                                const messageIndex = this.chatMessages.findIndex(m => m.id === messageId);
+                                if (messageIndex !== -1) {
+                                    this.chatMessages[messageIndex].isTyping = false;
+                                }
+                            }
+                        }, 20); // 每20ms显示一个字符
+                    }
+                }
+            }).mount('#app');
+        });
+    </script>
+</body>
+
+</html>

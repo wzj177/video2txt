@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 任务管理服务
+听语AI - 任务管理服务
 """
 
 import logging
 import asyncio
+import shutil
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+from pathlib import Path
 
 from ..database.connection import get_database_manager
 from ..database.repositories import (
-    VideoTaskRepository,
+    MediaTaskRepository,
     MeetingTaskRepository,
     TaskFileRepository,
 )
-from ..models.task import VideoTask, MeetingTask, TaskFile
+from ..models.task import MediaTask, MeetingTask, TaskFile
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +43,8 @@ class TaskService:
 
         try:
             async with self.db_manager.get_session() as session:
-                if task_type == "video":
-                    repo = VideoTaskRepository(session)
+                if task_type == "av":
+                    repo = MediaTaskRepository(session)
                     if status:
                         tasks = await repo.get_by_status(status, limit)
                     else:
@@ -69,8 +71,8 @@ class TaskService:
 
         try:
             async with self.db_manager.get_session() as session:
-                if task_type == "video":
-                    repo = VideoTaskRepository(session)
+                if task_type == "av":
+                    repo = MediaTaskRepository(session)
                 elif task_type == "meeting":
                     repo = MeetingTaskRepository(session)
                 else:
@@ -92,8 +94,8 @@ class TaskService:
 
         try:
             async with self.db_manager.get_session() as session:
-                if task_type == "video":
-                    repo = VideoTaskRepository(session)
+                if task_type == "av":
+                    repo = MediaTaskRepository(session)
                     return await repo.get_stats()
                 elif task_type == "meeting":
                     repo = MeetingTaskRepository(session)
@@ -117,14 +119,15 @@ class TaskService:
 
         try:
             async with self.db_manager.get_session() as session:
-                if task_type == "video":
-                    repo = VideoTaskRepository(session)
+                if task_type == "av":  # 音视频任务
+                    repo = MediaTaskRepository(session)
                     # 从task_data提取视频任务相关字段
                     input_data = task_data.get("input", {})
                     config_data = task_data.get("config", {})
 
                     task = await repo.create(
                         id=task_id,
+                        name=config_data.get("name") or input_data.get("filename", f"任务_{task_id}"),
                         task_type=task_data.get("type", "video"),
                         status=task_data.get("status", "pending"),
                         progress=task_data.get("progress", 0),
@@ -169,8 +172,8 @@ class TaskService:
 
         try:
             async with self.db_manager.get_session() as session:
-                if task_type == "video":
-                    repo = VideoTaskRepository(session)
+                if task_type == "av":
+                    repo = MediaTaskRepository(session)
                 elif task_type == "meeting":
                     repo = MeetingTaskRepository(session)
                 else:
@@ -188,20 +191,31 @@ class TaskService:
 
         try:
             async with self.db_manager.get_session() as session:
-                if task_type == "video":
-                    repo = VideoTaskRepository(session)
+                if task_type == "av":
+                    repo = MediaTaskRepository(session)
                 elif task_type == "meeting":
                     repo = MeetingTaskRepository(session)
                 else:
                     return False
 
-                # 先删除相关文件记录
+                # 先删除相关文件记录和实际文件
                 file_repo = TaskFileRepository(session)
                 task_files = await file_repo.get_by_task(task_id)
                 for task_file in task_files:
                     await file_repo.delete(task_file.id)
-                    # TODO: 删除实际文件
+                    # 删除实际文件
+                    await self._delete_physical_file(task_file.file_path)
                     logger.info(f"删除任务文件: {task_file.file_path}")
+
+                # 删除任务输出目录
+                await self._delete_task_output_directory(task_id)
+
+                # 删除上传的文件
+                task_data = await self.get_task(task_type, task_id)
+                if task_data:
+                    input_path = task_data.get("input_path", {})
+                    if input_path:
+                        await self._delete_physical_file(input_path)
 
                 # 删除任务
                 success = await repo.delete(task_id)
@@ -212,6 +226,28 @@ class TaskService:
         except Exception as e:
             logger.error(f"删除任务失败: {e}")
             return False
+
+    async def _delete_physical_file(self, file_path: str):
+        """删除物理文件"""
+        try:
+            if file_path and Path(file_path).exists():
+                Path(file_path).unlink()
+                logger.info(f"删除文件成功: {file_path}")
+        except Exception as e:
+            logger.error(f"删除文件失败 {file_path}: {e}")
+
+    async def _delete_task_output_directory(self, task_id: str):
+        """删除任务输出目录"""
+        try:
+            # 获取项目根目录
+            project_root = Path(__file__).parent.parent.parent
+            output_dir = project_root / "data" / "outputs" / task_id
+
+            if output_dir.exists() and output_dir.is_dir():
+                shutil.rmtree(output_dir)
+                logger.info(f"删除输出目录成功: {output_dir}")
+        except Exception as e:
+            logger.error(f"删除输出目录失败 {task_id}: {e}")
 
 
 # 全局任务服务实例

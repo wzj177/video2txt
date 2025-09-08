@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 用户数据模型
+听语AI - 用户数据模型
 """
 
 from sqlalchemy import Column, String, Integer, Float, Text, JSON, Boolean

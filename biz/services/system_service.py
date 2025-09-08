@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AI听世界 - 系统信息服务
+听语AI - 系统信息服务
 """
 
 import psutil

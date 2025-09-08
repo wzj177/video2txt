@@ -8,6 +8,7 @@ env/
 .codebuddy
 .cursor
 .DS_Store
+.promptx
 logs
 docs
 data
