@@ -10,6 +10,9 @@ import logging
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
+# 导入语义匹配器
+from ..semantic_frame_matcher import SemanticFrameMatcher, semantic_match_frames
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +29,9 @@ class ContentCardGenerator:
         """
         self.ai_client = ai_client
         self.storage_path = storage_path
-        logger.info("🎨 内容卡片生成器初始化完成")
+        # 🧠 初始化语义匹配器
+        self.semantic_matcher = SemanticFrameMatcher(ai_client)
+        logger.info("🎨 内容卡片生成器初始化完成（集成语义匹配）")
 
     async def _generate_text_only_content(
         self, config, transcript: str, stream_callback=None
@@ -108,6 +113,7 @@ class ContentCardGenerator:
         transcript: str,
         frame_info: Dict[str, Any],
         stream_callback=None,
+        custom_system_prompt: str = None,  # 🧠 新增：支持自定义系统提示词
         **kwargs,
     ) -> Dict[str, Any]:
         """生成内容卡片 - 主入口方法"""
@@ -131,20 +137,52 @@ class ContentCardGenerator:
             frame_list = self._convert_frame_data(frames)
             logger.info(f"🎨 处理 {len(frame_list)} 个提取的帧")
 
-            # 3. SRT与帧的精确匹配
-            if subtitles:
+            # 3. 智能帧匹配：优先使用语义匹配，回退到时间匹配
+            analysis_result = kwargs.get("analysis_result")
+            content_domain = (
+                analysis_result.primary_domain.value if analysis_result else "general"
+            )
+
+            # 🧠 尝试语义匹配
+            semantic_matches = await self.semantic_matcher.match_frames_to_content(
+                frames, transcript, subtitles, content_domain
+            )
+
+            if semantic_matches and len(semantic_matches) >= 3:
+                # 使用语义匹配结果
+                logger.info(f"🎯 使用语义匹配: {len(semantic_matches)} 个匹配")
+                image_strategy = (
+                    self.semantic_matcher.generate_matching_strategy_prompt(
+                        semantic_matches, keyframes_path
+                    )
+                )
+                srt_frame_mapping = None  # 语义匹配不需要SRT映射
+            elif subtitles:
+                # 回退到SRT时间匹配
+                logger.info("⏰ 回退到SRT时间匹配")
                 srt_frame_mapping = self._match_srt_to_frames(subtitles, frame_list)
                 image_strategy = self._build_srt_matching_strategy(
                     srt_frame_mapping, frame_list, cover_frame, keyframes_path
                 )
             else:
+                # 使用简单帧策略
+                logger.info("📐 使用简单帧策略")
                 srt_frame_mapping = None
                 image_strategy = self._build_simple_frame_strategy(
                     frame_list, cover_frame, keyframes_path
                 )
 
             # 4. 构建AI提示词
-            system_prompt = self._build_system_prompt(image_strategy, keyframes_path)
+            if custom_system_prompt:
+                # 🧠 使用自定义系统提示词（来自智能分析）
+                system_prompt = custom_system_prompt + "\n\n" + image_strategy
+                logger.info("🎨 使用智能分析生成的自定义系统提示词")
+            else:
+                # 使用默认系统提示词
+                system_prompt = self._build_system_prompt(
+                    image_strategy, keyframes_path
+                )
+
             user_prompt = self._build_user_prompt(
                 transcript, srt_frame_mapping, frame_list, keyframes_path
             )

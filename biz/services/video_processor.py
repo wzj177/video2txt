@@ -931,10 +931,27 @@ class VideoProcessor:
                     {"current_step": "正在生成AI分析内容...", "progress": 85},
                 )
 
+                # 确保frame_info不为None，并有必要的字段
+                safe_frame_info = frame_info or {
+                    "frames": [],
+                    "cover_frame": None,
+                    "has_frames": False,
+                    "type": "unknown",
+                }
+
+                # 确保frame_info包含所有必要字段
+                if not isinstance(safe_frame_info, dict):
+                    safe_frame_info = {
+                        "frames": [],
+                        "cover_frame": None,
+                        "has_frames": False,
+                        "type": "unknown",
+                    }
+
                 ai_files = await self._generate_ai_content_files(
                     output_dir,
                     transcript_text,
-                    frame_info,
+                    safe_frame_info,
                     ai_output_types,
                     config,
                     task_id,
@@ -1030,6 +1047,15 @@ class VideoProcessor:
 
         except Exception as e:
             logger.error(f"帧处理失败: {e}")
+            # 确保在异常情况下也返回正确的格式
+            frame_info = {
+                "frames": [],
+                "cover_frame": None,
+                "frame_dir": "",
+                "has_frames": False,
+                "type": "error",
+                "error": str(e),
+            }
 
         return frame_info
 

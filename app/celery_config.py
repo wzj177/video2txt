@@ -5,8 +5,10 @@
 """
 
 import os
+import logging
 from pathlib import Path
 from celery import Celery
+from celery.utils.log import get_task_logger
 
 # 项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -38,6 +40,68 @@ except Exception as e:
     # 创建一个基本的Celery应用，避免导入错误
     celery_app = Celery("ai_video2text")
 
+
+# 配置Celery日志
+def setup_celery_logging():
+    """配置Celery专用日志"""
+    try:
+        from datetime import datetime
+        from logging.handlers import TimedRotatingFileHandler
+
+        # 创建日志目录
+        now = datetime.now()
+        log_dir = (
+            PROJECT_ROOT
+            / "logs"
+            / f"{now.strftime('%Y年')}"
+            / f"{now.strftime('%m月')}"
+        )
+        log_dir.mkdir(parents=True, exist_ok=True)
+        celery_log_file = log_dir / f"celery_{now.strftime('%d日')}.log"
+
+        # 配置Celery任务日志
+        task_logger = get_task_logger(__name__)
+        task_logger.setLevel(logging.INFO)
+
+        # 创建文件处理器
+        file_handler = TimedRotatingFileHandler(
+            celery_log_file,
+            when="midnight",
+            interval=1,
+            backupCount=30,
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
+
+        # 创建控制台处理器
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(
+            logging.Formatter("%(asctime)s - CELERY - %(levelname)s - %(message)s")
+        )
+
+        # 添加处理器
+        task_logger.addHandler(file_handler)
+        task_logger.addHandler(console_handler)
+
+        # 配置根日志记录器
+        celery_logger = logging.getLogger("celery")
+        celery_logger.setLevel(logging.INFO)
+        celery_logger.addHandler(file_handler)
+        celery_logger.addHandler(console_handler)
+
+        print(f"✅ Celery日志配置完成: {celery_log_file}")
+        return task_logger
+
+    except Exception as e:
+        print(f"❌ Celery日志配置失败: {e}")
+        return get_task_logger(__name__)
+
+
+# 设置Celery日志
+celery_task_logger = setup_celery_logging()
+
 # Celery配置
 try:
     celery_app.conf.update(
@@ -67,6 +131,9 @@ try:
         # 监控配置
         worker_send_task_events=True,
         task_send_sent_event=True,
+        # 日志配置
+        worker_log_format="%(asctime)s - CELERY-WORKER - %(levelname)s - %(message)s",
+        worker_task_log_format="%(asctime)s - CELERY-TASK - %(levelname)s - %(message)s",
     )
 except Exception as e:
     print(f"Celery配置失败: {e}")

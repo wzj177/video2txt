@@ -24,6 +24,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from core.ai.ai_chat_client import create_ai_client
 from core.media.frame_extractor import create_frame_extractor
 
+# 导入新的内容分析器
+from .ai_content_analyzer import AIContentAnalyzer, analyze_and_generate_prompt
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,6 +64,8 @@ class AIContentFactory:
         self.content_card_generator = ContentCardGenerator(
             ai_client=self.ai_client, storage_path=self._get_storage_path()
         )
+        # 🧠 新增：智能内容分析器
+        self.content_analyzer = AIContentAnalyzer(self.ai_client)
 
     def _get_storage_path(self) -> Path:
         """
@@ -93,7 +98,7 @@ class AIContentFactory:
         **kwargs,
     ) -> Dict[str, Any]:
         """
-        生成指定类型的内容
+        生成指定类型的内容 - 集成智能分析
 
         Args:
             output_type: 输出类型 (content_card, mind_map, flashcards, ai_analysis)
@@ -111,6 +116,27 @@ class AIContentFactory:
             if output_type not in [t.value for t in OutputType]:
                 raise ValueError(f"不支持的输出类型: {output_type}")
 
+            # 🧠 第一步：智能内容分析
+            if stream_callback:
+                await stream_callback(
+                    "content_analyzing",
+                    {"type": output_type, "message": "🧠 正在分析内容特征和领域..."},
+                )
+
+            # 进行内容分析和动态提示词生成
+            analysis_result, dynamic_prompts = await analyze_and_generate_prompt(
+                self.ai_client,
+                transcript,
+                output_type,
+                frame_info=frame_info,
+                subtitles=subtitles,
+                **kwargs,
+            )
+
+            logger.info(
+                f"🎯 内容分析完成: {analysis_result.primary_domain.value}领域, 置信度: {analysis_result.confidence:.2f}"
+            )
+
             # 获取配置
             config = GenerationConfig(
                 output_type=OutputType(output_type),
@@ -127,21 +153,26 @@ class AIContentFactory:
                     video_path, audio_path, subtitles, **kwargs
                 )
 
+            # 🧠 第二步：使用动态提示词生成内容
+            kwargs.update(
+                {"analysis_result": analysis_result, "dynamic_prompts": dynamic_prompts}
+            )
+
             # 根据类型生成内容
             if output_type == OutputType.CONTENT_CARD.value:
-                return await self._generate_content_card(
+                return await self._generate_content_card_smart(
                     config, transcript, frame_info, stream_callback, **kwargs
                 )
             elif output_type == OutputType.MIND_MAP.value:
-                return await self._generate_mind_map(
+                return await self._generate_mind_map_smart(
                     config, transcript, frame_info, stream_callback, **kwargs
                 )
             elif output_type == OutputType.FLASHCARDS.value:
-                return await self._generate_flashcards(
+                return await self._generate_flashcards_smart(
                     config, transcript, frame_info, stream_callback, **kwargs
                 )
             elif output_type == OutputType.AI_ANALYSIS.value:
-                return await self._generate_ai_analysis(
+                return await self._generate_ai_analysis_smart(
                     config, transcript, frame_info, stream_callback, **kwargs
                 )
             else:
@@ -745,6 +776,310 @@ class AIContentFactory:
                 "frame_info": frame_info,
             }
         except Exception as e:
+            return {"error": str(e), "success": False}
+
+    # 🧠 新增：智能生成方法（使用动态提示词）
+    async def _generate_content_card_smart(
+        self,
+        config: GenerationConfig,
+        transcript: str,
+        frame_info: Dict[str, Any],
+        stream_callback=None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """智能生成内容卡片 - 使用动态提示词"""
+        try:
+            analysis_result = kwargs.get("analysis_result")
+            dynamic_prompts = kwargs.get("dynamic_prompts")
+
+            # 使用动态提示词
+            system_prompt = dynamic_prompts["system_prompt"]
+            user_prompt_template = dynamic_prompts["user_prompt_template"]
+
+            # 构建用户提示词
+            user_prompt = user_prompt_template.format(
+                domain=analysis_result.primary_domain.value,
+                content_type="内容卡片",
+                transcript=transcript[:3000],
+                target_audience=analysis_result.target_audience,
+                content_style=analysis_result.content_style,
+            )
+
+            # 添加图像策略（如果有帧信息）
+            if frame_info.get("has_frames", False):
+                frames = frame_info.get("frames", [])
+                subtitles = kwargs.get("subtitles", [])
+                task_id = kwargs.get("task_id", "")
+
+                # 使用内容卡片生成器的智能匹配功能
+                return await self.content_card_generator.generate_content_card(
+                    config=config,
+                    transcript=transcript,
+                    frame_info=frame_info,
+                    stream_callback=stream_callback,
+                    custom_system_prompt=system_prompt,  # 传递自定义系统提示词
+                    **kwargs,
+                )
+            else:
+                # 纯文本生成
+                if stream_callback:
+                    await stream_callback(
+                        "ai_generating",
+                        {
+                            "type": "content_card",
+                            "message": f"🎨 正在生成{analysis_result.primary_domain.value}领域内容卡片...",
+                        },
+                    )
+
+                content = await self.ai_client.generate_content(
+                    prompt=user_prompt,
+                    system_prompt=system_prompt,
+                    max_tokens=config.max_tokens,
+                    temperature=config.temperature,
+                )
+
+                if stream_callback:
+                    await stream_callback(
+                        "ai_content_chunk", {"type": "content_card", "content": content}
+                    )
+                    await stream_callback(
+                        "ai_content_complete",
+                        {"type": "content_card", "message": "✅ 智能内容卡片生成完成"},
+                    )
+
+                return {
+                    "success": True,
+                    "type": "content_card",
+                    "content": content,
+                    "format": "markdown",
+                    "analysis_result": analysis_result.__dict__,
+                }
+        except Exception as e:
+            logger.error(f"智能内容卡片生成失败: {e}")
+            return {"error": str(e), "success": False}
+
+    async def _generate_mind_map_smart(
+        self,
+        config: GenerationConfig,
+        transcript: str,
+        frame_info: Dict[str, Any],
+        stream_callback=None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """智能生成思维导图 - 使用动态提示词"""
+        try:
+            analysis_result = kwargs.get("analysis_result")
+            dynamic_prompts = kwargs.get("dynamic_prompts")
+
+            # 构建领域专用的思维导图提示词
+            domain_specific_prompt = f"""你是{analysis_result.primary_domain.value}领域的专家，擅长将该领域内容转化为结构化的思维导图。
+
+# 领域特色
+- 针对{analysis_result.primary_domain.value}内容的特点进行结构化整理
+- 突出该领域的核心要素和关键概念
+- 体现{analysis_result.content_style}的内容特征
+- 适合{analysis_result.target_audience}的认知水平
+
+# 核心话题
+重点关注：{', '.join(analysis_result.key_topics[:5])}
+
+# 思维导图要求
+- 主干不超过4-6个核心模块
+- 每个模块下2-4个子点
+- 总节点控制在15个以内
+- 节点简洁有力，体现{analysis_result.primary_domain.value}领域特色
+
+请直接输出思维导图，使用简体中文。"""
+
+            user_prompt = f"请为以下{analysis_result.primary_domain.value}内容生成专业的思维导图：\n\n{transcript[:3000]}"
+
+            # 流式生成通知
+            if stream_callback:
+                await stream_callback(
+                    "ai_generating",
+                    {
+                        "type": "mind_map",
+                        "message": f"🧠 正在生成{analysis_result.primary_domain.value}领域思维导图...",
+                    },
+                )
+
+            content = await self.ai_client.generate_content(
+                prompt=user_prompt,
+                system_prompt=domain_specific_prompt,
+                max_tokens=config.max_tokens,
+                temperature=config.temperature,
+            )
+
+            if stream_callback:
+                await stream_callback(
+                    "ai_content_chunk", {"type": "mind_map", "content": content}
+                )
+                await stream_callback(
+                    "ai_content_complete",
+                    {"type": "mind_map", "message": "✅ 智能思维导图生成完成"},
+                )
+
+            return {
+                "success": True,
+                "type": "mind_map",
+                "content": content,
+                "format": "markdown",
+                "analysis_result": analysis_result.__dict__,
+                "frame_info": frame_info,
+            }
+        except Exception as e:
+            logger.error(f"智能思维导图生成失败: {e}")
+            return {"error": str(e), "success": False}
+
+    async def _generate_flashcards_smart(
+        self,
+        config: GenerationConfig,
+        transcript: str,
+        frame_info: Dict[str, Any],
+        stream_callback=None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """智能生成学习闪卡 - 使用动态提示词"""
+        try:
+            analysis_result = kwargs.get("analysis_result")
+
+            # 构建领域专用的闪卡提示词
+            domain_flashcard_prompt = f"""你是{analysis_result.primary_domain.value}领域的教学专家，专门创建该领域的高质量学习闪卡。
+
+# 领域专业性
+- 深入理解{analysis_result.primary_domain.value}领域的核心概念和实践要点
+- 熟悉该领域的常见问题和学习难点
+- 了解{analysis_result.target_audience}的学习需求和认知特点
+
+# 核心内容焦点
+基于以下关键话题设计问题：{', '.join(analysis_result.key_topics[:5])}
+
+# 闪卡设计原则
+1. **领域针对性**：问题紧密结合{analysis_result.primary_domain.value}领域特色
+2. **实用导向**：关注该领域的实际应用和操作要点
+3. **难度适配**：适合{analysis_result.target_audience}的认知水平
+4. **内容风格**：体现{analysis_result.content_style}的特点
+
+# 闪卡类型分布（针对{analysis_result.primary_domain.value}领域）
+- 核心概念类：基础定义和重要原理
+- 实践应用类：具体操作和方法技巧
+- 问题解决类：常见问题和解决方案
+- 经验总结类：关键要点和注意事项
+
+请生成8-12张高质量的{analysis_result.primary_domain.value}领域学习闪卡，使用简体中文。"""
+
+            user_prompt = f"请为以下{analysis_result.primary_domain.value}内容生成专业的学习闪卡：\n\n{transcript[:3000]}"
+
+            # 流式生成通知
+            if stream_callback:
+                await stream_callback(
+                    "ai_generating",
+                    {
+                        "type": "flashcards",
+                        "message": f"📚 正在生成{analysis_result.primary_domain.value}领域学习闪卡...",
+                    },
+                )
+
+            content = await self.ai_client.generate_content(
+                prompt=user_prompt,
+                system_prompt=domain_flashcard_prompt,
+                max_tokens=config.max_tokens,
+                temperature=config.temperature,
+            )
+
+            if stream_callback:
+                await stream_callback(
+                    "ai_content_chunk", {"type": "flashcards", "content": content}
+                )
+                await stream_callback(
+                    "ai_content_complete",
+                    {"type": "flashcards", "message": "✅ 智能学习闪卡生成完成"},
+                )
+
+            return {
+                "success": True,
+                "type": "flashcards",
+                "content": content,
+                "format": "markdown",
+                "analysis_result": analysis_result.__dict__,
+                "frame_info": frame_info,
+            }
+        except Exception as e:
+            logger.error(f"智能学习闪卡生成失败: {e}")
+            return {"error": str(e), "success": False}
+
+    async def _generate_ai_analysis_smart(
+        self,
+        config: GenerationConfig,
+        transcript: str,
+        frame_info: Dict[str, Any],
+        stream_callback=None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """智能生成AI分析 - 基于内容分析结果"""
+        try:
+            analysis_result = kwargs.get("analysis_result")
+
+            # 构建基于分析结果的AI分析提示词
+            ai_analysis_prompt = f"""你是{analysis_result.primary_domain.value}领域的AI分析专家。请基于已有的内容分析结果进行深度分析。
+
+# 已知分析结果
+- 主要领域：{analysis_result.primary_domain.value}
+- 次要领域：{[d.value for d in analysis_result.secondary_domains]}
+- 置信度：{analysis_result.confidence:.2f}
+- 关键话题：{', '.join(analysis_result.key_topics)}
+- 内容风格：{analysis_result.content_style}
+- 目标受众：{analysis_result.target_audience}
+- 内容长度：{analysis_result.content_length}
+
+# 深度分析要求
+请在已有分析基础上，进一步提供：
+1. **内容价值评估**：从{analysis_result.primary_domain.value}领域角度评价内容价值
+2. **受众匹配度**：分析内容与目标受众的匹配程度
+3. **改进建议**：针对{analysis_result.primary_domain.value}领域的专业改进建议
+4. **应用场景**：该内容在{analysis_result.primary_domain.value}领域的具体应用场景
+5. **扩展方向**：基于当前内容的进一步发展方向
+
+请以JSON格式输出详细分析结果，使用简体中文。"""
+
+            user_prompt = f"请对以下{analysis_result.primary_domain.value}内容进行深度AI分析：\n\n{transcript[:2000]}"
+
+            # 流式生成通知
+            if stream_callback:
+                await stream_callback(
+                    "ai_generating",
+                    {
+                        "type": "ai_analysis",
+                        "message": f"🤖 正在进行{analysis_result.primary_domain.value}领域智能分析...",
+                    },
+                )
+
+            content = await self.ai_client.generate_content(
+                prompt=user_prompt,
+                system_prompt=ai_analysis_prompt,
+                max_tokens=config.max_tokens,
+                temperature=config.temperature,
+            )
+
+            if stream_callback:
+                await stream_callback(
+                    "ai_content_chunk", {"type": "ai_analysis", "content": content}
+                )
+                await stream_callback(
+                    "ai_content_complete",
+                    {"type": "ai_analysis", "message": "✅ 智能AI分析完成"},
+                )
+
+            return {
+                "success": True,
+                "type": "ai_analysis",
+                "content": content,
+                "format": "json",
+                "analysis_result": analysis_result.__dict__,
+                "frame_info": frame_info,
+            }
+        except Exception as e:
+            logger.error(f"智能AI分析生成失败: {e}")
             return {"error": str(e), "success": False}
 
 

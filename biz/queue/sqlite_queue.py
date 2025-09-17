@@ -46,8 +46,14 @@ class SQLiteTaskQueue:
         else:
             self.db_manager = db_manager
 
+        # 获取数据库路径
+        self.db_path = self.db_manager.db_path
+
         self.workers = {}  # worker_id -> WorkerThread
         self.running = False
+
+        # 初始化数据库表
+        self._init_database()
 
     def _init_database(self):
         """初始化数据库表"""
@@ -101,8 +107,8 @@ class SQLiteTaskQueue:
                 conn.execute(
                     """
                     INSERT INTO task_queue 
-                    (id, queue_name, task_name, task_args, task_kwargs, priority, max_retries)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (id, queue_name, task_name, task_args, task_kwargs, status, priority, max_retries, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                     (
                         task_id,
@@ -110,8 +116,11 @@ class SQLiteTaskQueue:
                         task_name,
                         json.dumps(args),
                         json.dumps(kwargs),
+                        "pending",  # 添加默认状态
                         priority,
                         max_retries,
+                        datetime.now().isoformat(),
+                        datetime.now().isoformat(),
                     ),
                 )
                 conn.commit()
@@ -136,7 +145,7 @@ class SQLiteTaskQueue:
                 placeholders = ",".join("?" * len(queue_names))
                 cursor = conn.execute(
                     f"""
-                    SELECT id, queue_name, task_name, task_args, task_kwargs, retry_count, max_retries
+                    SELECT id, queue_name, task_name, task_args, task_kwargs, retry_count, max_retries, created_at
                     FROM task_queue 
                     WHERE status = 'pending' 
                     AND queue_name IN ({placeholders})
@@ -159,13 +168,14 @@ class SQLiteTaskQueue:
                     task_kwargs,
                     retry_count,
                     max_retries,
+                    created_at,
                 ) = row
 
                 # 更新任务状态为运行中
                 conn.execute(
                     """
                     UPDATE task_queue 
-                    SET status = 'running', worker_id = ?, started_at = CURRENT_TIMESTAMP
+                    SET status = 'running', worker_id = ?, started_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 """,
                     (worker_id, task_id),
@@ -181,6 +191,7 @@ class SQLiteTaskQueue:
                     "kwargs": json.loads(task_kwargs),
                     "retry_count": retry_count,
                     "max_retries": max_retries,
+                    "created_at": created_at,
                 }
 
         except Exception as e:

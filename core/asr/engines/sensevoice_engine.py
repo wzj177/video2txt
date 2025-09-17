@@ -28,6 +28,64 @@ class SenseVoiceEngine(BaseVoiceEngine):
         self.model_name = "iic/SenseVoiceSmall"
         self.use_vad = True  # 默认启用VAD
         self.batch_mode = False  # 是否使用批量模式
+        self.offline_mode = False  # 离线模式标志
+
+    def _check_local_model(self) -> tuple[bool, Optional[str]]:
+        """
+        检查本地是否有SenseVoice模型
+
+        Returns:
+            tuple[bool, Optional[str]]: (是否存在本地模型, 模型路径)
+        """
+        # 检查ModelScope缓存
+        modelscope_cache = (
+            Path.home()
+            / ".cache"
+            / "modelscope"
+            / "hub"
+            / "models"
+            / "iic"
+            / "SenseVoiceSmall"
+        )
+
+        if modelscope_cache.exists():
+            # 检查关键文件是否存在
+            required_files = [
+                "config.yaml",
+                "model.pt",
+                "model.safetensors",
+                "tokenizer.json",
+            ]
+
+            existing_files = list(modelscope_cache.glob("*"))
+            if len(existing_files) > 0:  # 只要有文件就认为模型存在
+                logger.info(f"📁 发现本地SenseVoice模型: {modelscope_cache}")
+                logger.info(
+                    f"📋 模型文件: {[f.name for f in existing_files[:5]]}..."
+                )  # 显示前5个文件
+                return True, str(modelscope_cache)
+
+        logger.warning("⚠️ 未找到本地SenseVoice模型")
+        return False, None
+
+    def _setup_offline_environment(self, cache_dir: str) -> None:
+        """设置离线环境变量"""
+        import os
+
+        # 设置ModelScope相关环境变量
+        os.environ["MODELSCOPE_CACHE"] = cache_dir
+
+        # 设置Hugging Face离线模式
+        os.environ["HF_HUB_OFFLINE"] = "1"
+        os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
+        # 设置PyTorch Hub离线模式
+        os.environ["TORCH_HOME"] = cache_dir
+
+        # 禁用自动更新检查
+        os.environ["MODELSCOPE_OFFLINE"] = "1"
+
+        logger.info("🔒 已配置离线模式环境变量")
 
     def initialize(self) -> bool:
         """初始化SenseVoice引擎"""
@@ -75,51 +133,55 @@ class SenseVoiceEngine(BaseVoiceEngine):
 
             from funasr import AutoModel
 
-            # 设置缓存目录 - 优先使用ModelScope缓存
-            import os
-            from pathlib import Path
+            # 🔧 检查本地模型
+            has_local_model, local_model_path = self._check_local_model()
 
-            # 检查ModelScope缓存是否存在
-            modelscope_cache = (
-                Path.home()
-                / ".cache"
-                / "modelscope"
-                / "hub"
-                / "models"
-                / "iic"
-                / "SenseVoiceSmall"
-            )
-            if modelscope_cache.exists():
-                logger.info(f"📁 发现ModelScope缓存: {modelscope_cache}")
-                # 使用ModelScope缓存目录的父级作为cache_dir
+            if has_local_model:
+                # 使用本地模型
                 cache_dir = str(Path.home() / ".cache" / "modelscope")
-                os.environ.setdefault("MODELSCOPE_CACHE", cache_dir)
+                self._setup_offline_environment(cache_dir)
+                model_path_to_use = local_model_path
+                self.offline_mode = True
+                logger.info(f"📂 将使用本地模型: {local_model_path}")
             else:
-                # 使用项目本地缓存
+                # 需要下载模型
                 cache_dir = "./data/models/funasr_cache"
-                os.makedirs(cache_dir, exist_ok=True)
+                Path(cache_dir).mkdir(parents=True, exist_ok=True)
+                model_path_to_use = self.model_name
+                self.offline_mode = False
+                logger.warning("⚠️ 未找到本地模型，将尝试在线下载")
+
+            # 🔧 构建AutoModel参数
+            model_kwargs = {
+                "model": model_path_to_use,
+                "trust_remote_code": True,
+                "device": self.device,
+                "cache_dir": cache_dir,
+            }
+
+            # 如果是离线模式，添加离线参数
+            if self.offline_mode:
+                model_kwargs["local_files_only"] = True
+                logger.info("🔒 使用离线模式加载")
 
             # 根据音频长度决定是否使用VAD
             if self.use_vad:
                 # 长音频模式：使用VAD进行音频切割
                 logger.info("🎙️ 启用VAD模式 - 适合长音频")
-                self.model = AutoModel(
-                    model=self.model_name,
-                    trust_remote_code=True,
-                    vad_model="fsmn-vad",
-                    vad_kwargs={"max_single_segment_time": 30000},  # 30秒最大切割
-                    device=self.device,
-                    cache_dir=cache_dir,
+                model_kwargs.update(
+                    {
+                        "vad_model": "fsmn-vad",
+                        "vad_kwargs": {
+                            "max_single_segment_time": 30000
+                        },  # 30秒最大切割
+                    }
                 )
             else:
                 # 短音频批量模式：移除VAD，提高效率
                 logger.info("⚡ 启用批量模式 - 适合短音频(<30s)")
-                self.model = AutoModel(
-                    model=self.model_name,
-                    trust_remote_code=True,
-                    device=self.device,
-                    cache_dir=cache_dir,
-                )
+
+            # 创建模型
+            self.model = AutoModel(**model_kwargs)
 
             logger.info(f"✅ SenseVoice模型加载成功 (设备: {self.device})")
             logger.info(f"📁 模型路径: {self.model.model_path}")
@@ -128,7 +190,57 @@ class SenseVoiceEngine(BaseVoiceEngine):
 
         except Exception as e:
             logger.error(f"❌ SenseVoice模型加载失败: {e}")
-            logger.error("请确保已安装FunASR: pip install funasr modelscope")
+
+            # 🔧 特殊处理网络连接错误
+            error_str = str(e)
+            if any(
+                keyword in error_str
+                for keyword in [
+                    "NameResolutionError",
+                    "modelscope.cn",
+                    "Connection",
+                    "timeout",
+                ]
+            ):
+                logger.error("🌐 检测到网络连接问题")
+
+                # 如果有本地模型但加载失败，尝试强制离线模式
+                if has_local_model and local_model_path:
+                    logger.info("🔄 尝试强制离线模式...")
+                    try:
+                        # 更激进的离线设置
+                        import os
+
+                        os.environ["CURL_CA_BUNDLE"] = ""  # 禁用SSL验证
+                        os.environ["REQUESTS_CA_BUNDLE"] = ""
+                        os.environ["SSL_VERIFY"] = "false"
+
+                        # 简化的模型加载
+                        self.model = AutoModel(
+                            model=local_model_path,
+                            trust_remote_code=True,
+                            device=self.device,
+                            local_files_only=True,
+                        )
+
+                        logger.info("✅ 强制离线模式加载成功")
+                        self.initialized = True
+                        return True
+
+                    except Exception as offline_error:
+                        logger.error(f"❌ 强制离线模式也失败: {offline_error}")
+
+                # 提供解决方案
+                logger.error("💡 解决方案:")
+                logger.error("1. 检查网络连接到 www.modelscope.cn")
+                logger.error(
+                    "2. 确保模型文件完整下载到 ~/.cache/modelscope/hub/models/iic/SenseVoiceSmall"
+                )
+                logger.error("3. 或者暂时使用其他语音模型（Whisper、Dolphin）")
+                logger.error("4. 重启应用后再试")
+            else:
+                logger.error("请确保已安装FunASR: pip install funasr modelscope")
+
             return False
 
     def _get_audio_duration(self, audio_path: str) -> float:

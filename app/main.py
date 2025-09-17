@@ -121,210 +121,40 @@ from biz.database.connection import init_database, close_database
 _queue_manager = None
 
 
-async def start_celery_worker() -> bool:
-    """尝试自动启动Celery Worker"""
-    try:
-        import subprocess
-        import sys
-        import os
-
-        # 获取当前Python解释器路径
-        python_path = sys.executable
-
-        # 构建Celery Worker启动命令
-        cmd = [
-            python_path,
-            "-m",
-            "celery",
-            "-A",
-            "app.celery_config:celery_app",
-            "worker",
-            "--loglevel=info",
-            "--concurrency=2",  # 限制并发数
-            "--max-tasks-per-child=50",  # 每个子进程最多处理50个任务
-        ]
-
-        # 尝试使用detach选项，如果失败则使用常规方式
-        use_detach = True
-
-        logger.info(f"启动命令: {' '.join(cmd)}")
-
-        # 启动Worker进程（后台方式）
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.DEVNULL,  # 忽略输出，让Worker在后台运行
-            stderr=asyncio.subprocess.DEVNULL,
-            cwd=PROJECT_ROOT,
-            start_new_session=True,  # 在新的会话中启动，避免与主进程关联
-        )
-
-        # 不等待进程完成，直接让它在后台运行
-        logger.info("Worker进程已启动，等待初始化...")
-
-        # 等待8秒让Worker完全启动和注册
-        await asyncio.sleep(8)
-
-        # 验证Worker是否真正运行（多次尝试）
-        from app.celery_config import celery_app
-
-        for attempt in range(5):  # 增加到5次尝试
-            try:
-                inspector = celery_app.control.inspect()
-                stats = inspector.stats()
-                active = inspector.active()
-
-                logger.info(
-                    f"第 {attempt + 1} 次检测: stats={bool(stats)}, active={bool(active)}"
-                )
-
-                if stats and len(stats) > 0:
-                    logger.info(f"检测到 {len(stats)} 个活跃Worker")
-                    return True
-                elif active is not None and len(active) > 0:
-                    logger.info("检测到Worker活动，验证成功")
-                    return True
-                else:
-                    logger.info(
-                        f"第 {attempt + 1} 次检测未发现活跃Worker，等待3秒后重试..."
-                    )
-                    await asyncio.sleep(3)
-            except Exception as e:
-                logger.warning(f"第 {attempt + 1} 次检测失败: {e}")
-                await asyncio.sleep(3)
-
-        logger.warning("Worker启动但未能检测到活跃状态")
-        return False
-
-    except ImportError:
-        logger.warning("Celery未安装，无法自动启动Worker")
-        return False
-    except Exception as e:
-        logger.error(f"启动Celery Worker时出错: {e}")
-        return False
-
-
-async def detect_queue_system() -> str:
-    """检测可用的队列系统"""
-    # 1. 检查Redis是否可用（端口6379）
-    try:
-        import socket
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        result = sock.connect_ex(("localhost", 6379))
-        sock.close()
-
-        if result == 0:
-            # Redis可用，检查Celery
-            try:
-                from app.celery_config import celery_app
-
-                # 检查celery_app是否正确初始化
-                if hasattr(celery_app, "control") and celery_app.control:
-                    return "redis"
-                    # try:
-                    #     inspector = celery_app.control.inspect()
-                    #     stats = inspector.stats()
-                    #     if stats:
-                    #         return "redis"
-                    #     else:
-                    #         logger.warning("⚠️  Redis可用但Celery Worker未启动")
-                    # except Exception as inspect_error:
-                    #     logger.warning(f"Celery检查失败: {inspect_error}")
-                else:
-                    logger.warning("⚠️  Celery应用未正确初始化")
-            except ImportError as e:
-                logger.warning(f"Celery导入失败: {e}")
-            except Exception as e:
-                logger.warning(f"Celery配置错误: {e}")
-    except Exception:
-        pass
-
-    # 2. 使用SQLite队列
-    try:
-        from biz.queue.task_manager import get_task_manager
-
-        return "sqlite"
-    except Exception as e:
-        logger.warning(f"SQLite队列系统不可用: {e}")
-        return "none"
+# Celery相关函数已移除，直接使用SQLite队列系统
 
 
 async def start_queue_system():
-    """启动智能队列系统"""
+    """启动SQLite队列系统 - 简化版本"""
     global _queue_manager
-    queue_type = await detect_queue_system()
 
-    if queue_type == "redis":
-        logger.info("✅ 检测到Redis，使用Redis+Celery队列系统")
-        try:
-            from app.celery_config import celery_app
+    logger.info("✅ 使用SQLite队列系统（零依赖，适合个人PC）")
+    try:
+        # 导入任务以注册到队列
+        from biz.tasks import video_tasks
+        from biz.queue.task_manager import get_task_manager
 
-            # 检查celery_app是否正确初始化
-            if hasattr(celery_app, "control") and celery_app.control:
-                try:
-                    inspector = celery_app.control.inspect()
-                    stats = inspector.stats()
-                    if stats:
-                        logger.info("✅ Celery Worker正在运行")
-                        logger.info("🚀 系统已启用高性能异步任务处理")
-                    else:
-                        logger.info("🚀 检测到Redis可用，尝试自动启动Celery Worker...")
-                        worker_started = await start_celery_worker()
-                        if worker_started:
-                            logger.info("✅ Celery Worker已自动启动")
-                            logger.info("🚀 系统已启用高性能异步任务处理")
-                        else:
-                            logger.warning("❌ 自动启动Celery Worker失败")
-                            logger.warning(
-                                "⚠️  请手动启动: celery -A app.celery_config:celery_app worker --loglevel=info"
-                            )
-                            logger.info("🔄 回退到SQLite队列系统")
-                            queue_type = "sqlite"
-                except Exception as inspect_error:
-                    logger.warning(f"Celery Worker检查失败: {inspect_error}")
-                    logger.info("🔄 回退到SQLite队列系统")
-                    # 重新检测队列系统，这次应该会选择SQLite
-                    queue_type = "sqlite"
-            else:
-                logger.warning("⚠️  Celery应用未正确初始化，回退到SQLite队列")
-                # 回退到SQLite队列
-                queue_type = "sqlite"
-        except Exception as e:
-            logger.error(f"Redis队列系统错误: {e}")
-            logger.info("🔄 回退到SQLite队列系统")
+        manager = get_task_manager()
+        _queue_manager = manager
 
-    elif queue_type == "sqlite":
-        logger.info("✅ 使用SQLite队列系统（推荐，无需Redis）")
-        try:
-            # 导入任务以注册到队列
-            from biz.tasks import video_tasks
-            from biz.queue.task_manager import get_task_manager
+        # 启动Worker（如果还未启动）
+        if not manager.running:
+            manager.start_workers(
+                worker_count=2,
+                queue_names=["video_processing", "meeting_processing", "default"],
+            )
+            logger.info("✅ SQLite Worker已启动（2个工作进程）")
+        else:
+            logger.info("✅ SQLite Worker已在运行")
 
-            manager = get_task_manager()
-            _queue_manager = manager
+        # 显示队列统计
+        stats = manager.get_queue_stats()
+        logger.info(f"📊 队列统计: 总任务 {stats.get('total', 0)}")
+        logger.info("🚀 系统已启用零依赖异步任务处理")
 
-            # 启动Worker（如果还未启动）
-            if not manager.running:
-                manager.start_workers(
-                    worker_count=2,
-                    queue_names=["video_processing", "meeting_processing", "default"],
-                )
-                logger.info("✅ SQLite Worker已启动（2个工作进程）")
-            else:
-                logger.info("✅ SQLite Worker已在运行")
-
-            # 显示队列统计
-            stats = manager.get_queue_stats()
-            logger.info(f"📊 队列统计: 总任务 {stats.get('total', 0)}")
-            logger.info("🚀 系统已启用零依赖异步任务处理")
-
-        except Exception as e:
-            logger.error(f"SQLite队列系统启动失败: {e}")
-            logger.info("🔄 系统将使用同步处理模式")
-    else:
-        logger.warning("⚠️  队列系统不可用，使用同步处理模式")
-        logger.info("💡 建议：安装Redis或检查SQLite队列配置")
+    except Exception as e:
+        logger.error(f"SQLite队列系统启动失败: {e}")
+        logger.info("🔄 系统将使用同步处理模式")
 
 
 async def stop_queue_system():

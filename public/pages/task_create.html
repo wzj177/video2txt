@@ -262,7 +262,7 @@
                             model: 'whisper',
                             modelSize: 'medium',
                             basicOutputTypes: ['transcript', 'summary', 'subtitle'],
-                            aiOutputTypes: [],
+                            aiOutputTypes: ['content_card', 'mind_map', 'flashcards'],
                             url: '',
                             forceSync: false,  // 强制同步处理选项
                             aiCorrection: false  // AI智能纠错选项
@@ -315,7 +315,7 @@
                     },
 
                     isAllAISelected() {
-                        const allAITypes = ['content_card', 'mind_map', 'flashcards', 'ai_analysis'];
+                        const allAITypes = ['content_card', 'mind_map', 'flashcards'];
                         const aiOutputTypes = this.formData.aiOutputTypes;
                         return allAITypes.every(type => aiOutputTypes.includes(type));
                     },

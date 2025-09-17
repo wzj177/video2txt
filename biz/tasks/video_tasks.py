@@ -16,6 +16,7 @@ import logging
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# 使用标准日志记录器（Celery任务会使用Celery专用日志）
 logger = logging.getLogger(__name__)
 
 from ..services.video_processor import video_processor
@@ -125,27 +126,9 @@ def _run_async_task(coro):
 
 
 # =============================================================================
-# Celery任务装饰器版本（如果Celery可用）
+# Celery支持已移除，专注使用SQLite队列系统
 # =============================================================================
-try:
-    from app.celery_config import celery_app
-
-    @celery_app.task(bind=True, name="process_video_file")
-    def process_video_file_task(
-        self, task_id: str, file_data: Dict[str, Any], config: Dict[str, Any]
-    ):
-        """Celery版本的视频文件处理任务"""
-        return sync_process_video_file(task_id, file_data, config)
-
-    @celery_app.task(bind=True, name="process_video_url")
-    def process_video_url_task(self, task_id: str, url: str, config: Dict[str, Any]):
-        """Celery版本的视频URL处理任务"""
-        return sync_process_video_url(task_id, url, config)
-
-    logger.info("✅ Celery任务已注册")
-
-except ImportError:
-    logger.info("ℹ️ Celery不可用，跳过Celery任务注册")
+logger.info("ℹ️ 使用SQLite队列系统，无需Celery")
 
 
 # =============================================================================

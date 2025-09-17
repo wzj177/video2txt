@@ -8,6 +8,7 @@ import os
 import asyncio
 from typing import Dict, List, Any, Optional
 from pathlib import Path
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -71,8 +72,9 @@ class VideoService:
 
                 # 队列不可用，回退到异步处理
                 logger.warning("队列系统不可用，回退到异步处理")
-                asyncio.create_task(
-                    video_processor.process_file_complete(task_id, file_data, config)
+                # 创建带错误处理的异步任务
+                task = asyncio.create_task(
+                    self._process_file_with_error_handling(task_id, file_data, config)
                 )
                 return {"task_id": task_id, "status": "created"}
 
@@ -123,13 +125,80 @@ class VideoService:
 
                 # 队列不可用，回退到异步处理
                 logger.warning("队列系统不可用，回退到异步处理")
-                asyncio.create_task(
-                    video_processor.process_url_complete(task_id, url, config)
+                # 创建带错误处理的异步任务
+                task = asyncio.create_task(
+                    self._process_url_with_error_handling(task_id, url, config)
                 )
                 return {"task_id": task_id, "status": "created"}
 
         except Exception as e:
             return {"error": str(e)}
+
+    async def _process_file_with_error_handling(
+        self, task_id: str, file_data: Dict[str, Any], config: Dict[str, Any]
+    ):
+        """带错误处理的文件处理异步任务"""
+        try:
+            logger.info(f"🚀 开始异步处理文件任务: {task_id}")
+            result = await video_processor.process_file_complete(
+                task_id, file_data, config
+            )
+
+            if result.get("success"):
+                logger.info(f"✅ 文件任务处理完成: {task_id}")
+            else:
+                logger.error(
+                    f"❌ 文件任务处理失败: {task_id}, 错误: {result.get('error')}"
+                )
+
+        except Exception as e:
+            logger.error(f"❌ 异步文件任务执行异常: {task_id}, 错误: {e}")
+            # 更新任务状态为失败
+            try:
+                await task_service.update_task(
+                    "av",
+                    task_id,
+                    {
+                        "status": "failed",
+                        "current_step": f"异步处理失败: {str(e)}",
+                        "error": str(e),
+                        "failed_at": datetime.now().isoformat(),
+                    },
+                )
+            except Exception as update_error:
+                logger.error(f"更新任务状态失败: {update_error}")
+
+    async def _process_url_with_error_handling(
+        self, task_id: str, url: str, config: Dict[str, Any]
+    ):
+        """带错误处理的URL处理异步任务"""
+        try:
+            logger.info(f"🚀 开始异步处理URL任务: {task_id}")
+            result = await video_processor.process_url_complete(task_id, url, config)
+
+            if result.get("success"):
+                logger.info(f"✅ URL任务处理完成: {task_id}")
+            else:
+                logger.error(
+                    f"❌ URL任务处理失败: {task_id}, 错误: {result.get('error')}"
+                )
+
+        except Exception as e:
+            logger.error(f"❌ 异步URL任务执行异常: {task_id}, 错误: {e}")
+            # 更新任务状态为失败
+            try:
+                await task_service.update_task(
+                    "av",
+                    task_id,
+                    {
+                        "status": "failed",
+                        "current_step": f"异步处理失败: {str(e)}",
+                        "error": str(e),
+                        "failed_at": datetime.now().isoformat(),
+                    },
+                )
+            except Exception as update_error:
+                logger.error(f"更新任务状态失败: {update_error}")
 
     def _detect_file_type(self, filename: str) -> str:
         """检测文件类型"""
@@ -149,9 +218,9 @@ class VideoService:
     ) -> Optional[Dict[str, Any]]:
         """尝试使用队列处理任务"""
         # 1. 尝试Celery队列
-        celery_result = await self._try_celery_processing(task_id, task_name, args)
-        if celery_result:
-            return celery_result
+        # celery_result = await self._try_celery_processing(task_id, task_name, args)
+        # if celery_result:
+        #     return celery_result
 
         # 2. 尝试SQLite队列
         sqlite_result = await self._try_sqlite_processing(task_id, task_name, args)
