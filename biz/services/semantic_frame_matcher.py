@@ -196,6 +196,7 @@ class SemanticFrameMatcher:
         for filename, timestamp in frames:
             # 基于时间戳和文件名生成模拟描述
             # 实际项目中应该使用图像识别API（如OpenAI Vision、Google Vision等）
+            # timestamp 非 number
             description = await self._simulate_frame_description(
                 filename, timestamp, content_domain
             )
@@ -217,6 +218,10 @@ class SemanticFrameMatcher:
     ) -> Dict[str, Any]:
         """模拟帧描述生成（实际项目中应该使用图像识别）"""
 
+        # 处理 timestamp 可能是 datetime.timedelta 类型的情况
+        if hasattr(timestamp, 'total_seconds'):
+            timestamp = timestamp.total_seconds()
+        
         # 基于时间戳模拟不同类型的场景
         minute = int(timestamp // 60)
         second = int(timestamp % 60)

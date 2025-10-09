@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建会议记录 - 听语AI</title>
+    <link rel="icon" href="/favicon.ico">
+    <link href="/assets/js/layui/css/layui.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/common.css">
+    <link rel="stylesheet" href="/assets/css/meeting.css">
+    <style>
+        /* 创建会议页面美化样式 */
+        .meeting-create-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .page-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header-left h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header-left p {
+            margin: 0;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .header-right {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .main-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .meeting-form {
+            position: relative;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: white;
+        }
+        
+        .form-help {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .form-help p {
+            margin: 5px 0;
+        }
+        
+        .form-help strong {
+            color: #333;
+        }
+        
+        .form-checkbox-group {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-checkbox input[type="checkbox"] {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e1e5e9;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.8);
+            color: #666;
+            border: 2px solid #e1e5e9;
+        }
+        
+        .btn-secondary:hover {
+            background: white;
+            border-color: #ccc;
+            transform: translateY(-1px);
+        }
+        
+        /* 录制状态样式 */
+        .recording-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .meeting-status-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .status-indicator {
+            font-size: 32px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.recording {
+            color: #e74c3c;
+        }
+        
+        .status-indicator.paused {
+            color: #f39c12;
+            animation: none;
+        }
+        
+        .status-indicator.completed {
+            color: #27ae60;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .status-details h3 {
+            margin: 0 0 8px 0;
+            color: #333;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .meeting-time {
+            display: flex;
+            gap: 25px;
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        /* 转录内容样式 */
+        .transcription-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .transcription-section h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .transcription-content {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 2px solid #e1e5e9;
+            border-radius: 15px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .transcription-segment {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(102, 126, 234, 0.05);
+            border-left: 4px solid #667eea;
+        }
+        
+        .segment-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .timestamp {
+            color: #666;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        
+        .speaker {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .segment-text {
+            color: #333;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+        
+        .no-transcription {
+            text-align: center;
+            color: #666;
+            padding: 60px 20px;
+            font-size: 16px;
+        }
+        
+        /* 编辑器样式 */
+        .transcript-editor-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .transcript-editor-section h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .editor-toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .transcript-editor {
+            width: 100%;
+            border: 2px solid #e1e5e9;
+            border-radius: 15px;
+            padding: 20px;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+        }
+        
+        .transcript-editor:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: white;
+        }
+        
+        .save-options {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e1e5e9;
+        }
+        
+        .save-options h4 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .option-group {
+            margin-bottom: 20px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 12px;
+            padding: 15px;
+        }
+        
+        .final-save-action {
+            margin-top: 40px;
+            text-align: center;
+        }
+        
+        .btn-large {
+            padding: 20px 40px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 15px;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .meeting-create-container {
+                padding: 15px;
+            }
+            
+            .form-container {
+                padding: 25px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="meeting-create-container">
+        <!-- 页面头部 -->
+        <div class="page-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1 v-if="!currentTaskId">🎤 创建会议记录</h1>
+                    <h1 v-else>📝 {{ currentMeeting.title || '会议记录中' }}</h1>
+                    <p v-if="!currentTaskId">配置会议录制参数</p>
+                    <p v-else>{{ getMeetingStatusText() }}</p>
+                </div>
+                <div class="header-right">
+                    <button v-if="!currentTaskId" class="btn btn-secondary" @click="closePage">✕ 关闭</button>
+                    <button v-else-if="currentMeeting.status === 'recording'" class="btn btn-warning" @click="pauseMeeting">⏸️ 暂停</button>
+                    <button v-else-if="currentMeeting.status === 'paused'" class="btn btn-success" @click="resumeMeeting">▶️ 继续</button>
+                    <button v-if="currentTaskId && currentMeeting.status !== 'completed'" class="btn btn-danger" @click="stopMeeting">⏹️ 结束录制</button>
+                    <button v-if="currentTaskId" class="btn btn-secondary" @click="closePage">✕ 关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表单内容 -->
+        <div class="main-content">
+            <!-- 创建会议表单 -->
+            <div v-if="!currentTaskId" class="form-container">
+                <form @submit.prevent="createMeeting" class="meeting-form">
+                    <div class="form-group">
+                        <label class="form-label">会议标题 *</label>
+                        <input type="text" v-model="meetingConfig.title" 
+                               class="form-input" placeholder="请输入会议标题..." required>
+                        <div class="form-help">为本次会议指定一个易于识别的标题</div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-help">
+                            <p><strong>🔧 音频和语言配置</strong></p>
+                            <p>• 音频源：系统音频（自动配置）</p>
+                            <p>• 转录引擎：SenseVoice（推荐）</p>
+                            <p>• 语言：自动检测</p>
+                            <p style="color: #666; font-size: 12px;">详细设置可在录制控制器中调整</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group form-checkbox-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" v-model="meetingConfig.enableSpeakerDiarization">
+                            <span class="checkmark"></span>
+                            启用说话人分离
+                        </label>
+                        <div class="form-help">识别并区分不同的说话人</div>
+                    </div>
+
+                    <div class="form-group form-checkbox-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" v-model="meetingConfig.enableRealTimeSummary">
+                            <span class="checkmark"></span>
+                            启用实时总结
+                        </label>
+                        <div class="form-help">在会议过程中生成实时摘要</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" @click="closePage">取消</button>
+                        <button type="submit" class="btn btn-primary" :disabled="!isFormValid">
+                            开始录制
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- 会议记录状态 -->
+            <div v-else class="recording-container">
+                <!-- 会议状态信息 -->
+                <div class="meeting-status-card">
+                    <div class="status-info">
+                        <div class="status-indicator" :class="currentMeeting.status">
+                            <span v-if="currentMeeting.status === 'recording'">🔴</span>
+                            <span v-else-if="currentMeeting.status === 'paused'">⏸️</span>
+                            <span v-else>⏹️</span>
+                        </div>
+                        <div class="status-details">
+                            <h3>{{ currentMeeting.title }}</h3>
+                            <p>{{ getMeetingStatusText() }}</p>
+                            <div class="meeting-time">
+                                <span>开始时间: {{ formatTime(currentMeeting.startTime) }}</span>
+                                <span v-if="currentMeeting.duration">时长: {{ currentMeeting.duration }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 实时转录内容 -->
+                <div class="transcription-section">
+                    <h3>📝 实时转录内容</h3>
+                    <div class="transcription-content" v-if="transcriptionSegments.length > 0">
+                        <div v-for="segment in transcriptionSegments" :key="segment.id" class="transcription-segment">
+                            <div class="segment-meta">
+                                <span class="timestamp">{{ formatTimestamp(segment.timestamp) }}</span>
+                                <span v-if="segment.speaker" class="speaker" :class="getSpeakerClass(segment.speaker)">
+                                    {{ segment.speaker }}
+                                </span>
+                                <span v-if="segment.emotion && segment.emotion.primary_emotion !== 'neutral'" 
+                                      class="emotion" :class="getEmotionClass(segment.emotion.primary_emotion)">
+                                    {{ getEmotionText(segment.emotion.primary_emotion) }}
+                                </span>
+                            </div>
+                            <div class="segment-text">{{ segment.text }}</div>
+                        </div>
+                    </div>
+                    <div v-else class="no-transcription">
+                        <p>等待转录内容...</p>
+                    </div>
+                </div>
+
+                <!-- 转录内容编辑区 -->
+                <div v-if="currentMeeting.status === 'completed'" class="transcript-editor-section">
+                    <h3>✏️ 编辑转录内容</h3>
+                    <div class="editor-toolbar">
+                        <button class="btn btn-sm btn-secondary" @click="resetTranscript">重置</button>
+                        <button class="btn btn-sm btn-primary" @click="saveTranscript" :disabled="!isTranscriptModified">保存修改</button>
+                    </div>
+                    <textarea v-model="editableTranscript" 
+                             class="transcript-editor" 
+                             rows="15" 
+                             placeholder="转录内容将在这里显示，您可以进行编辑..."></textarea>
+                    
+                    <!-- 保存选项 -->
+                    <div class="save-options">
+                        <h4>保存设置</h4>
+                        <div class="option-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" v-model="saveOptions.generateSummary">
+                                <span class="checkmark"></span>
+                                生成AI总结
+                            </label>
+                        </div>
+                        <div class="option-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" v-model="saveOptions.generateMindMap">
+                                <span class="checkmark"></span>
+                                生成思维导图
+                            </label>
+                        </div>
+                        <div class="option-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" v-model="saveOptions.generateCards">
+                                <span class="checkmark"></span>
+                                生成学习卡片
+                            </label>
+                        </div>
+                        
+                        <div class="final-save-action">
+                            <button class="btn btn-success btn-large" @click="submitToVideo2txt" :disabled="!editableTranscript.trim()">
+                                💾 保存到任务系统
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/js/vue.global.js"></script>
+    <script src="/assets/js/axios/axios.min.js"></script>
+    <script src="/assets/js/layui/layui.js"></script>
+    <script src="/assets/js/http.js"></script>
+    <script>
+        const { createApp } = Vue;
+
+        layui.use(['layer'], () => {
+            const layer = layui.layer;
+
+            createApp({
+                data() {
+                    return {
+                        // 任务相关
+                        currentTaskId: null,
+                        currentMeeting: {
+                            title: '',
+                            status: 'recording', // recording, paused, completed
+                            startTime: null,
+                            duration: null
+                        },
+                        
+                        // 转录相关
+                        transcriptionSegments: [],
+                        editableTranscript: '',
+                        originalTranscript: '',
+                        
+                        // 保存选项
+                        saveOptions: {
+                            generateSummary: true,
+                            generateMindMap: false,
+                            generateCards: false
+                        },
+                        
+                        // SSE连接
+                        eventSource: null,
+                        
+                        // 表单配置
+                        meetingConfig: {
+                            title: `会议记录_${new Date().toLocaleString('zh-CN', {
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}`,
+                            audioSource: 'system',
+                            engine: 'sensevoice',
+                            language: 'auto',
+                            enableSpeakerDiarization: true,
+                            enableRealTimeSummary: false
+                        }
+                    }
+                },
+
+                computed: {
+                    isFormValid() {
+                        return this.meetingConfig.title && this.meetingConfig.title.trim() !== '';
+                    },
+                    
+                    isTranscriptModified() {
+                        return this.editableTranscript !== this.originalTranscript;
+                    }
+                },
+
+                methods: {
+                    async createMeeting() {
+                        if (!this.isFormValid) {
+                            layer.msg('请输入会议标题', { icon: 0 });
+                            return;
+                        }
+
+                        try {
+                            // 首先检查是否已有活跃会议
+                            layer.load(1, { content: '检查会议状态...' });
+                            
+                            const activeCheck = await http.get('/api/tasks/meeting/active');
+                            if (activeCheck.hasActive) {
+                                layer.closeAll('loading');
+                                const activeMeeting = activeCheck.meetings[0];
+                                layer.confirm(
+                                    `已有会议「${activeMeeting.title}」正在进行中（状态：${this.getStatusText(activeMeeting.status)}）。\n\n` +
+                                    `只能同时进行一个会议，是否要：\n` +
+                                    `• 查看当前会议\n` +
+                                    `• 或先结束当前会议再创建新会议`,
+                                    {
+                                        btn: ['查看当前会议', '结束当前会议', '取消'],
+                                        icon: 3,
+                                        title: '发现活跃会议'
+                                    },
+                                    (index) => {
+                                        // 查看当前会议
+                                        layer.close(index);
+                                    },
+                                    (index) => {
+                                        // 结束当前会议
+                                        layer.close(index);
+                                        this.stopActiveMeeting(activeMeeting.id);
+                                    }
+                                );
+                                return;
+                            }
+
+                            layer.load(1, { content: '正在启动录制器...' });
+
+                            // 使用请求体发送数据而不是查询参数
+                            await http.post('/api/tasks/meeting/create', {
+                                title: this.meetingConfig.title,
+                                audioSource: this.meetingConfig.audioSource,
+                                engine: this.meetingConfig.engine,
+                                language: this.meetingConfig.language,
+                                enableSpeakerDiarization: this.meetingConfig.enableSpeakerDiarization,
+                                enableRealTimeSummary: this.meetingConfig.enableRealTimeSummary
+                            });
+
+                            layer.closeAll('loading');
+
+                            // 关闭当前页面
+                            this.closePage();
+
+                            // 通知父页面刷新会议列表
+                            if (window.parent && window.parent.refreshMeetingList) {
+                                window.parent.refreshMeetingList();
+                            }
+
+                            // 显示成功消息
+                            layer.msg('会议录制已开始', { icon: 1 });
+                        } catch (error) {
+                            layer.closeAll('loading');
+                            const errorMessage = error && error.message ? error.message : '启动失败，请稍后重试';
+                            layer.msg(`启动失败: ${errorMessage}`, { icon: 2 });
+                        }
+                    },
+
+                    closePage() {
+                        // 关闭SSE连接
+                        this.closeEventSource();
+                        
+                        // 使用layui关闭当前页面
+                        const index = parent.layer.getFrameIndex(window.name);
+                        parent.layer.close(index);
+                    },
+                    
+                    // 会议状态相关方法
+                    getMeetingStatusText() {
+                        switch(this.currentMeeting.status) {
+                            case 'recording': return '🔴 正在录制中...';
+                            case 'paused': return '⏸️ 录制已暂停';
+                            case 'completed': return '✅ 录制已完成，可以编辑转录内容';
+                            default: return '状态未知';
+                        }
+                    },
+                    
+                    async pauseMeeting() {
+                        try {
+                            await http.post(`/api/tasks/meeting/${this.currentTaskId}/pause`);
+                            this.currentMeeting.status = 'paused';
+                            layer.msg('会议已暂停', { icon: 1 });
+                        } catch (error) {
+                            layer.msg('暂停失败', { icon: 2 });
+                        }
+                    },
+                    
+                    async resumeMeeting() {
+                        try {
+                            await http.post(`/api/tasks/meeting/${this.currentTaskId}/resume`);
+                            this.currentMeeting.status = 'recording';
+                            layer.msg('会议已继续', { icon: 1 });
+                        } catch (error) {
+                            layer.msg('继续失败', { icon: 2 });
+                        }
+                    },
+                    
+                    async stopMeeting() {
+                        const result = layer.confirm('是否要结束会议记录，并开始总结？', {
+                            btn: ['确定', '取消'],
+                            icon: 3
+                        }, async (index) => {
+                            try {
+                                await http.post(`/api/tasks/meeting/${this.currentTaskId}/stop`);
+                                this.currentMeeting.status = 'completed';
+                                this.generateEditableTranscript();
+                                layer.close(index);
+                                layer.msg('会议已结束，可以编辑转录内容', { icon: 1 });
+                            } catch (error) {
+                                layer.msg('结束失败', { icon: 2 });
+                                layer.close(index);
+                            }
+                        });
+                    },
+                    
+                    // 转录相关方法
+                    generateEditableTranscript() {
+                        this.editableTranscript = this.transcriptionSegments
+                            .map(segment => `[${this.formatTimestamp(segment.timestamp)}] ${segment.speaker || 'Speaker'}: ${segment.text}`)
+                            .join('\n\n');
+                        this.originalTranscript = this.editableTranscript;
+                    },
+                    
+                    resetTranscript() {
+                        this.editableTranscript = this.originalTranscript;
+                    },
+                    
+                    saveTranscript() {
+                        this.originalTranscript = this.editableTranscript;
+                        layer.msg('转录内容已保存', { icon: 1 });
+                    },
+                    
+                    async submitToVideo2txt() {
+                        if (!this.editableTranscript.trim()) {
+                            layer.msg('转录内容不能为空', { icon: 0 });
+                            return;
+                        }
+                        
+                        try {
+                            layer.load(1, { content: '正在提交到任务系统...' });
+                            
+                            // 提交到video2txt系统
+                            const response = await http.post('/api/tasks/video', {
+                                title: this.currentMeeting.title,
+                                transcript: this.editableTranscript,
+                                source: 'meeting_record',
+                                taskId: this.currentTaskId,
+                                generateSummary: this.saveOptions.generateSummary,
+                                generateMindMap: this.saveOptions.generateMindMap,
+                                generateCards: this.saveOptions.generateCards
+                            });
+                            
+                            layer.closeAll('loading');
+                            
+                            if (response.success) {
+                                layer.msg('已成功提交到任务系统！', { icon: 1 });
+                                // 跳转到任务详情页
+                                setTimeout(() => {
+                                    window.location.href = `/task_detail?id=${response.taskId}`;
+                                }, 1500);
+                            } else {
+                                layer.msg(response.message || '提交失败', { icon: 2 });
+                            }
+                        } catch (error) {
+                            layer.closeAll('loading');
+                            layer.msg('提交失败', { icon: 2 });
+                        }
+                    },
+                    
+                    // SSE相关方法
+                    startEventSource() {
+                        if (!this.currentTaskId) return;
+                        
+                        this.closeEventSource();
+                        
+                        const url = `/api/tasks/meeting/${this.currentTaskId}/stream`;
+                        this.eventSource = new EventSource(url);
+                        
+                        this.eventSource.onmessage = (event) => {
+                            const data = JSON.parse(event.data);
+                            this.handleStreamMessage(data);
+                        };
+                        
+                        this.eventSource.onerror = (error) => {
+                            console.error('SSE连接错误:', error);
+                        };
+                    },
+                    
+                    closeEventSource() {
+                        if (this.eventSource) {
+                            this.eventSource.close();
+                            this.eventSource = null;
+                        }
+                    },
+                    
+                    handleStreamMessage(data) {
+                        switch (data.type) {
+                            case 'transcription':
+                                this.addTranscriptionSegment(data);
+                                break;
+                            case 'status':
+                                this.updateMeetingStatus(data);
+                                break;
+                            case 'completed':
+                                this.handleMeetingCompleted(data);
+                                break;
+                        }
+                    },
+                    
+                    addTranscriptionSegment(data) {
+                        const segment = {
+                            id: Date.now() + Math.random(),
+                            timestamp: new Date(),
+                            text: data.text,
+                            speaker: data.speaker || null,
+                            emotion: data.emotion || null,
+                            confidence: data.confidence || null
+                        };
+                        
+                        this.transcriptionSegments.push(segment);
+                    },
+                    
+                    updateMeetingStatus(data) {
+                        if (data.status) {
+                            this.currentMeeting.status = data.status;
+                        }
+                        if (data.duration) {
+                            this.currentMeeting.duration = data.duration;
+                        }
+                    },
+                    
+                    handleMeetingCompleted(data) {
+                        this.currentMeeting.status = 'completed';
+                        this.generateEditableTranscript();
+                        layer.msg('会议录制已完成！', { icon: 1 });
+                    },
+                    
+                    // 工具方法
+                    formatTime(dateString) {
+                        if (!dateString) return '';
+                        const date = new Date(dateString);
+                        return date.toLocaleString('zh-CN');
+                    },
+                    
+                    formatTimestamp(timestamp) {
+                        if (!timestamp) return '';
+                        const date = new Date(timestamp);
+                        return date.toLocaleTimeString('zh-CN');
+                    },
+                    
+                    getSpeakerClass(speaker) {
+                        const speakerNumber = speaker.match(/\d+/);
+                        return speakerNumber ? `speaker-${speakerNumber[0]}` : 'speaker-1';
+                    },
+                    
+                    getEmotionClass(emotion) {
+                        return `emotion-${emotion}`;
+                    },
+                    
+                    getEmotionText(emotion) {
+                        const emotionMap = {
+                            happy: '😊',
+                            sad: '😢',
+                            angry: '😠',
+                            surprised: '😲',
+                            fear: '😨',
+                            disgust: '🤢',
+                            neutral: '😐'
+                        };
+                        return emotionMap[emotion] || '😐';
+                    },
+                    
+                    // 停止活跃会议
+                    async stopActiveMeeting(meetingId) {
+                        try {
+                            layer.load(1, { content: '正在结束当前会议...' });
+                            
+                            await http.post(`/api/tasks/meeting/${meetingId}/stop`);
+                            
+                            layer.closeAll('loading');
+                            layer.msg('当前会议已结束，现在可以创建新会议', { icon: 1 });
+                            
+                            // 重新尝试创建会议
+                            setTimeout(() => {
+                                this.createMeeting();
+                            }, 1000);
+                            
+                        } catch (error) {
+                            layer.closeAll('loading');
+                            const errorMessage = error && error.message ? error.message : '结束会议失败';
+                            layer.msg(`结束会议失败: ${errorMessage}`, { icon: 2 });
+                        }
+                    },
+                    
+                    // 获取状态文本
+                    getStatusText(status) {
+                        const statusMap = {
+                            'ready': '准备中',
+                            'recording': '录制中',
+                            'paused': '已暂停',
+                            'initializing': '初始化中',
+                            'starting_audio': '启动音频中',
+                            'processing': '处理中',
+                            'completed': '已完成',
+                            'error': '出错'
+                        };
+                        return statusMap[status] || status;
+                    },
+                    
+                    // 加载会议数据
+                    async loadMeetingData(taskId) {
+                        try {
+                            const response = await http.get(`/api/tasks/meeting/${taskId}`);
+                            if (response.success) {
+                                this.currentMeeting = {
+                                    title: response.data.title,
+                                    status: response.data.status,
+                                    startTime: response.data.startTime,
+                                    duration: response.data.duration
+                                };
+                                
+                                // 如果会议已完成，加载转录内容
+                                if (response.data.status === 'completed' && response.data.transcript) {
+                                    this.editableTranscript = response.data.transcript;
+                                    this.originalTranscript = response.data.transcript;
+                                }
+                            }
+                        } catch (error) {
+                            layer.msg('加载会议数据失败', { icon: 2 });
+                        }
+                    }
+                },
+
+                mounted() {
+                    // 检查URL参数，判断是创建新会议还是查看现有会议
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const taskId = urlParams.get('taskId');
+                    
+                    if (taskId) {
+                        // 进入会议记录模式
+                        this.currentTaskId = taskId;
+                        this.loadMeetingData(taskId);
+                        this.startEventSource();
+                    } else {
+                        // 创建新会议模式 - 自动聚焦到标题输入框
+                        this.$nextTick(() => {
+                            const titleInput = document.querySelector('.form-input');
+                            if (titleInput) {
+                                titleInput.focus();
+                            }
+                        });
+                    }
+                }
+            }).mount('#app');
+        });
+    </script>
+</body>
+</html>

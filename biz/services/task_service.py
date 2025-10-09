@@ -18,6 +18,7 @@ from ..database.repositories import (
     TaskFileRepository,
 )
 from ..models.task import MediaTask, MeetingTask, TaskFile
+from .notification_service import notification_service
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,12 @@ class TaskService:
         if not self._initialized:
             await self.db_manager.create_tables()
             self._initialized = True
+
+    async def get_tasks_by_type(
+        self, task_type: str, status: str = None, limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """获取指定类型的任务列表"""
+        return await self.get_tasks(task_type, status, limit)
 
     async def get_tasks(
         self, task_type: str, status: str = None, limit: int = 100
@@ -127,7 +134,8 @@ class TaskService:
 
                     task = await repo.create(
                         id=task_id,
-                        name=config_data.get("name") or input_data.get("filename", f"任务_{task_id}"),
+                        name=config_data.get("name")
+                        or input_data.get("filename", f"任务_{task_id}"),
                         task_type=task_data.get("type", "video"),
                         status=task_data.get("status", "pending"),
                         progress=task_data.get("progress", 0),
@@ -146,6 +154,7 @@ class TaskService:
 
                     task = await repo.create(
                         id=task_id,
+                        name=config_data.get("title", f"会议任务_{task_id[:8]}"),
                         status=task_data.get("status", "pending"),
                         progress=task_data.get("progress", 0),
                         current_step=task_data.get("current_step", ""),
@@ -179,8 +188,27 @@ class TaskService:
                 else:
                     return False
 
+                # 获取更新前的任务状态
+                old_task = await repo.get_by_id(task_id)
+                if old_task is None:
+                    logger.error(f"任务不存在: {task_id}")
+                    return False
+
+                old_status = old_task.status if old_task else None
+
+                # 更新任务
                 task = await repo.update(task_id, **updates)
-                return task is not None
+                if task is None:
+                    return False
+
+                # 检查是否需要发送通知
+                new_status = updates.get("status")
+                if new_status and new_status != old_status:
+                    await self._handle_status_change_notification(
+                        task_type, task, old_status, new_status
+                    )
+
+                return True
         except Exception as e:
             logger.error(f"更新任务失败: {e}")
             return False
@@ -248,6 +276,88 @@ class TaskService:
                 logger.info(f"删除输出目录成功: {output_dir}")
         except Exception as e:
             logger.error(f"删除输出目录失败 {task_id}: {e}")
+
+    async def _handle_status_change_notification(
+        self, task_type: str, task: Any, old_status: str, new_status: str
+    ):
+        """处理任务状态变化通知"""
+        try:
+            # 只在任务完成或失败时发送通知
+            if new_status not in ["completed", "failed"]:
+                return
+
+            # 获取任务名称
+            task_name = self._get_task_display_name(task)
+
+            # 计算任务持续时间
+            duration = None
+            if hasattr(task, "created_at") and hasattr(task, "updated_at"):
+                if task.created_at and task.updated_at:
+                    try:
+                        created = datetime.fromisoformat(
+                            task.created_at.replace("Z", "+00:00")
+                        )
+                        updated = datetime.fromisoformat(
+                            task.updated_at.replace("Z", "+00:00")
+                        )
+                        duration = (updated - created).total_seconds()
+                    except Exception:
+                        pass
+
+            # 发送通知
+            success = new_status == "completed"
+            notification_service.notify_task_completed(
+                task_id=task.id,
+                task_type=self._map_task_type(task_type),
+                task_name=task_name,
+                duration=duration,
+                success=success,
+            )
+
+            logger.info(f"✅ 已发送任务状态通知: {task_name} - {new_status}")
+
+        except Exception as e:
+            logger.error(f"发送任务状态通知失败: {e}")
+
+    def _get_task_display_name(self, task: Any) -> str:
+        """获取任务显示名称"""
+        try:
+            # 优先使用任务名称
+            if hasattr(task, "name") and task.name:
+                return task.name
+
+            # 使用输入文件名
+            if hasattr(task, "input_filename") and task.input_filename:
+                return task.input_filename
+
+            # 使用输入URL
+            if hasattr(task, "input_url") and task.input_url:
+                return task.input_url
+
+            # 使用配置中的标题（会议任务）
+            if hasattr(task, "config") and task.config:
+                if isinstance(task.config, dict) and "title" in task.config:
+                    return task.config["title"]
+                elif isinstance(task.config, str):
+                    try:
+                        import json
+
+                        config_dict = json.loads(task.config)
+                        if "title" in config_dict:
+                            return config_dict["title"]
+                    except:
+                        pass
+
+            # 最后使用任务ID
+            return f"任务 {task.id[:8]}..."
+
+        except Exception:
+            return f"任务 {getattr(task, 'id', 'unknown')}"
+
+    def _map_task_type(self, task_type: str) -> str:
+        """映射任务类型到通知服务的类型"""
+        type_map = {"av": "video", "meeting": "meeting"}  # 音视频任务映射为video
+        return type_map.get(task_type, task_type)
 
 
 # 全局任务服务实例

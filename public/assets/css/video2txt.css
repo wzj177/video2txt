@@ -1,116 +1,9 @@
-:root {
-    --primary-color: #00B26A;
-    --secondary-color: #00A1D6;
-    --primary-light: #26d17c;
-    --secondary-light: #40c7f0;
-    --success-color: #52c41a;
-    --warning-color: #faad14;
-    --error-color: #ff4d4f;
-    --info-color: #1890ff;
-    --bg-color: #f5f5f5;
-    --card-bg: #ffffff;
-    --text-primary: #262626;
-    --text-secondary: #595959;
-    --text-tertiary: #8c8c8c;
-    --border-light: #f0f0f0;
-    --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.06);
-    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 16px;
-    --spacing-lg: 24px;
-    --spacing-xl: 32px;
-    --spacing-xxl: 48px;
-    --radius-small: 4px;
-    --radius-medium: 8px;
-    --radius-large: 12px;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-color);
-    color: var(--text-primary);
-    line-height: 1.6;
-}
 
 .video2txt-container {
     min-height: 100vh;
     background: linear-gradient(135deg,
-            rgba(0, 178, 106, 0.03) 0%,
-            rgba(0, 161, 214, 0.03) 100%);
-}
-
-.header {
-    background: var(--card-bg);
-    box-shadow: var(--shadow-light);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    padding: 0 var(--spacing-lg);
-}
-
-.header-content {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 64px;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-lg);
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    font-size: 20px;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-decoration: none;
-}
-
-.nav-menu {
-    display: flex;
-    gap: var(--spacing-lg);
-}
-
-.nav-item {
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: var(--radius-medium);
-    color: var(--text-secondary);
-    text-decoration: none;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    font-weight: 500;
-}
-
-.nav-item:hover,
-.nav-item.active {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-}
-
-.main-layout {
-    display: flex;
-    height: calc(100vh - 64px);
-    max-width: 1400px;
-    margin: 0 auto;
+    rgba(0, 178, 106, 0.03) 0%,
+    rgba(0, 161, 214, 0.03) 100%);
 }
 
 .sidebar {
@@ -741,18 +634,6 @@ body {
     background: var(--secondary-light);
 }
 
-.result-content {
-    background: var(--bg-color);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-medium);
-    padding: var(--spacing-lg);
-    white-space: pre-wrap;
-    font-family: 'Monaco', 'Consolas', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    max-height: 300px;
-    overflow-y: auto;
-}
 
 .file-list {
     display: grid;
@@ -1205,10 +1086,6 @@ body {
     }
 }
 
-.main-layout {
-    flex-direction: column;
-    height: auto;
-}
 
 .sidebar {
     width: 100%;
@@ -1221,7 +1098,6 @@ body {
 
 .checkbox-group {
     grid-template-columns: 1fr;
-}
 }
 
 /* 抽屉样式 */
@@ -1297,7 +1173,6 @@ body {
 .tasks-container {
     width: 1200px;
     margin: 0 auto;
-    padding: var(--spacing-lg);
 }
 
 .tasks-header {
@@ -1311,33 +1186,8 @@ body {
     box-shadow: var(--shadow-light);
 }
 
-.tasks-title {
-    font-size: 24px;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
 
-.create-task-btn {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    border: none;
-    padding: var(--spacing-md) var(--spacing-xl);
-    border-radius: var(--radius-medium);
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
 
-.create-task-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-medium);
-}
 
 .tasks-filters {
     background: var(--card-bg);

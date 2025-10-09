@@ -42,8 +42,7 @@ class Http {
         // 统一处理响应数据
         if (response.data && response.data.success !== undefined) {
           if (response.data.success) {
-            // 对于API响应，返回完整数据以保持success字段
-            console.log('response.data:', response.data)
+            // 返回完整的响应数据，保持success字段和其他字段
             return response.data.data;
           } else {
             throw new Error(response.data.message || '请求失败');

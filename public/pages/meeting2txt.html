@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,1034 +8,900 @@
     <link href="/assets/js/layui/css/layui.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/common.css">
     <link rel="stylesheet" href="/assets/css/icons.css">
-    <link rel="stylesheet" href="/assets/css/meeting2txt.css">
+    <link rel="stylesheet" href="/assets/css/meeting.css">
 </head>
-
 <body>
-    <div id="app" class="meeting-container">
-        <!-- 顶部导航 -->
-        <header class="header">
+<div id="app" class="meeting2txt-container">
+    <!-- 顶部导航 -->
+    <header class="header">
             <div class="header-content">
                 <div class="header-left">
-                    <a href="./" class="logo">
-                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                <a href="./" class="logo">
+                    <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    听语AI
+                </a>
+                <nav class="nav-menu">
+                    <a href="/dashboard" class="nav-item">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
                         </svg>
-                        听语AI
+                        仪表盘
                     </a>
-                    <nav class="nav-menu">
-                        <a href="/dashboard" class="nav-item">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
-                            </svg>
-                            仪表盘
-                        </a>
-                        <a href="/video2txt" class="nav-item">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path
-                                    d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z" />
-                            </svg>
-                            音视频转文本
-                        </a>
-                        <a href="/meeting2txt" class="nav-item active">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path
-                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            实时会议记录
-                        </a>
-                        <a href="/settings" class="nav-item">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path
-                                    d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" />
-                            </svg>
-                            设置
-                        </a>
-                    </nav>
+                    <a href="/video2txt" class="nav-item">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path
+                                    d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
+                        </svg>
+                        音视频转文本
+                    </a>
+                    <a href="/meeting2txt" class="nav-item active">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path
+                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        实时会议记录
+                    </a>
+                    <a href="/settings" class="nav-item">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path
+                                    d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+                        </svg>
+                        设置
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要布局 -->
+    <div class="main-layout">
+
+
+        <!-- 主要内容区域 -->
+        <div class="main-content">
+            <!-- 页面标题和操作区域 -->
+            <div class="page-title-section">
+                <div class="page-title-content">
+                    <div class="title-info">
+                        <h1 class="page-title">🎤 实时会议记录</h1>
+                        <p class="page-subtitle">智能音频捕获 • 实时转录 • 自动总结</p>
+                </div>
+                    <div class="page-actions">
+                        <button class="create-task-btn" @click="startNewMeeting" :disabled="isRecording">
+                        <span v-if="!isRecording">🎬 开始新会议</span>
+                        <span v-else>📹 录制中...</span>
+                    </button>
                 </div>
             </div>
-        </header>
-
-        <!-- 主要内容 -->
-        <main class="main-content">
-            <div class="page-title">
-                <svg class="icon icon-lg" viewBox="0 0 24 24">
-                    <path
-                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                实时会议记录
+        </div>
+            <!-- 当前录制状态 -->
+            <div v-if="currentMeeting" class="current-meeting-card">
+                <div class="meeting-header">
+                    <div class="meeting-info">
+                        <h2>{{ currentMeeting.title }}</h2>
+                        <div class="meeting-meta">
+                            <span class="meeting-time">{{ formatTime(currentMeeting.startTime) }}</span>
+                            <span class="meeting-duration">{{ currentDuration }}</span>
+                            <span class="meeting-status" :class="currentMeeting.status">
+                                {{ getStatusText(currentMeeting.status) }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="meeting-actions">
+                        <button v-if="currentMeeting.status === 'recording'" 
+                                class="btn btn-warning" @click="pauseMeeting">
+                            ⏸️ 暂停
+                        </button>
+                        <button v-if="currentMeeting.status === 'paused'" 
+                                class="btn btn-success" @click="resumeMeeting">
+                            ▶️ 继续
+                        </button>
+                        <button class="btn btn-danger" @click="stopMeeting">
+                            ⏹️ 结束
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 实时转录内容 -->
+                <div class="realtime-transcription">
+                    <h3>🎯 实时转录</h3>
+                    <div class="transcription-content" ref="transcriptionContainer">
+                        <div v-for="segment in transcriptionSegments" :key="segment.id" 
+                             class="transcription-segment">
+                            <span class="timestamp">{{ formatTimestamp(segment.timestamp) }}</span>
+                            <span class="speaker" v-if="segment.speaker" :class="getSpeakerClass(segment.speaker)">
+                                {{ segment.speaker }}
+                            </span>
+                            <span class="emotion"
+                                  v-if="segment.emotion && segment.emotion.primary_emotion !== 'neutral'"
+                                  :class="getEmotionClass(segment.emotion.primary_emotion)">
+                                {{ getEmotionText(segment.emotion.primary_emotion) }}
+                            </span>
+                            <span class="text">{{ segment.text }}</span>
+                            <span class="confidence" v-if="segment.confidence"
+                                  :class="getConfidenceClass(segment.confidence)">
+                                {{ Math.round(segment.confidence * 100) }}%
+                            </span>
+                        </div>
+                        <div v-if="transcriptionSegments.length === 0" class="empty-transcription">
+                            等待音频输入...
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- 会议控制面板 -->
-            <div class="meeting-controls fade-in">
-                <div class="control-section">
-                    <div class="section-title">
-                        <svg class="icon icon-md" viewBox="0 0 24 24">
-                            <path
-                                d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" />
-                        </svg>
-                        监控设置
+            <!-- 会议历史列表 -->
+            <div class="meeting-history">
+                <div class="history-header">
+                    <h2>📋 会议历史</h2>
+                    <div class="history-filters">
+                        <select v-model="filterStatus" @change="filterMeetings">
+                            <option value="">全部状态</option>
+                            <option value="completed">已完成</option>
+                            <option value="recording">录制中</option>
+                            <option value="processing">处理中</option>
+                            <option value="error">出错</option>
+                        </select>
+                        <input type="date" v-model="filterDate" @change="filterMeetings" 
+                               placeholder="筛选日期">
+                        <input type="text" v-model="searchKeyword" @input="filterMeetings" 
+                               placeholder="搜索关键词...">
                     </div>
-                    <div class="control-row">
+                </div>
+
+                <div class="meeting-list">
+                    <!-- 正在进行的会议 -->
+                    <div v-if="activeMeetings.length > 0" class="active-meetings">
+                        <h3>🔴 正在进行</h3>
+                        <div v-for="meeting in activeMeetings" :key="meeting.id" 
+                             class="meeting-item active">
+                            <div class="meeting-info">
+                                <h4>{{ meeting.title }}</h4>
+                                <div class="meeting-meta">
+                                    <span>{{ formatTime(meeting.startTime) }}</span>
+                                    <span class="duration">{{ calculateDuration(meeting.startTime) }}</span>
+                                    <span class="status" :class="meeting.status">{{ getStatusText(meeting.status)
+                                        }}</span>
+                                </div>
+                            </div>
+                            <div class="meeting-actions">
+                                <button class="btn btn-sm" @click="viewMeeting(meeting.id)">查看</button>
+                                <button class="btn btn-sm btn-danger" @click="stopMeeting(meeting.id)">停止</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 历史会议 -->
+                    <div class="historical-meetings">
+                        <h3>📚 历史记录</h3>
+                        <div v-if="filteredMeetings.length === 0" class="empty-meetings">
+                            <p>暂无会议记录</p>
+                        </div>
+                        <div v-else>
+                            <div v-for="meeting in paginatedMeetings" :key="meeting.id" 
+                                 class="meeting-item">
+                                <div class="meeting-info">
+                                    <h4>{{ meeting.title }}</h4>
+                                    <div class="meeting-meta">
+                                        <span>{{ formatTime(meeting.startTime) }}</span>
+                                        <span v-if="meeting.duration">{{ formatDuration(meeting.duration) }}</span>
+                                        <span class="status" :class="meeting.status">{{ getStatusText(meeting.status)
+                                            }}</span>
+                                    </div>
+                                    <div class="meeting-stats" v-if="meeting.stats">
+                                        <span>{{ meeting.stats.transcriptLength || 0 }} 字</span>
+                                        <span>{{ meeting.stats.speakers || 0 }} 人</span>
+                                    </div>
+                                </div>
+                                <div class="meeting-actions">
+                                    <button class="btn btn-sm" @click="viewMeeting(meeting.id)">查看</button>
+                                    <button class="btn btn-sm" @click="downloadMeeting(meeting.id)">下载录制文件</button>
+                                    <button class="btn btn-sm btn-danger" @click="deleteMeeting(meeting.id)">删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 分页 -->
+                        <div v-if="totalPages > 1" class="pagination">
+                            <button class="btn btn-sm" @click="changePage(currentPage - 1)" 
+                                    :disabled="currentPage <= 1">上一页
+                            </button>
+                            <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
+                            <button class="btn btn-sm" @click="changePage(currentPage + 1)" 
+                                    :disabled="currentPage >= totalPages">下一页
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 会议配置对话框 -->
+        <div v-if="showMeetingDialog" class="modal-overlay" @click="closeMeetingDialog">
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h3>🎤 新建会议记录</h3>
+                    <button class="close-btn" @click="closeMeetingDialog">×</button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="createMeeting">
                         <div class="form-group">
-                            <label class="form-label">会议软件</label>
-                            <select v-model="meetingConfig.meetingApp" class="form-select">
-                                <option value="auto">自动检测</option>
-                                <option value="tencent">腾讯会议</option>
-                                <option value="dingtalk">钉钉</option>
-                                <option value="zoom">Zoom</option>
-                                <option value="teams">Microsoft Teams</option>
-                                <option value="webex">Webex</option>
+                            <label>会议标题</label>
+                            <input type="text" v-model="meetingConfig.title" 
+                                   placeholder="请输入会议标题..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>音频源</label>
+                            <select v-model="meetingConfig.audioSource">
                                 <option value="system">系统音频</option>
+                                <option value="microphone">麦克风</option>
+                                <option value="both">系统音频+麦克风</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">源语言</label>
-                            <select v-model="meetingConfig.sourceLanguage" class="form-select">
+                            <label>转录引擎</label>
+                            <select v-model="meetingConfig.engine">
+                                <option value="sensevoice">SenseVoice (推荐)</option>
+                                <option value="whisper">Whisper</option>
+                                <option value="openai">OpenAI</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>语言设置</label>
+                            <select v-model="meetingConfig.language">
                                 <option value="auto">自动检测</option>
                                 <option value="zh">中文</option>
-                                <option value="en">英语</option>
-                                <option value="ja">日语</option>
-                                <option value="ko">韩语</option>
+                                <option value="en">英文</option>
+                                <option value="ja">日文</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">目标语言</label>
-                            <select v-model="meetingConfig.targetLanguage" class="form-select">
-                                <option value="none">仅转录</option>
-                                <option value="zh">中文</option>
-                                <option value="en">英语</option>
-                                <option value="ja">日语</option>
-                                <option value="ko">韩语</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="control-row">
-                        <div class="form-group">
-                            <label class="form-label">识别引擎</label>
-                            <select v-model="meetingConfig.engine" class="form-select">
-                                <option value="sensevoice">SenseVoice (中文优化)</option>
-                                <option value="whisper">Whisper (通用)</option>
-                                <option value="faster-whisper">FasterWhisper (快速)</option>
-                            </select>
+                            <label>
+                                <input type="checkbox" v-model="meetingConfig.enableSpeakerDiarization">
+                                启用说话人分离
+                            </label>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">音频设备</label>
-                            <select v-model="meetingConfig.audioDevice" class="form-select"
-                                @change="onAudioDeviceChange">
-                                <option value="auto">自动选择</option>
-                                <option v-for="device in audioDevices.input" :key="device.id" :value="device.id">
-                                    🎤 {{ device.name }}
-                                </option>
-                                <option v-for="device in audioDevices.loopback" :key="device.id" :value="device.id">
-                                    🔊 {{ device.name }}
-                                </option>
-                            </select>
+                            <label>
+                                <input type="checkbox" v-model="meetingConfig.enableRealTimeSummary">
+                                启用实时总结
+                            </label>
                         </div>
-                    </div>
-
-                    <!-- 权限和设备状态 -->
-                    <div class="control-section">
-                        <div class="section-title">
-                            <svg class="icon icon-md" viewBox="0 0 24 24">
-                                <path
-                                    d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1M10 17L6 13L7.41 11.59L10 14.17L16.59 7.58L18 9L10 17Z" />
-                            </svg>
-                            权限和设备状态
-                        </div>
-                        <div class="status-grid"
-                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
-                            <div class="status-card"
-                                style="padding: 12px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--card-bg);">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <div class="status-dot"
-                                        :class="audioPermissions.microphone?.granted ? 'success' : 'error'"></div>
-                                    <span style="font-weight: 500; font-size: 14px;">麦克风权限</span>
-                                </div>
-                                <div style="font-size: 12px; color: var(--text-tertiary);">
-                                    {{ audioPermissions.microphone?.granted ? '已授权' : '需要授权' }}
-                                </div>
-                            </div>
-                            <div class="status-card"
-                                style="padding: 12px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--card-bg);">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <div class="status-dot"
-                                        :class="audioPermissions.system_audio?.granted ? 'success' : 'warning'"></div>
-                                    <span style="font-weight: 500; font-size: 14px;">系统音频</span>
-                                </div>
-                                <div style="font-size: 12px; color: var(--text-tertiary);">
-                                    {{ audioPermissions.system_audio?.granted ? '可用' : '需要配置' }}
-                                </div>
-                            </div>
-                            <div class="status-card"
-                                style="padding: 12px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--card-bg);">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <div class="status-dot"
-                                        :class="audioDevices.total_devices > 0 ? 'success' : 'error'"></div>
-                                    <span style="font-weight: 500; font-size: 14px;">音频设备</span>
-                                </div>
-                                <div style="font-size: 12px; color: var(--text-tertiary);">
-                                    {{ audioDevices.total_devices || 0 }} 个设备
-                                </div>
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="btn btn-secondary" @click="checkPermissions" :disabled="loadingPermissions">
-                                <svg class="icon icon-sm" :class="{'icon-spin': loadingPermissions}"
-                                    viewBox="0 0 24 24">
-                                    <path
-                                        d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" />
-                                </svg>
-                                刷新状态
-                            </button>
-                            <button class="btn btn-secondary" @click="requestPermissions"
-                                v-if="!audioPermissions.microphone?.granted">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path
-                                        d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1M10 17L6 13L7.41 11.59L10 14.17L16.59 7.58L18 9L10 17Z" />
-                                </svg>
-                                申请权限
-                            </button>
-                            <button class="btn btn-secondary" @click="showPermissionHelp">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path
-                                        d="M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C7.59,4 4,12C7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z" />
-                                </svg>
-                                帮助
-                            </button>
-                        </div>
-                    </div>
+                    </form>
                 </div>
-
-                <!-- 监控控制 -->
-                <div class="meeting-status">
-                    <div class="status-info">
-                        <div class="status-indicator" :class="monitoringStatus">
-                            <svg v-if="monitoringStatus === 'monitoring'" class="icon icon-sm" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" fill="currentColor" />
-                            </svg>
-                            <svg v-else class="icon icon-sm" viewBox="0 0 24 24">
-                                <rect x="6" y="6" width="12" height="12" fill="currentColor" />
-                            </svg>
-                            {{ getMonitoringStatusText() }}
-                        </div>
-                        <div class="timer">{{ formatTime(monitoringTime) }}</div>
-                    </div>
-
-                    <button class="record-button" :class="monitoringStatus" @click="toggleMonitoring"
-                        :disabled="!isConfigValid">
-                        <svg v-if="monitoringStatus === 'stopped'" class="icon" style="width: 32px; height: 32px;"
-                            viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10" fill="currentColor" />
-                        </svg>
-                        <svg v-else class="icon" style="width: 32px; height: 32px;" viewBox="0 0 24 24">
-                            <rect x="6" y="6" width="12" height="12" fill="currentColor" />
-                        </svg>
-                        <span style="margin-left: 8px;">
-                            {{ monitoringStatus === 'stopped' ? '开始监控' : '停止监控' }}
-                        </span>
+                <div class="modal-footer">
+                    <button class="btn" @click="closeMeetingDialog">取消</button>
+                    <button class="btn btn-primary" @click="createMeeting" 
+                            :disabled="!meetingConfig.title">开始录制
                     </button>
-
-                    <!-- 音频状态指示器 -->
-                    <div class="volume-indicator">
-                        <span style="font-size: 12px; color: var(--text-tertiary);">音频:</span>
-                        <div class="volume-bars">
-                            <div v-for="i in 8" :key="i" class="volume-bar" :class="{active: volumeLevel >= i}"></div>
-                        </div>
-                        <button class="btn btn-sm" @click="testAudioCapture"
-                            style="margin-left: 12px; font-size: 12px;">
-                            测试
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 会议内容 -->
-            <div class="meeting-content">
-                <!-- 实时转录 -->
-                <div class="content-panel fade-in">
-                    <div class="panel-header">
-                        <div class="panel-title">
-                            <svg class="icon icon-md" viewBox="0 0 24 24">
-                                <path
-                                    d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z" />
-                            </svg>
-                            实时转录
-                        </div>
-                        <div class="panel-actions">
-                            <button class="btn btn-secondary" @click="clearTranscript">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path
-                                        d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                                </svg>
-                                清除
-                            </button>
-                            <button class="btn btn-primary" @click="exportTranscript">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
-                                </svg>
-                                导出
-                            </button>
-                        </div>
-                    </div>
-                    <div class="panel-content">
-                        <div v-if="transcripts.length === 0" class="empty-state">
-                            <svg class="empty-icon" viewBox="0 0 24 24">
-                                <path
-                                    d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
-                            </svg>
-                            <div>开始录制以查看实时转录内容</div>
-                        </div>
-                        <div v-else>
-                            <div v-for="(item, index) in transcripts" :key="index" class="transcript-item">
-                                <div class="transcript-time">{{ item.time }}</div>
-                                <div class="transcript-text">{{ item.text }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 会议总结 -->
-                <div class="content-panel fade-in">
-                    <div class="panel-header">
-                        <div class="panel-title">
-                            <svg class="icon icon-md" viewBox="0 0 24 24">
-                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
-                            </svg>
-                            会议总结
-                        </div>
-                        <div class="panel-actions">
-                            <button class="btn btn-secondary" @click="generateSummary"
-                                :disabled="transcripts.length === 0">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path
-                                        d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" />
-                                </svg>
-                                生成总结
-                            </button>
-                        </div>
-                    </div>
-                    <div class="panel-content">
-                        <div v-if="!summary.content" class="empty-state">
-                            <svg class="empty-icon" viewBox="0 0 24 24">
-                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
-                            </svg>
-                            <div>会议结束后将自动生成总结</div>
-                        </div>
-                        <div v-else>
-                            <div class="summary-section">
-                                <div class="summary-title">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path
-                                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                    </svg>
-                                    会议概要
-                                </div>
-                                <div class="summary-content">{{ summary.content }}</div>
-                            </div>
-
-                            <div class="summary-section">
-                                <div class="summary-title">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" />
-                                    </svg>
-                                    关键要点
-                                </div>
-                                <div class="summary-content">
-                                    <ul style="padding-left: 20px;">
-                                        <li v-for="point in summary.keyPoints" :key="point">{{ point }}</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div class="summary-section">
-                                <div class="summary-title">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path
-                                            d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zM15.5 11H8v2h7.5v-2z" />
-                                    </svg>
-                                    关键词
-                                </div>
-                                <div class="keyword-tags">
-                                    <span v-for="keyword in summary.keywords" :key="keyword" class="keyword-tag">
-                                        {{ keyword }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 参与者列表 -->
-            <div class="content-panel fade-in" style="margin-top: var(--spacing-lg);">
-                <div class="panel-header">
-                    <div class="panel-title">
-                        <svg class="icon icon-md" viewBox="0 0 24 24">
-                            <path
-                                d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A2.996 2.996 0 0117.06 6H16.94c-.95 0-1.85.54-2.27 1.4L12.73 12H6v3h6v5h2v-5h4v5h2zm-7.5-10.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10.5s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm2 16v-7H9V9c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v6h1.5v7h4z" />
-                        </svg>
-                        参与者 ({{ participants.length }})
-                    </div>
-                    <div class="panel-actions">
-                        <button class="btn btn-secondary" @click="addParticipant">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                            </svg>
-                            添加
-                        </button>
-                    </div>
-                </div>
-                <div class="panel-content">
-                    <div v-if="participants.length === 0" class="empty-state">
-                        <svg class="empty-icon" viewBox="0 0 24 24">
-                            <path
-                                d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A2.996 2.996 0 0117.06 6H16.94c-.95 0-1.85.54-2.27 1.4L12.73 12H6v3h6v5h2v-5h4v5h2zm-7.5-10.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10.5s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm2 16v-7H9V9c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v6h1.5v7h4z" />
-                        </svg>
-                        <div>暂无参与者信息</div>
-                    </div>
-                    <div v-else class="participants-list">
-                        <div v-for="participant in participants" :key="participant.id" class="participant-item">
-                            <div class="participant-info">
-                                <div class="participant-avatar">{{ participant.name.charAt(0) }}</div>
-                                <div>
-                                    <div class="participant-name">{{ participant.name }}</div>
-                                    <div class="participant-status">{{ participant.status }}</div>
-                                </div>
-                            </div>
-                            <div v-if="participant.speaking" class="speaking-indicator"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- 权限帮助模态框 -->
-        <div v-if="showPermissionHelpModal" class="permission-help-modal" @click="closePermissionHelp">
-            <div class="permission-help-content" @click.stop>
-                <div
-                    style="display: flex; justify-content: between; align-items: center; margin-bottom: var(--spacing-lg);">
-                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">音频权限设置帮助</h3>
-                    <button class="btn btn-secondary" @click="closePermissionHelp" style="padding: var(--spacing-xs);">
-                        <svg class="icon" viewBox="0 0 24 24">
-                            <path
-                                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                        </svg>
-                    </button>
-                </div>
-
-                <div v-if="permissionHelp.platform">
-                    <div class="help-section">
-                        <div class="help-title">
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path
-                                    d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
-                            </svg>
-                            麦克风权限设置
-                        </div>
-                        <div class="help-content" v-html="permissionHelp.microphone_help.replace(/\\n/g, '<br>')"></div>
-                    </div>
-
-                    <div class="help-section">
-                        <div class="help-title">
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path
-                                    d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                            </svg>
-                            系统音频捕获设置
-                        </div>
-                        <div class="help-content" v-html="permissionHelp.system_audio_help.replace(/\\n/g, '<br>')">
-                        </div>
-                    </div>
-
-                    <div class="help-section" v-if="permissionHelp.troubleshooting?.length">
-                        <div class="help-title">
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path
-                                    d="M11,18H13V16H11V18M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z" />
-                            </svg>
-                            故障排除
-                        </div>
-                        <ul class="help-list">
-                            <li v-for="tip in permissionHelp.troubleshooting" :key="tip">{{ tip }}</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div v-else class="help-section">
-                    <div style="text-align: center; color: var(--text-tertiary);">正在加载帮助信息...</div>
                 </div>
             </div>
         </div>
     </div>
-
     <script src="/assets/js/vue.global.js"></script>
     <script src="/assets/js/axios/axios.min.js"></script>
     <script src="/assets/js/layui/layui.js"></script>
     <script src="/assets/js/http.js"></script>
-    <script type="module">
-        const { createApp } = Vue;
+    <script>
+        const {createApp} = Vue;
 
         layui.use(['layer'], () => {
+            const layer = layui.layer;
 
             createApp({
                 data() {
                     return {
-                        monitoringStatus: 'stopped', // monitoring, stopped
-                        monitoringTime: 0,
-                        volumeLevel: 0,
-                        meetingConfig: {
-                            meetingApp: 'auto',
-                            sourceLanguage: 'auto',
-                            targetLanguage: 'none',
-                            engine: 'sensevoice',
-                            audioDevice: 'auto'
-                        },
-                        transcripts: [],
-                        summary: {
-                            content: '',
-                            keyPoints: [],
-                            keywords: []
-                        },
-                        participants: [],
-                        monitoringTimer: null,
-                        volumeTimer: null,
+                        // 当前状态
+                        isRecording: false,
+                        currentMeeting: null,
+                        transcriptionSegments: [],
                         eventSource: null,
-                        currentTaskId: null,
-                        // 新增的数据
-                        audioPermissions: {
-                            microphone: null,
-                            system_audio: null,
-                            overall_status: false
+                        
+                        // 会议列表
+                        meetings: [],
+                        activeMeetings: [],
+                        filteredMeetings: [],
+                        
+                        // 筛选和搜索
+                        filterStatus: '',
+                        filterDate: '',
+                        searchKeyword: '',
+                        
+                        // 分页
+                        currentPage: 1,
+                        pageSize: 10,
+                        
+                        // 对话框
+                        showMeetingDialog: false,
+                        meetingConfig: {
+                            title: '',
+                            audioSource: 'system',
+                            engine: 'sensevoice',
+                            language: 'auto',
+                            enableSpeakerDiarization: true,
+                            enableRealTimeSummary: false
                         },
-                        audioDevices: {
-                            input: [],
-                            output: [],
-                            loopback: [],
-                            recommended_system_device: null,
-                            total_devices: 0
-                        },
-                        loadingPermissions: false,
-                        showPermissionHelpModal: false,
-                        permissionHelp: {}
+                        
+                        // 定时器
+                        durationTimer: null
                     }
                 },
-
+                
                 computed: {
-                    isConfigValid() {
-                        return this.meetingConfig.meetingApp &&
-                            this.meetingConfig.sourceLanguage &&
-                            this.meetingConfig.engine;
+                    totalPages() {
+                        return Math.ceil(this.filteredMeetings.length / this.pageSize);
+                    },
+                    
+                    paginatedMeetings() {
+                        const start = (this.currentPage - 1) * this.pageSize;
+                        return this.filteredMeetings.slice(start, start + this.pageSize);
+                    },
+                    
+                    currentDuration() {
+                        if (!this.currentMeeting?.startTime) return '00:00:00';
+                        return this.calculateDuration(this.currentMeeting.startTime);
                     }
                 },
-
+                
                 async mounted() {
-                    await this.checkPermissions();
-                    await this.loadAudioDevices();
-                    this.simulateVolumeLevel();
+                    await this.loadMeetings();
+                    this.startDurationTimer();
+                    this.checkPlatform();
                 },
-
+                
                 beforeUnmount() {
-                    this.stopMonitoring();
-                    if (this.volumeTimer) {
-                        clearInterval(this.volumeTimer);
-                    }
+                    this.stopDurationTimer();
+                    this.closeEventSource();
                 },
-
+                
                 methods: {
-                    // 权限和设备相关方法
-                    async checkPermissions() {
-                        if (this.loadingPermissions) return;
-
-                        this.loadingPermissions = true;
+                    // 开始新会议
+                    async startNewMeeting() {
                         try {
-                            // TODO: 全部要换成封装的http对象
-                            // const response = await fetch('/api/tasks/meeting/audio-permissions');
-                            // const result = await response.json();
-
-                            // if (result.success) {
-                            //     this.audioPermissions = result.data;
-                            // } else {
-                            //     console.error('检查权限失败:', result.error);
-                            // }
+                            // 检查是否已有活跃会议
+                            const activeCheck = await http.get('/api/tasks/meeting/active');
+                            if (activeCheck.hasActive) {
+                                const activeMeeting = activeCheck.meetings[0];
+                                layer.confirm(
+                                    `已有会议「${activeMeeting.title}」正在进行中（状态：${this.getStatusText(activeMeeting.status)}）。\n\n` +
+                                    `只能同时进行一个会议，是否要：`,
+                                    {
+                                        btn: ['查看当前会议', '结束当前会议', '取消'],
+                                        icon: 3,
+                                        title: '发现活跃会议'
+                                    },
+                                    (index) => {
+                                        // 查看当前会议
+                                        layer.close(index);
+                                        this.viewMeeting(activeMeeting.id);
+                                    },
+                                    (index) => {
+                                        // 结束当前会议
+                                        layer.close(index);
+                                        this.stopActiveMeetingAndCreate(activeMeeting.id);
+                                    }
+                                );
+                                return;
+                            }
+                            
+                            // 没有活跃会议，正常打开创建页面
+                            this.openCreateMeetingDialog();
+                            
                         } catch (error) {
-                            console.error('检查权限异常:', error);
-                        } finally {
-                            this.loadingPermissions = false;
+                            console.error('检查活跃会议失败:', error);
+                            // 检查失败时仍然允许创建
+                            this.openCreateMeetingDialog();
                         }
                     },
-
-                    async loadAudioDevices() {
+                    
+                    // 打开创建会议对话框
+                    openCreateMeetingDialog() {
+                        layui.layer.open({
+                            type: 2,
+                            title: '创建会议记录',
+                            offset: 'r',
+                            anim: 'slideLeft',
+                            shade: 0.1,
+                            shadeClose: true,
+                            content: `/meeting_create`,
+                            area: ['75%', '100%'],
+                            end: () => {
+                                this.loadMeetings();
+                            }
+                        });
+                    },
+                    
+                    // 停止活跃会议并创建新会议
+                    async stopActiveMeetingAndCreate(meetingId) {
                         try {
-                            // TODO: 全部要换成封装的http对象
-                            // const response = await fetch('/api/tasks/meeting/audio-devices');
-                            // const result = await response.json();
-
-                            // if (result.success) {
-                            //     this.audioDevices = result.data;
-
-                            //     // 如果有推荐的系统音频设备，自动选择
-                            //     if (this.audioDevices.recommended_system_device?.id && this.meetingConfig.audioDevice === 'auto') {
-                            //         this.meetingConfig.audioDevice = this.audioDevices.recommended_system_device.id;
-                            //     }
-                            // } else {
-                            //     console.error('加载音频设备失败:', result.error);
-                            // }
+                            layer.load(1, { content: '正在结束当前会议...' });
+                            
+                            await http.post(`/api/tasks/meeting/${meetingId}/stop`);
+                            
+                            layer.closeAll('loading');
+                            layer.msg('当前会议已结束', { icon: 1 });
+                            
+                            // 刷新会议列表
+                            await this.loadMeetings();
+                            
+                            // 打开创建新会议对话框
+                            setTimeout(() => {
+                                this.openCreateMeetingDialog();
+                            }, 500);
+                            
                         } catch (error) {
-                            console.error('加载音频设备异常:', error);
+                            layer.closeAll('loading');
+                            const errorMessage = error && error.message ? error.message : '结束会议失败';
+                            layer.msg(`结束会议失败: ${errorMessage}`, { icon: 2 });
                         }
                     },
-
-                    async requestPermissions() {
+                    
+                    // 创建会议
+                    async createMeeting() {
+                        if (!this.meetingConfig.title.trim()) {
+                            layer.msg('请输入会议标题', {icon: 0});
+                            return;
+                        }
+                        
                         try {
-                            // TODO: 全部要换成封装的http对象
-                            // const response = await fetch('/api/tasks/meeting/request-permissions', {
-                            //     method: 'POST'
-                            // });
-                            // const result = await response.json();
-
-                            // if (result.success) {
-                            //     alert(result.data.message);
-                            //     // 重新检查权限
-                            //     setTimeout(() => this.checkPermissions(), 1000);
-                            // } else {
-                            //     alert('权限申请失败: ' + result.error);
-                            // }
+                            layer.load(1, {content: '正在启动录制器...'});
+                            
+                            const response = await http.post('/api/tasks/meeting/create', {
+                                title: this.meetingConfig.title,
+                                audioSource: this.meetingConfig.audioSource,
+                                engine: this.meetingConfig.engine,
+                                language: this.meetingConfig.language,
+                                enableSpeakerDiarization: this.meetingConfig.enableSpeakerDiarization,
+                                enableRealTimeSummary: this.meetingConfig.enableRealTimeSummary
+                            });
+                            
+                            layer.closeAll('loading');
+                            
+                                this.currentMeeting = {
+                                    id: response.taskId,
+                                    title: this.meetingConfig.title,
+                                    startTime: new Date(),
+                                    status: 'recording'
+                                };
+                                
+                                this.isRecording = true;
+                                this.transcriptionSegments = [];
+                                this.showMeetingDialog = false;
+                                
+                                // 启动实时数据流
+                                this.startEventSource(response.taskId);
+                                
+                            layer.msg('会议录制已开始', {icon: 1});
                         } catch (error) {
-                            alert('权限申请异常: ' + error.message);
+                            layer.closeAll('loading');
+                            const errorMessage = error && error.message ? error.message : '启动失败，请稍后重试';
+                            layer.msg(`启动失败: ${errorMessage}`, {icon: 2});
                         }
                     },
-
-                    async showPermissionHelp() {
+                    
+                    // 启动事件源
+                    startEventSource(taskId) {
+                        this.closeEventSource();
+                        
+                        this.eventSource = new EventSource(`/api/tasks/meeting/${taskId}/stream`);
+                        
+                        this.eventSource.onmessage = (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                this.handleStreamMessage(data);
+                            } catch (error) {
+                                console.error('解析流数据失败:', error);
+                            }
+                        };
+                        
+                        this.eventSource.onerror = (error) => {
+                            console.error('事件源错误:', error);
+                            layer.msg('实时连接中断', {icon: 0});
+                        };
+                    },
+                    
+                    // 处理流消息
+                    handleStreamMessage(data) {
+                        switch (data.type) {
+                            case 'transcription':
+                                this.addTranscriptionSegment(data);
+                                break;
+                            case 'status':
+                                this.updateMeetingStatus(data);
+                                break;
+                            case 'error':
+                                layer.msg(data.message, {icon: 2});
+                                break;
+                            case 'completed':
+                                this.handleMeetingCompleted(data);
+                                break;
+                        }
+                    },
+                    
+                    // 添加转录片段
+                    addTranscriptionSegment(data) {
+                        const segment = {
+                            id: Date.now() + Math.random(),
+                            timestamp: new Date(),
+                            text: data.text,
+                            speaker: data.speaker || null,
+                            confidence: data.confidence || null
+                        };
+                        
+                        this.transcriptionSegments.push(segment);
+                        
+                        // 自动滚动到底部
+                        this.$nextTick(() => {
+                            const container = this.$refs.transcriptionContainer;
+                            if (container) {
+                                container.scrollTop = container.scrollHeight;
+                            }
+                        });
+                    },
+                    
+                    // 暂停会议
+                    async pauseMeeting() {
+                        if (!this.currentMeeting) return;
+                        
                         try {
-                            // TODO: 全部要换成封装的http对象
-                            // const response = await fetch('/api/tasks/meeting/permission-help');
-                            // const result = await response.json();
-
-                            // if (result.success) {
-                            //     this.permissionHelp = result.data;
-                            //     this.showPermissionHelpModal = true;
-                            // } else {
-                            //     alert('获取帮助信息失败: ' + result.error);
-                            // }
+                            await http.post(`/api/tasks/meeting/${this.currentMeeting.id}/pause`);
+                                this.currentMeeting.status = 'paused';
+                            layer.msg('录制已暂停', {icon: 1});
                         } catch (error) {
-                            alert('获取帮助信息异常: ' + error.message);
+                            layer.msg(`暂停失败: ${error.message}`, {icon: 2});
                         }
                     },
-
-                    closePermissionHelp() {
-                        this.showPermissionHelpModal = false;
-                    },
-
-                    onAudioDeviceChange() {
-                        console.log('音频设备已更改为:', this.meetingConfig.audioDevice);
-                    },
-
-                    async testAudioCapture() {
+                    
+                    // 继续会议
+                    async resumeMeeting() {
+                        if (!this.currentMeeting) return;
+                        
                         try {
-                            // TODO: 全部要换成封装的http对象
-                            // const deviceId = this.meetingConfig.audioDevice === 'auto' ? null : this.meetingConfig.audioDevice;
-
-                            // const response = await fetch('/api/tasks/meeting/test-audio-capture', {
-                            //     method: 'POST',
-                            //     headers: {
-                            //         'Content-Type': 'application/json'
-                            //     },
-                            //     body: JSON.stringify({
-                            //         device_id: deviceId,
-                            //         duration: 2.0
-                            //     })
-                            // });
-
-                            // const result = await response.json();
-
-                            // if (result.success) {
-                            //     const data = result.data;
-                            //     alert(`音频测试成功！\n设备: ${data.device_info?.name || '未知'}\n采样数: ${data.samples_captured}\n平均音量: ${(data.average_volume * 100).toFixed(1)}%\n最大音量: ${(data.max_volume * 100).toFixed(1)}%`);
-                            // } else {
-                            //     alert('音频测试失败: ' + result.error);
-                            // }
+                            await http.post(`/api/tasks/meeting/${this.currentMeeting.id}/resume`);
+                                this.currentMeeting.status = 'recording';
+                            layer.msg('录制已继续', {icon: 1});
                         } catch (error) {
-                            alert('音频测试异常: ' + error.message);
+                            layer.msg(`继续失败: ${error.message}`, {icon: 2});
                         }
                     },
+                    
+                    // 停止会议
+                    async stopMeeting(meetingId = null) {
+                        // 如果传入了meetingId，使用传入的ID，否则使用当前会议ID
+                        const targetMeetingId = meetingId || (this.currentMeeting && this.currentMeeting.id);
 
-                    // 监控相关方法
-                    toggleMonitoring() {
-                        if (this.monitoringStatus === 'stopped') {
-                            this.startMonitoring();
-                        } else {
-                            this.stopMonitoring();
+                        if (!targetMeetingId) {
+                            layer.msg('没有找到要停止的会议', {icon: 0});
+                            return;
                         }
+
+                        // 找到对应的会议信息用于显示
+                        const targetMeeting = meetingId ?
+                            this.meetings.find(m => m.id === meetingId) || this.activeMeetings.find(m => m.id === meetingId) :
+                            this.currentMeeting;
+
+                        const meetingTitle = targetMeeting ? targetMeeting.title : '未命名会议';
+
+                        layer.confirm(`确定要结束会议"${meetingTitle}"的记录吗？`, {
+                            icon: 3,
+                            title: '确认操作'
+                        }, async (index) => {
+                            try {
+                                layer.load(1, {content: '正在结束录制并生成总结...'});
+                                
+                                await http.post(`/api/tasks/meeting/${targetMeetingId}/stop`);
+                                
+                                layer.closeAll('loading');
+                                layer.close(index);
+                                // 如果停止的是当前会议，清理当前状态
+                                if (!meetingId || (this.currentMeeting && targetMeetingId === this.currentMeeting.id)) {
+                                    this.isRecording = false;
+                                    this.currentMeeting = null;
+                                    this.transcriptionSegments = [];
+                                    this.closeEventSource();
+                                }
+                                    
+                                    // 刷新会议列表
+                                    await this.loadMeetings();
+                                    
+                                layer.msg('会议记录已完成', {icon: 1});
+                            } catch (error) {
+                                layer.closeAll('loading');
+                                layer.close(index);
+                                layer.msg(`停止失败: ${error.message}`, {icon: 2});
+                            }
+                        });
                     },
-
-                    async startMonitoring() {
-                        try {
-                            this.monitoringStatus = 'monitoring';
-                            this.monitoringTime = 0;
-
-                            // 开始计时
-                            this.monitoringTimer = setInterval(() => {
-                                this.monitoringTime++;
-                            }, 1000);
-
-                            // 启动音频捕获和实时转录
-                            await this.initializeAudioCapture();
-                            console.log('开始监控会议音频...');
-
-                        } catch (error) {
-                            console.error('启动监控失败:', error);
-                            alert('启动监控失败: ' + error.message);
-                            this.stopMonitoring();
-                        }
-                    },
-
-                    stopRecording() {
-                        this.recordingStatus = 'stopped';
-
-                        if (this.recordingTimer) {
-                            clearInterval(this.recordingTimer);
-                            this.recordingTimer = null;
-                        }
-
-                        // 自动生成总结
-                        if (this.transcripts.length > 0) {
-                            this.generateSummary();
-                        }
-
-                        console.log('停止录制会议');
-                    },
-
-                    stopMonitoring() {
-                        this.monitoringStatus = 'stopped';
-
-                        if (this.monitoringTimer) {
-                            clearInterval(this.monitoringTimer);
-                            this.monitoringTimer = null;
-                        }
-
-                        // 关闭SSE连接
+                    
+                    // 关闭事件源
+                    closeEventSource() {
                         if (this.eventSource) {
                             this.eventSource.close();
                             this.eventSource = null;
                         }
-
-                        console.log('停止监控会议音频');
                     },
-
-                    async initializeAudioCapture() {
+                    
+                    // 加载会议列表
+                    async loadMeetings() {
                         try {
-                            // 创建实时转录任务
-                            const response = await fetch('/api/tasks/meeting', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    meetingApp: this.meetingConfig.meetingApp,
-                                    sourceLanguage: this.meetingConfig.sourceLanguage,
-                                    targetLanguage: this.meetingConfig.targetLanguage,
-                                    engine: this.meetingConfig.engine,
-                                    captureMode: this.meetingConfig.captureMode,
-                                    realtime: true
-                                })
-                            });
-
-                            if (!response.ok) {
-                                throw new Error('创建监控任务失败');
-                            }
-
-                            const result = await response.json();
-                            this.currentTaskId = result.task_id;
-
-                            // 建立SSE连接接收实时转录
-                            this.connectSSE();
-
+                            const result = await http.get('/api/tasks/meeting/list');
+                            this.meetings = result.meetings
+                                this.updateActiveMeetings();
+                                this.filterMeetings();
+                                
+                                // 将刷新方法暴露给子页面
+                                window.refreshMeetingList = this.loadMeetings;
                         } catch (error) {
-                            throw new Error('初始化音频捕获失败: ' + error.message);
+                            console.error('加载会议列表失败:', error);
                         }
                     },
-
-                    connectSSE() {
-                        if (!this.currentTaskId) return;
-
-                        const url = `/api/tasks/meeting/${this.currentTaskId}/stream`;
-                        this.eventSource = new EventSource(url);
-
-                        this.eventSource.onmessage = (event) => {
-                            try {
-                                const data = JSON.parse(event.data);
-                                this.handleRealtimeData(data);
-                            } catch (error) {
-                                console.error('解析SSE数据失败:', error);
-                            }
-                        };
-
-                        this.eventSource.onerror = (error) => {
-                            console.error('SSE连接错误:', error);
-                            setTimeout(() => {
-                                if (this.monitoringStatus === 'monitoring') {
-                                    this.connectSSE();
-                                }
-                            }, 3000);
-                        };
+                    
+                    // 更新活跃会议
+                    updateActiveMeetings() {
+                        this.activeMeetings = this.meetings.filter(meeting => 
+                            ['recording', 'paused', 'processing'].includes(meeting.status)
+                        );
                     },
-
-                    handleRealtimeData(data) {
-                        switch (data.type) {
-                            case 'connected':
-                                console.log('会议监控已连接:', data.message);
-                                break;
-                            case 'transcript':
-                                this.addTranscript(data.content);
-                                break;
-                            case 'translation':
-                                this.addTranslation(data.content);
-                                break;
-                            case 'volume':
-                                this.volumeLevel = data.level;
-                                break;
-                            case 'analysis':
-                                this.updateAnalysis(data.content);
-                                break;
-                            case 'heartbeat':
-                                // 心跳包，保持连接
-                                break;
-                            case 'disconnected':
-                                console.log('会议监控已断开:', data.message);
-                                if (data.summary) {
-                                    this.updateFinalSummary(data.summary);
-                                }
-                                break;
-                            case 'error':
-                                console.error('转录错误:', data.message);
-                                this.showError('转录错误: ' + data.message);
-                                break;
-                            default:
-                                console.log('未知数据类型:', data.type, data);
+                    
+                    // 筛选会议
+                    filterMeetings() {
+                        let filtered = this.meetings.filter(meeting => 
+                            !['recording', 'paused', 'processing'].includes(meeting.status)
+                        );
+                        
+                        if (this.filterStatus) {
+                            filtered = filtered.filter(meeting => meeting.status === this.filterStatus);
                         }
-                    },
-
-                    addTranscript(content) {
-                        this.transcripts.unshift({
-                            id: Date.now(),
-                            text: content.text,
-                            translation: content.translation || '',
-                            timestamp: new Date().toLocaleTimeString(),
-                            speaker: content.speaker || '未知',
-                            confidence: content.confidence || 0.9
-                        });
-
-                        // 保持转录列表不超过100条
-                        if (this.transcripts.length > 100) {
-                            this.transcripts = this.transcripts.slice(0, 100);
-                        }
-                    },
-
-                    addTranslation(content) {
-                        // 为最新的转录添加翻译
-                        if (this.transcripts.length > 0) {
-                            this.transcripts[0].translation = content.translation;
-                        }
-                    },
-
-                    updateAnalysis(content) {
-                        // 更新关键词
-                        if (content.keywords) {
-                            content.keywords.forEach(keyword => {
-                                if (!this.summary.keywords.includes(keyword)) {
-                                    this.summary.keywords.push(keyword);
-                                }
+                        
+                        if (this.filterDate) {
+                            filtered = filtered.filter(meeting => {
+                                const meetingDate = new Date(meeting.startTime).toISOString().split('T')[0];
+                                return meetingDate === this.filterDate;
                             });
                         }
-
-                        // 更新要点
-                        if (content.key_point) {
-                            this.summary.keyPoints.push(content.key_point);
-
-                            // 保持要点列表不超过20条
-                            if (this.summary.keyPoints.length > 20) {
-                                this.summary.keyPoints = this.summary.keyPoints.slice(-20);
-                            }
+                        
+                        if (this.searchKeyword) {
+                            const keyword = this.searchKeyword.toLowerCase();
+                            filtered = filtered.filter(meeting => 
+                                meeting.title.toLowerCase().includes(keyword)
+                            );
+                        }
+                        
+                        this.filteredMeetings = filtered.sort((a, b) => 
+                            new Date(b.startTime) - new Date(a.startTime)
+                        );
+                        
+                        // 重置到第一页
+                        this.currentPage = 1;
+                    },
+                    
+                    // 分页
+                    changePage(page) {
+                        if (page >= 1 && page <= this.totalPages) {
+                            this.currentPage = page;
                         }
                     },
-
-                    updateFinalSummary(summaryData) {
-                        // 更新最终摘要
-                        if (summaryData.summary_text) {
-                            this.summary.content = summaryData.summary_text;
-                        }
-
-                        // 更新参与者信息
-                        if (summaryData.speakers) {
-                            this.participants = [];
-                            Object.keys(summaryData.speakers).forEach((speakerKey, index) => {
-                                const speaker = summaryData.speakers[speakerKey];
-                                this.participants.push({
-                                    id: index + 1,
-                                    name: speaker.name,
-                                    status: '已结束',
-                                    speaking: false,
-                                    wordCount: speaker.word_count,
-                                    speakingTime: speaker.speaking_time
-                                });
+                    
+                    // 查看会议
+                    viewMeeting(meetingId) {
+                        // 如果是活跃会议，跳转到会议创建页面的录制模式
+                        const activeMeeting = this.activeMeetings.find(m => m.id === meetingId);
+                        if (activeMeeting) {
+                            layui.layer.open({
+                                type: 2,
+                                title: `会议记录 - ${activeMeeting.title}`,
+                                offset: 'r',
+                                anim: 'slideLeft',
+                                shade: 0.1,
+                                shadeClose: true,
+                                content: `/meeting_create?taskId=${meetingId}`,
+                                area: ['75%', '100%'],
+                                end: () => {
+                                    this.loadMeetings();
+                                }
                             });
-                        }
-
-                        // 显示完成通知
-                        this.showSuccess('会议监控已完成，摘要已生成！');
-                    },
-
-                    showError(message) {
-                        // 简单的错误提示（可以替换为更好的UI组件）
-                        alert('错误: ' + message);
-                    },
-
-                    showSuccess(message) {
-                        // 简单的成功提示（可以替换为更好的UI组件）
-                        console.log('成功: ' + message);
-                    },
-
-
-
-                    getMonitoringStatusText() {
-                        const statusMap = {
-                            monitoring: '监控中',
-                            stopped: '已停止'
-                        };
-                        return statusMap[this.monitoringStatus] || this.monitoringStatus;
-                    },
-
-                    addMockTranscript() {
-                        const mockTexts = [
-                            '大家好，欢迎参加今天的产品讨论会议。',
-                            '我们今天主要讨论新版本的功能特性。',
-                            '关于用户体验方面，我们需要重点关注界面的简洁性。',
-                            '技术实现上，我建议采用模块化的架构设计。',
-                            '项目时间线需要再次确认，确保按时交付。',
-                            '我们还需要考虑性能优化的问题。',
-                            '用户反馈显示加载速度需要提升。',
-                            '测试环节要覆盖各种边界情况。'
-                        ];
-
-                        const randomText = mockTexts[Math.floor(Math.random() * mockTexts.length)];
-                        const now = new Date();
-                        const timeStr = now.toLocaleTimeString();
-
-                        this.transcripts.push({
-                            time: timeStr,
-                            text: randomText
-                        });
-
-                        // 保持最多50条记录
-                        if (this.transcripts.length > 50) {
-                            this.transcripts.shift();
-                        }
-
-                        // 模拟参与者发言状态
-                        this.participants.forEach(p => p.speaking = false);
-                        if (this.participants.length > 0) {
-                            const randomParticipant = this.participants[Math.floor(Math.random() * this.participants.length)];
-                            randomParticipant.speaking = true;
+                        } else {
+                            // 已完成的会议，跳转到任务详情页
+                            layui.layer.open({
+                                type: 2,
+                                title: '会议详情',
+                                offset: 'r',
+                                anim: 'slideLeft',
+                                shade: 0.1,
+                                shadeClose: true,
+                                content: `/meeting_detail?id=${meetingId}`,
+                                area: ['85%', '100%']
+                            })
                         }
                     },
+                    
+                    // 下载会议
+                    async downloadMeeting(meetingId) {
+                        try {
+                            const response = await http.get(`/api/tasks/meeting/${meetingId}/download-audio`, {
+                                responseType: 'blob'
+                            });
 
-                    generateSummary() {
-                        if (this.transcripts.length === 0) return;
-
-                        // 模拟生成会议总结
-                        this.summary = {
-                            content: '本次会议主要讨论了新产品版本的开发计划和技术方案。团队就用户体验优化、技术架构选择、项目时间安排等关键议题进行了深入交流。',
-                            keyPoints: [
-                                '确定采用模块化架构设计',
-                                '优先解决性能和加载速度问题',
-                                '加强用户体验测试',
-                                '按时交付项目里程碑'
-                            ],
-                            keywords: ['产品开发', '用户体验', '技术架构', '性能优化', '项目管理']
-                        };
-                    },
-
-                    clearTranscript() {
-                        if (confirm('确定要清除所有转录内容吗？')) {
-                            this.transcripts = [];
+                            const url = window.URL.createObjectURL(new Blob([response], { type: 'audio/wav' }));
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `meeting_${meetingId}.wav`;
+                            link.click();
+                            window.URL.revokeObjectURL(url);
+                            
+                            layer.msg('录制文件下载成功', {icon: 1});
+                        } catch (error) {
+                            layer.msg(`下载失败: ${error.message}`, {icon: 2});
                         }
                     },
-
-                    exportTranscript() {
-                        if (this.transcripts.length === 0) {
-                            alert('暂无转录内容可导出');
+                    
+                    // 删除会议
+                    async deleteMeeting(meetingId) {
+                        if (!meetingId) {
+                            layer.msg('没有找到要删除的会议', {icon: 0});
                             return;
                         }
 
-                        // 生成导出内容
-                        let content = `会议记录 - ${this.meetingConfig.name}\n`;
-                        content += `时间：${new Date().toLocaleString()}\n`;
-                        content += `语言：${this.meetingConfig.language}\n\n`;
-                        content += '=== 转录内容 ===\n';
+                        // 找到对应的会议信息用于显示
+                        const targetMeeting = this.meetings.find(m => m.id === meetingId) ||
+                            this.activeMeetings.find(m => m.id === meetingId);
+                        const meetingTitle = targetMeeting ? targetMeeting.title : '未命名会议';
 
-                        this.transcripts.forEach(item => {
-                            content += `[${item.time}] ${item.text}\n`;
+                        layer.confirm(`确定要删除会议"${meetingTitle}"的记录吗？\n\n删除后无法恢复！`, {
+                            icon: 3,
+                            title: '确认删除'
+                        }, async (index) => {
+                            try {
+                                layer.load(1, {content: '正在删除会议记录...'});
+
+                                await http.delete(`/api/tasks/meeting/${meetingId}`);
+
+                                layer.closeAll('loading');
+                                layer.close(index);
+
+                                // 如果删除的是当前会议，清理当前状态
+                                if (this.currentMeeting && this.currentMeeting.id === meetingId) {
+                                    this.isRecording = false;
+                                    this.currentMeeting = null;
+                                    this.transcriptionSegments = [];
+                                    this.closeEventSource();
+                                }
+
+                                await this.loadMeetings();
+                                layer.msg('删除成功', {icon: 1});
+                            } catch (error) {
+                                layer.closeAll('loading');
+                                layer.close(index);
+                                layer.msg(`删除失败: ${error.message}`, {icon: 2});
+                            }
                         });
-
-                        // 创建下载
-                        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `会议记录_${this.meetingConfig.name}_${new Date().toISOString().slice(0, 10)}.txt`;
-                        a.click();
-                        URL.revokeObjectURL(url);
                     },
-
-                    addParticipant() {
-                        const name = prompt('请输入参与者姓名：');
-                        if (name && name.trim()) {
-                            this.participants.push({
-                                id: Date.now(),
-                                name: name.trim(),
-                                status: '在线',
-                                speaking: false
-                            });
+                    
+                    // 关闭对话框
+                    closeMeetingDialog() {
+                        this.showMeetingDialog = false;
+                    },
+                    
+                    // 开始持续时间计时器
+                    startDurationTimer() {
+                        this.durationTimer = setInterval(() => {
+                            // 强制更新计算属性
+                            this.$forceUpdate();
+                        }, 1000);
+                    },
+                    
+                    // 停止持续时间计时器
+                    stopDurationTimer() {
+                        if (this.durationTimer) {
+                            clearInterval(this.durationTimer);
+                            this.durationTimer = null;
                         }
                     },
-
-                    simulateVolumeLevel() {
-                        this.volumeTimer = setInterval(() => {
-                            if (this.recordingStatus === 'recording') {
-                                // 模拟音量变化
-                                this.volumeLevel = Math.floor(Math.random() * 8) + 1;
-                            } else {
-                                this.volumeLevel = 0;
-                            }
-                        }, 200);
+                    
+                    // 格式化时间
+                    formatTime(time) {
+                        return new Date(time).toLocaleString();
                     },
-
-                    getRecordingStatusText() {
-                        return this.recordingStatus === 'recording' ? '录制中' : '已停止';
+                    
+                    // 格式化时间戳
+                    formatTimestamp(time) {
+                        return new Date(time).toLocaleTimeString();
                     },
-
-                    formatTime(seconds) {
+                    
+                    // 计算持续时间
+                    calculateDuration(startTime) {
+                        const now = new Date();
+                        const start = new Date(startTime);
+                        const diff = Math.floor((now - start) / 1000);
+                        
+                        const hours = Math.floor(diff / 3600);
+                        const minutes = Math.floor((diff % 3600) / 60);
+                        const seconds = diff % 60;
+                        
+                        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    },
+                    
+                    // 格式化持续时间
+                    formatDuration(seconds) {
                         const hours = Math.floor(seconds / 3600);
                         const minutes = Math.floor((seconds % 3600) / 60);
                         const secs = seconds % 60;
-
+                        
                         if (hours > 0) {
-                            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                            return `${hours}小时${minutes}分钟`;
+                        } else if (minutes > 0) {
+                            return `${minutes}分钟${secs}秒`;
                         } else {
-                            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                            return `${secs}秒`;
+                        }
+                    },
+                    
+                    // 获取状态文本
+                    getStatusText(status) {
+                        const statusMap = {
+                            'recording': '录制中',
+                            'paused': '已暂停',
+                            'processing': '处理中',
+                            'completed': '已完成',
+                            'error': '出错'
+                        };
+                        return statusMap[status] || status;
+                    },
+
+                    // 获取说话人样式类
+                    getSpeakerClass(speaker) {
+                        const speakerMap = {
+                            'Speaker_1': 'speaker-1',
+                            'Speaker_2': 'speaker-2',
+                            'Speaker_3': 'speaker-3',
+                            'Speaker_4': 'speaker-4'
+                        };
+                        return speakerMap[speaker] || 'speaker-default';
+                    },
+
+                    // 获取情感样式类
+                    getEmotionClass(emotion) {
+                        return `emotion-${emotion}`;
+                    },
+
+                    // 获取情感文本
+                    getEmotionText(emotion) {
+                        const emotionMap = {
+                            'happy': '😊',
+                            'sad': '😢',
+                            'angry': '😠',
+                            'surprised': '😲',
+                            'neutral': '😐'
+                        };
+                        return emotionMap[emotion] || '😐';
+                    },
+
+                    // 获取置信度样式类
+                    getConfidenceClass(confidence) {
+                        if (confidence >= 0.8) return 'confidence-high';
+                        if (confidence >= 0.6) return 'confidence-medium';
+                        return 'confidence-low';
+                    },
+
+                    // 检查平台并显示相应提示
+                    checkPlatform() {
+                        const userAgent = navigator.userAgent;
+                        const isMacOS = /Mac|iPhone|iPad|iPod/.test(userAgent);
+
+                        if (isMacOS) {
+                            const notice = document.getElementById('macosNotice');
+                            if (notice) {
+                                notice.style.display = 'block';
+                            }
                         }
                     }
                 }
             }).mount('#app');
-
-
-
-
-
-        })
+        });
     </script>
 </body>
-
 </html>

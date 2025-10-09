@@ -377,7 +377,7 @@ class AudioBuffer:
         self.buffer = np.array([], dtype=np.float32)
         self.lock = threading.Lock()
 
-    def add_audio(self, audio_data: np.ndarray):
+    def add_audio(self, audio_data: np.ndarray, timestamp: float = None):
         """添加音频数据到缓冲区"""
         with self.lock:
             self.buffer = np.concatenate([self.buffer, audio_data])
@@ -397,6 +397,19 @@ class AudioBuffer:
                 return self.buffer[-samples:].copy()
             else:
                 return self.buffer.copy()
+
+    def get_latest_audio(self, duration: float = 5.0) -> Optional[np.ndarray]:
+        """获取最新的音频数据"""
+        with self.lock:
+            if len(self.buffer) == 0:
+                return None
+
+            samples = int(duration * self.sample_rate)
+            if len(self.buffer) >= samples:
+                return self.buffer[-samples:].copy()
+            else:
+                # 如果缓冲区数据不足，返回所有数据
+                return self.buffer.copy() if len(self.buffer) > 0 else None
 
     def clear(self):
         """清空缓冲区"""

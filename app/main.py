@@ -180,6 +180,8 @@ from biz.routes.video_api import video_router
 from biz.routes.meeting_api import meeting_router
 from biz.routes.model_api import model_router
 from biz.routes.settings_api import settings_router
+from biz.routes.notification_api import notification_router
+from biz.routes.voice_analysis_api import voice_analysis_router
 
 
 @asynccontextmanager
@@ -262,6 +264,8 @@ app.include_router(video_router)
 app.include_router(meeting_router)
 app.include_router(model_router)
 app.include_router(settings_router)
+app.include_router(notification_router)
+app.include_router(voice_analysis_router)
 
 
 @app.get("/")

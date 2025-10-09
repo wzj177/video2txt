@@ -4,19 +4,69 @@
 会议监控API路由
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Body
 from fastapi.responses import StreamingResponse
 from typing import Dict, Any, Optional
 import json
 import asyncio
 import uuid
 from datetime import datetime
+from pydantic import BaseModel
+import logging
 
 from ..services.task_service import task_service
-from ..services.meeting_service import meeting_service
+from ..services.realtime_meeting_service import realtime_meeting_service
 from core.audio import AudioPermissionChecker, SystemAudioCapture
+from ..middleware.exception_handler import (
+    create_success_response,
+    create_error_response,
+)
+
+# 配置日志
+logger = logging.getLogger(__name__)
 
 meeting_router = APIRouter(prefix="/api/tasks/meeting", tags=["meeting"])
+
+
+async def get_active_meetings():
+    """获取活跃的会议（正在进行或准备中的会议）"""
+    try:
+        # 获取所有会议任务
+        tasks = await task_service.get_tasks("meeting", None, 100)
+
+        # 筛选活跃状态的会议
+        active_statuses = [
+            "ready",
+            "recording",
+            "paused",
+            "starting_audio",
+            "initializing",
+        ]
+        active_meetings = []
+
+        for task in tasks:
+            if task.get("status") in active_statuses:
+                meeting_info = {
+                    "id": task["id"],
+                    "title": task.get("config", {}).get("title", "未命名会议"),
+                    "status": task.get("status"),
+                    "created_at": task.get("created_at"),
+                }
+                active_meetings.append(meeting_info)
+
+        return active_meetings
+    except Exception as e:
+        logger.error(f"获取活跃会议失败: {e}")
+        return []
+
+
+class MeetingCreateRequest(BaseModel):
+    title: str
+    audioSource: str = "system"
+    engine: str = "sensevoice"
+    language: str = "auto"
+    enableSpeakerDiarization: bool = True
+    enableRealTimeSummary: bool = False
 
 
 @meeting_router.get("/stats")
@@ -24,9 +74,26 @@ async def get_meeting_stats() -> Dict[str, Any]:
     """获取会议任务统计"""
     try:
         stats = await task_service.get_task_stats("meeting")
-        return {"success": True, "data": stats}
+        return create_success_response(stats, "获取会议统计成功")
     except Exception as e:
-        return {"success": False, "error": str(e), "data": {}}
+        return create_error_response(f"获取会议统计失败: {str(e)}", 500)
+
+
+@meeting_router.get("/active")
+async def get_active_meetings_api() -> Dict[str, Any]:
+    """获取当前活跃的会议"""
+    try:
+        active_meetings = await get_active_meetings()
+        return create_success_response(
+            {
+                "meetings": active_meetings,
+                "count": len(active_meetings),
+                "hasActive": len(active_meetings) > 0,
+            },
+            "获取活跃会议成功",
+        )
+    except Exception as e:
+        return create_error_response(f"获取活跃会议失败: {str(e)}", 500)
 
 
 @meeting_router.get("/audio-permissions")
@@ -42,20 +109,18 @@ async def check_audio_permissions() -> Dict[str, Any]:
         # 检查系统音频权限
         system_audio_permission = AudioPermissionChecker.check_system_audio_permission()
 
-        return {
-            "success": True,
-            "data": {
-                "system_info": system_info,
-                "microphone": mic_permission,
-                "system_audio": system_audio_permission,
-                "overall_status": (
-                    mic_permission.get("granted", False)
-                    or system_audio_permission.get("granted", False)
-                ),
-            },
+        data = {
+            "system_info": system_info,
+            "microphone": mic_permission,
+            "system_audio": system_audio_permission,
+            "overall_status": (
+                mic_permission.get("granted", False)
+                or system_audio_permission.get("granted", False)
+            ),
         }
+        return create_success_response(data, "音频权限检查完成")
     except Exception as e:
-        return {"success": False, "error": str(e), "data": {}}
+        return create_error_response(f"音频权限检查失败: {str(e)}", 500)
 
 
 @meeting_router.get("/audio-devices")
@@ -71,21 +136,19 @@ async def get_audio_devices() -> Dict[str, Any]:
         if system_device_id is not None:
             system_device_info = capture.get_device_info(system_device_id)
 
-        return {
-            "success": True,
-            "data": {
-                "input_devices": devices.get("input", []),
-                "output_devices": devices.get("output", []),
-                "loopback_devices": devices.get("loopback", []),
-                "recommended_system_device": {
-                    "id": system_device_id,
-                    "info": system_device_info,
-                },
-                "total_devices": sum(len(devices.get(k, [])) for k in devices.keys()),
+        data = {
+            "input_devices": devices.get("input", []),
+            "output_devices": devices.get("output", []),
+            "loopback_devices": devices.get("loopback", []),
+            "recommended_system_device": {
+                "id": system_device_id,
+                "info": system_device_info,
             },
+            "total_devices": sum(len(devices.get(k, [])) for k in devices.keys()),
         }
+        return create_success_response(data, "获取音频设备列表成功")
     except Exception as e:
-        return {"success": False, "error": str(e), "data": {}}
+        return create_error_response(f"获取音频设备列表失败: {str(e)}", 500)
 
 
 @meeting_router.get("/permission-help")
@@ -93,35 +156,38 @@ async def get_permission_help() -> Dict[str, Any]:
     """获取权限设置帮助信息"""
     try:
         help_info = AudioPermissionChecker.get_permission_help()
-
-        return {"success": True, "data": help_info}
+        return create_success_response(help_info, "获取权限帮助信息成功")
     except Exception as e:
-        return {"success": False, "error": str(e), "data": {}}
+        return create_error_response(f"获取权限帮助信息失败: {str(e)}", 500)
 
 
-@meeting_router.post("")
+@meeting_router.post("/create")
 async def create_meeting_task(
-    background_tasks: BackgroundTasks,
-    meetingApp: str = "auto",
-    sourceLanguage: str = "auto",
-    targetLanguage: str = "none",
-    engine: str = "sensevoice",
-    captureMode: str = "system",
-    realtime: bool = True,
+    request: MeetingCreateRequest,
 ):
     """创建会议监控任务"""
     try:
+        # 检查是否已有活跃的会议
+        active_meetings = await get_active_meetings()
+        if active_meetings:
+            active_meeting = active_meetings[0]
+            return create_error_response(
+                f"已有会议「{active_meeting.get('title', '未命名会议')}」正在进行中，请先结束当前会议再创建新会议",
+                400,
+                "ActiveMeetingExists",
+            )
+
         # 生成任务ID
         task_id = str(uuid.uuid4())
 
         # 创建任务配置
         config = {
-            "meeting_app": meetingApp,
-            "source_language": sourceLanguage,
-            "target_language": targetLanguage,
-            "engine": engine,
-            "capture_mode": captureMode,
-            "realtime": realtime,
+            "title": request.title,
+            "audio_source": request.audioSource,
+            "engine": request.engine,
+            "language": request.language,
+            "enable_speaker_diarization": request.enableSpeakerDiarization,
+            "enable_realtime_summary": request.enableRealTimeSummary,
             "created_at": datetime.now().isoformat(),
         }
 
@@ -138,12 +204,14 @@ async def create_meeting_task(
         )
 
         # 启动会议处理器
-        success = await meeting_service.create_meeting_processor(task_id, config)
+        success = await realtime_meeting_service.create_meeting_processor(
+            task_id, config
+        )
 
         if not success:
             raise HTTPException(status_code=500, detail="启动会议处理器失败")
 
-        return {"success": True, "task_id": task_id, "message": "会议监控任务创建成功"}
+        return create_success_response({"taskId": task_id}, "会议监控任务创建成功")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建会议任务失败: {str(e)}")
@@ -163,7 +231,7 @@ async def stream_meeting_results(task_id: str):
                 return
 
             # 获取会议处理器
-            processor = meeting_service.get_meeting_processor(task_id)
+            processor = realtime_meeting_service.get_meeting_processor(task_id)
             if not processor:
                 yield f"data: {json.dumps({'type': 'error', 'message': '会议处理器不存在'})}\n\n"
                 return
@@ -225,6 +293,68 @@ async def stream_meeting_results(task_id: str):
     )
 
 
+@meeting_router.post("/{task_id}/start-recording")
+async def start_meeting_recording(task_id: str):
+    """开始会议录制"""
+    try:
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 开始录制
+        success = await realtime_meeting_service.start_meeting_recording(task_id)
+
+        if success:
+            return create_success_response(None, "录制已开始")
+        else:
+            raise HTTPException(status_code=500, detail="开始录制失败")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"开始录制失败: {str(e)}")
+
+
+@meeting_router.post("/{task_id}/pause")
+async def pause_meeting_task(task_id: str):
+    """暂停会议监控任务"""
+    try:
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 暂停会议处理器
+        success = await realtime_meeting_service.pause_meeting_processor(task_id)
+
+        if success:
+            await task_service.update_task("meeting", task_id, {"status": "paused"})
+            return create_success_response(None, "会议监控已暂停")
+        else:
+            raise HTTPException(status_code=500, detail="暂停会议处理器失败")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"暂停监控失败: {str(e)}")
+
+
+@meeting_router.post("/{task_id}/resume")
+async def resume_meeting_task(task_id: str):
+    """继续会议监控任务"""
+    try:
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 继续会议处理器
+        success = await realtime_meeting_service.resume_meeting_processor(task_id)
+
+        if success:
+            await task_service.update_task("meeting", task_id, {"status": "recording"})
+            return create_success_response(None, "会议监控已继续")
+        else:
+            raise HTTPException(status_code=500, detail="继续会议处理器失败")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"继续监控失败: {str(e)}")
+
+
 @meeting_router.post("/{task_id}/stop")
 async def stop_meeting_task(task_id: str):
     """停止会议监控任务"""
@@ -234,15 +364,187 @@ async def stop_meeting_task(task_id: str):
             raise HTTPException(status_code=404, detail="任务不存在")
 
         # 停止会议处理器
-        success = await meeting_service.stop_meeting_processor(task_id)
+        success = await realtime_meeting_service.stop_meeting_processor(task_id)
 
         if not success:
             logger.warning(f"停止会议处理器失败: {task_id}")
 
-        return {"success": True, "message": "会议监控已停止"}
+        # 更新任务状态
+        await task_service.update_task("meeting", task_id, {"status": "stopped"})
+
+        return create_success_response(None, "会议监控已停止")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"停止监控失败: {str(e)}")
+
+
+@meeting_router.get("/{task_id}/download")
+async def download_meeting_task(task_id: str):
+    """下载会议记录"""
+    try:
+        from fastapi.responses import FileResponse
+        import zipfile
+        import tempfile
+        import os
+
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 创建临时zip文件
+        temp_dir = tempfile.mkdtemp()
+        zip_path = os.path.join(temp_dir, f"meeting_{task_id}.zip")
+
+        with zipfile.ZipFile(zip_path, "w") as zip_file:
+            # 添加转录文本
+            if task.get("results", {}).get("transcript"):
+                transcript_content = task["results"]["transcript"]
+                zip_file.writestr("transcript.txt", transcript_content)
+
+            # 添加总结内容
+            if task.get("results", {}).get("summary"):
+                summary_content = task["results"]["summary"]
+                zip_file.writestr("summary.md", summary_content)
+
+            # 添加其他结果文件
+            for key, value in task.get("results", {}).items():
+                if key not in ["transcript", "summary"] and isinstance(value, str):
+                    zip_file.writestr(f"{key}.txt", value)
+
+        return FileResponse(
+            zip_path, filename=f"meeting_{task_id}.zip", media_type="application/zip"
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"下载失败: {str(e)}")
+
+
+@meeting_router.get("/{task_id}/download-audio")
+async def download_meeting_audio(task_id: str):
+    """下载会议录制音频文件"""
+    try:
+        from fastapi.responses import FileResponse
+        from pathlib import Path
+
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 获取音频文件路径
+        audio_path = task.get("config", {}).get("audio_path")
+        if not audio_path:
+            raise HTTPException(status_code=404, detail="音频文件不存在")
+
+        audio_file = Path(audio_path)
+        if not audio_file.exists():
+            raise HTTPException(status_code=404, detail="音频文件未找到")
+
+        return FileResponse(
+            audio_file, filename=f"meeting_{task_id}.wav", media_type="audio/wav"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"下载音频失败: {str(e)}")
+
+
+@meeting_router.delete("/{task_id}")
+async def delete_meeting_task(task_id: str):
+    """删除会议记录"""
+    try:
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 如果任务正在运行，先停止
+        if task.get("status") in ["recording", "paused"]:
+            await realtime_meeting_service.stop_meeting_processor(task_id)
+
+        # 删除任务
+        success = await task_service.delete_task("meeting", task_id)
+
+        if success:
+            return create_success_response(None, "会议记录已删除")
+        else:
+            raise HTTPException(status_code=500, detail="删除任务失败")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除失败: {str(e)}")
+
+
+@meeting_router.get("/list")
+async def get_meeting_list(
+    status: Optional[str] = None,
+    date: Optional[str] = None,
+    keyword: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 10,
+):
+    """获取会议列表"""
+    try:
+        # 获取所有会议任务
+        tasks = await task_service.get_tasks(
+            "meeting", status, 1000
+        )  # 先获取足够多的任务进行筛选
+
+        # 筛选
+        filtered_tasks = []
+        for task in tasks:
+            # 状态筛选
+            if status and task.get("status") != status:
+                continue
+
+            # 日期筛选
+            if date:
+                task_date = datetime.fromisoformat(task.get("created_at", "")).date()
+                filter_date = datetime.fromisoformat(date).date()
+                if task_date != filter_date:
+                    continue
+
+            # 关键词筛选
+            if keyword:
+                title = task.get("config", {}).get("title", "")
+                if keyword.lower() not in title.lower():
+                    continue
+
+            # 转换任务格式
+            meeting = {
+                "id": task["id"],
+                "title": task['name'],
+                "startTime": task.get("created_at"),
+                "status": task.get("status", "unknown"),
+                "duration": task.get("duration"),
+                "stats": {
+                    "transcriptLength": len(
+                        task.get("results", {}).get("transcript", "")
+                    ),
+                    "speakers": len(task.get("results", {}).get("speakers", {})),
+                },
+            }
+            filtered_tasks.append(meeting)
+
+        # 排序（最新的在前）
+        filtered_tasks.sort(key=lambda x: x["startTime"], reverse=True)
+
+        # 分页
+        total = len(filtered_tasks)
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_tasks = filtered_tasks[start:end]
+
+        result_data = {
+            "meetings": paginated_tasks,
+            "pagination": {
+                "page": page,
+                "pageSize": page_size,
+                "total": total,
+                "totalPages": (total + page_size - 1) // page_size,
+            },
+        }
+        return create_success_response(result_data, "获取会议列表成功")
+    except Exception as e:
+        return create_error_response(f"获取会议列表失败: {str(e)}", 500)
 
 
 @meeting_router.get("/{task_id}")
@@ -253,7 +555,7 @@ async def get_meeting_task(task_id: str):
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
 
-        return {"success": True, "task": task}
+        return create_success_response(task, "获取会议任务成功")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取任务失败: {str(e)}")
@@ -282,8 +584,7 @@ async def test_audio_capture(captureMode: str = "system"):
         test_result = audio_capture.test_capture(duration=2.0)
 
         if test_result["success"]:
-            return {
-                "success": True,
+            data = {
                 "backend": test_result["backend"],
                 "device": test_result["device"],
                 "sampleRate": f"{test_result['sample_rate']} Hz",
@@ -291,19 +592,20 @@ async def test_audio_capture(captureMode: str = "system"):
                 "maxVolume": test_result.get("max_volume", 0),
                 "samples": test_result.get("samples", 0),
                 "availableDevices": len(devices_info.get("devices", [])),
-                "message": "音频设备测试成功",
             }
+            return create_success_response(data, "音频设备测试成功")
         else:
-            return {
-                "success": False,
+            error_data = {
                 "backend": test_result["backend"],
                 "error": test_result.get("error", "未知错误"),
-                "message": f"音频测试失败: {test_result.get('error', '未知错误')}",
             }
+            return create_error_response(
+                f"音频测试失败: {test_result.get('error', '未知错误')}", 500
+            )
 
     except Exception as e:
         logger.error(f"音频测试异常: {e}")
-        return {"success": False, "message": f"音频测试失败: {str(e)}"}
+        return create_error_response(f"音频测试失败: {str(e)}", 500)
 
 
 @meeting_router.post("/request-permissions")
@@ -312,22 +614,20 @@ async def request_audio_permissions() -> Dict[str, Any]:
     try:
         result = AudioPermissionChecker.request_microphone_permission()
 
-        return {
-            "success": result.get("success", False),
-            "data": {
+        if result.get("success", False):
+            data = {
                 "permission_dialog_triggered": result.get(
                     "permission_dialog_triggered", False
                 ),
                 "error": result.get("error"),
-                "message": (
-                    "权限申请已触发，请在系统对话框中允许访问"
-                    if result.get("success")
-                    else result.get("error", "权限申请失败")
-                ),
-            },
-        }
+            }
+            return create_success_response(
+                data, "权限申请已触发，请在系统对话框中允许访问"
+            )
+        else:
+            return create_error_response(result.get("error", "权限申请失败"), 400)
     except Exception as e:
-        return {"success": False, "error": str(e), "data": {}}
+        return create_error_response(f"权限申请失败: {str(e)}", 500)
 
 
 @meeting_router.post("/test-audio-capture")
@@ -342,7 +642,7 @@ async def test_audio_capture_new(
             device_id = capture.get_system_audio_device()
 
         if device_id is None:
-            return {"success": False, "error": "未找到可用的音频设备", "data": {}}
+            return create_error_response("未找到可用的音频设备", 400)
 
         # 获取设备信息
         device_info = capture.get_device_info(device_id)
@@ -388,18 +688,20 @@ async def test_audio_capture_new(
         else:
             test_result["error"] = "无法启动音频捕获"
 
-        return {
-            "success": test_result["success"],
-            "data": {
+        if test_result["success"]:
+            data = {
                 "device_id": device_id,
                 "device_info": device_info,
                 "test_duration": duration,
                 "samples_captured": test_result["samples_captured"],
                 "average_volume": test_result["average_volume"],
                 "max_volume": test_result["max_volume"],
-                "error": test_result["error"],
-            },
-        }
+            }
+            return create_success_response(data, "音频捕获测试成功")
+        else:
+            return create_error_response(
+                test_result.get("error", "音频捕获测试失败"), 500
+            )
 
     except Exception as e:
-        return {"success": False, "error": str(e), "data": {}}
+        return create_error_response(f"音频捕获测试失败: {str(e)}", 500)

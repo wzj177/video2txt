@@ -4,9 +4,10 @@
 听语AI - 视频处理API路由
 """
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Body
 from fastapi.responses import StreamingResponse, FileResponse
 from typing import Dict, Any, List, Optional
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 import json
 import asyncio
@@ -14,6 +15,7 @@ import time
 from pathlib import Path
 import weakref
 from collections import defaultdict
+from datetime import datetime
 
 from ..services.task_service import task_service
 from ..services.video_service import video_service
@@ -23,8 +25,23 @@ from ..middleware.exception_handler import (
 )
 
 # 创建视频API路由器
+video_router = APIRouter(prefix="/api/tasks/video", tags=["video"])
+
 # 全局流式事件存储
 _streaming_events = defaultdict(list)
+
+
+class TranscriptUpdateRequest(BaseModel):
+    """转录文本更新请求模型"""
+
+    transcript: str
+
+
+class SegmentationRequest(BaseModel):
+    """文本分段请求模型"""
+
+    text: str
+    method: str = "auto"  # auto, basic, ai, hybrid
 
 
 async def push_streaming_event(task_id: str, event_type: str, data: dict):
@@ -35,9 +52,6 @@ async def push_streaming_event(task_id: str, event_type: str, data: dict):
     # 限制事件数量，避免内存泄漏
     if len(_streaming_events[task_id]) > 100:
         _streaming_events[task_id] = _streaming_events[task_id][-50:]
-
-
-video_router = APIRouter(prefix="/api/tasks/video", tags=["video"])
 
 
 @video_router.get("")
@@ -199,6 +213,104 @@ async def get_video_task(task_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail="任务未找到")
 
     return create_success_response(task)
+
+
+@video_router.put("/{task_id}/transcript")
+async def update_transcript(
+    task_id: str, request: TranscriptUpdateRequest
+) -> Dict[str, Any]:
+    """更新任务的转录文本"""
+    try:
+        # 获取任务
+        task = await task_service.get_task_by_id("av", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务未找到")
+
+        # 获取新的转录文本
+        new_transcript = request.transcript
+        if not new_transcript.strip():
+            raise HTTPException(status_code=400, detail="转录文本不能为空")
+
+        # 更新任务结果
+        results = task.get("results", {})
+        results["transcript"] = new_transcript.strip()
+
+        # 保存到数据库
+        await task_service.update_task(
+            "av",
+            task_id,
+            {"results": results, "updated_at": datetime.now().isoformat()},
+        )
+
+        return create_success_response(
+            {"message": "转录文本更新成功", "transcript": new_transcript.strip()}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"更新转录文本失败: {e}")
+        return create_error_response(f"更新失败: {str(e)}")
+
+
+@video_router.post("/segment-text")
+async def segment_text(request: SegmentationRequest) -> Dict[str, Any]:
+    """对文本进行智能分段"""
+    try:
+        from ..services.text_segmentation import segment_transcript
+        import json
+
+        # 加载settings.json
+        settings_path = Path(__file__).parent.parent.parent / "config" / "settings.json"
+        settings = {}
+        if settings_path.exists():
+            try:
+                with open(settings_path, "r", encoding="utf-8") as f:
+                    settings = json.load(f)
+            except Exception as e:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"加载settings.json失败: {e}")
+
+        # 进行文本分段
+        from ..services.text_segmentation import get_segmentation_service
+
+        service = get_segmentation_service(settings)
+        segments = service.segment_text(request.text, request.method)
+
+        # 转换为字典格式
+        segments_dict = [
+            {
+                "text": seg.text,
+                "start_index": seg.start_index,
+                "end_index": seg.end_index,
+                "segment_type": seg.segment_type,
+                "confidence": seg.confidence,
+                "length": len(seg.text),
+                "metadata": seg.metadata or {},
+            }
+            for seg in segments
+        ]
+
+        return create_success_response(
+            {
+                "segments": segments_dict,
+                "total_segments": len(segments_dict),
+                "method_used": request.method,
+                "total_length": len(request.text),
+            }
+        )
+
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"文本分段失败: {e}")
+        return create_error_response(f"分段失败: {str(e)}")
 
 
 @video_router.get("/{task_id}/stream")

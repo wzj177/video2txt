@@ -6,13 +6,11 @@
     "max_tokens": 2000
   },
   "ollama": {
-    "installed": true,
-    "version": "ollama version is 0.11.10",
-    "running": true,
+    "installed": false,
+    "version": "",
+    "running": false,
     "base_url": "http://localhost:11434",
-    "models": [
-      "qwen3:1.7b"
-    ]
+    "models": []
   },
   "system": {
     "default_language": "zh",

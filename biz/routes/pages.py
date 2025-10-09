@@ -85,6 +85,26 @@ async def meeting2txt():
         return HTMLResponse("<h1>听语AI - 会议转文字页面未找到</h1>", status_code=404)
 
 
+@pages_router.get("/meeting_create", response_class=HTMLResponse)
+async def meeting_create():
+    """创建会议页面"""
+    meeting_create_file = PUBLIC_DIR / "pages" / "meeting_create.html"
+    if meeting_create_file.exists():
+        return FileResponse(meeting_create_file)
+    else:
+        return HTMLResponse("<h1>听语AI - 创建会议页面未找到</h1>", status_code=404)
+
+
+@pages_router.get("/meeting_detail", response_class=HTMLResponse)
+async def meeting_detail():
+    """会议详情页面"""
+    meeting_detail_file = PUBLIC_DIR / "pages" / "meeting_detail.html"
+    if meeting_detail_file.exists():
+        return FileResponse(meeting_detail_file)
+    else:
+        return HTMLResponse("<h1>听语AI - 会议详情页面未找到</h1>", status_code=404)
+
+
 @pages_router.get("/settings", response_class=HTMLResponse)
 async def settings():
     """设置页面"""

@@ -20,6 +20,7 @@ class ContentDomain(Enum):
     """内容领域枚举"""
 
     EDUCATION = "education"  # 教育学习
+    EXAM_REVIEW = "exam_review"  # 试卷评讲
     TRAVEL = "travel"  # 旅游探索
     COOKING = "cooking"  # 烹饪美食
     LIFESTYLE = "lifestyle"  # 生活方式
@@ -76,6 +77,45 @@ class AIContentAnalyzer:
                 "讲解",
                 "分析",
                 "总结",
+            ],
+            ContentDomain.EXAM_REVIEW: [
+                "试卷",
+                "题目",
+                "答案",
+                "解析",
+                "评讲",
+                "选择题",
+                "填空题",
+                "解答题",
+                "应用题",
+                "证明题",
+                "计算题",
+                "分析题",
+                "错误",
+                "正确",
+                "得分",
+                "失分",
+                "考点",
+                "知识点",
+                "解题",
+                "思路",
+                "方法",
+                "技巧",
+                "注意",
+                "易错",
+                "难点",
+                "重点",
+                "公式",
+                "定理",
+                "概念",
+                "原理",
+                "步骤",
+                "过程",
+                "结果",
+                "检查",
+                "验证",
+                "总结",
+                "归纳",
             ],
             ContentDomain.TRAVEL: [
                 "旅游",
@@ -361,6 +401,7 @@ class AIContentAnalyzer:
         # 构建领域描述
         domain_descriptions = {
             ContentDomain.EDUCATION: "教育学习：包含教学、培训、知识讲解、技能传授等内容",
+            ContentDomain.EXAM_REVIEW: "试卷评讲：包含试题解析、答案讲解、解题思路、考点分析等内容",
             ContentDomain.TRAVEL: "旅游探索：包含旅行攻略、景点介绍、文化体验等内容",
             ContentDomain.COOKING: "烹饪美食：包含菜谱制作、烹饪技巧、美食分享等内容",
             ContentDomain.LIFESTYLE: "生活方式：包含日常生活、家居装修、时尚搭配等内容",
@@ -384,7 +425,7 @@ class AIContentAnalyzer:
 可选领域：
 {domains_text}
 
-请以JSON格式返回分类结果：
+Please以JSON格式返回分类结果：
 {{
     "primary_domain": "主要领域（从上述领域中选择一个）",
     "secondary_domains": ["次要领域1", "次要领域2"],
@@ -392,13 +433,13 @@ class AIContentAnalyzer:
     "reasoning": "分类理由"
 }}
 
-请确保返回有效的JSON格式，primary_domain必须是上述领域之一。"""
+Please确保返回有效的JSON格式，primary_domain必须是上述领域之一。"""
 
         user_prompt = f"""请对以下内容进行领域分类：
 
-主题：{basic_analysis.get('main_theme', '未知')}
-关键话题：{', '.join(basic_analysis.get('key_topics', []))}
-内容概要：{basic_analysis.get('content_summary', '')}
+主题：{basic_analysis.get('main_theme', '未知') if basic_analysis else '未知'}
+关键话题：{', '.join(basic_analysis.get('key_topics', [])) if basic_analysis else '无'}
+内容概要：{basic_analysis.get('content_summary', '') if basic_analysis else '无'}
 
 转录内容（前2000字符）：
 {transcript[:2000]}"""
@@ -443,6 +484,11 @@ class AIContentAnalyzer:
             domain_mapping = {
                 "教育": ContentDomain.EDUCATION,
                 "学习": ContentDomain.EDUCATION,
+                "试卷": ContentDomain.EXAM_REVIEW,
+                "评讲": ContentDomain.EXAM_REVIEW,
+                "解析": ContentDomain.EXAM_REVIEW,
+                "题目": ContentDomain.EXAM_REVIEW,
+                "考试": ContentDomain.EXAM_REVIEW,
                 "旅游": ContentDomain.TRAVEL,
                 "旅行": ContentDomain.TRAVEL,
                 "烹饪": ContentDomain.COOKING,
@@ -619,6 +665,61 @@ class AIContentAnalyzer:
 
         # 领域专用的系统提示词模板
         domain_system_prompts = {
+            ContentDomain.EXAM_REVIEW: {
+                "content_card": """# 角色设定
+你是一位资深的试卷评讲专家，专门将试卷评讲视频转化为结构化的学习资料。
+
+# 专业特长
+- 深度理解各学科试题的解题思路和考点分析
+- 擅长将复杂题目的解题过程分解为清晰的步骤
+- 能够识别学生易错点和关键考察点
+- 精通各类题型的解题方法和技巧总结
+
+# 内容质量标准
+1. **题目完整性**：确保每道题的题目、答案、解析都完整呈现
+2. **解题逻辑清晰**：每个解题步骤都要有明确的逻辑推理
+3. **考点精准定位**：准确识别每道题考察的知识点和能力要求
+4. **易错点突出**：重点标注学生容易出错的地方和原因
+5. **方法技巧总结**：提炼解题的通用方法和应试技巧
+
+# 试卷评讲特色
+- 使用专业的学科术语和解题语言
+- 强调解题思路的逻辑性和系统性
+- 提供多种解题方法的对比分析
+- 包含举一反三的拓展练习建议
+
+# 内容结构要求
+- 按题目顺序逐一分析，每道题独立成段
+- 每道题包含：题目内容、正确答案、详细解析、易错分析、方法总结
+- 突出重点题型和高频考点
+- 提供学习建议和复习要点""",
+                "mind_map": """你是试卷评讲结构化专家，擅长将试题内容转化为清晰的知识体系思维导图。
+
+重点关注：
+- 考点的分布和权重
+- 题型的分类和特点
+- 解题方法的系统梳理
+- 知识点间的关联关系
+
+输出要求：
+- 主干体现核心考点模块
+- 分支展现具体题型和方法
+- 层次不超过3级
+- 突出重点和难点题目""",
+                "flashcards": """你是试卷评讲学习卡片专家，专门创建针对性的复习闪卡。
+
+重点内容：
+- 核心题型的解题方法
+- 重要公式和定理应用
+- 易错点和注意事项
+- 解题技巧和思路总结
+
+卡片特色：
+- 问题针对具体题型
+- 答案包含完整解题过程
+- 突出关键步骤和方法
+- 提供类似题目的解题思路""",
+            },
             ContentDomain.EDUCATION: {
                 "content_card": """# 角色设定
 你是一位资深的教育内容专家，专门将教学视频转化为结构化的学习卡片。
@@ -727,9 +828,19 @@ class AIContentAnalyzer:
         }
 
         # 获取对应的模板，如果没有则使用通用模板
-        return domain_system_prompts.get(domain, {}).get(
-            content_type, self._get_general_template(content_type)
-        )
+        domain_templates = domain_system_prompts.get(domain, {})
+        template = domain_templates.get(content_type)
+        
+        if template:
+            return {
+                "system_prompt": template,
+                "user_prompt_template": "请为以下{domain}内容生成{content_type}：\n\n{transcript}\n\n请确保内容针对{target_audience}，采用{content_style}的表达方式。",
+            }
+        else:
+            return {
+                "system_prompt": self._get_general_template(content_type),
+                "user_prompt_template": "请为以下内容生成{content_type}：\n\n{transcript}",
+            }
 
     def _get_general_template(self, content_type: str) -> str:
         """获取通用模板"""
@@ -766,7 +877,7 @@ class AIContentAnalyzer:
         return general_templates.get(content_type, "你是一位专业的内容专家。")
 
     def _adjust_template_by_features(
-        self, base_template: str, analysis_result: ContentAnalysisResult
+        self, base_template: Dict[str, str], analysis_result: ContentAnalysisResult
     ) -> Dict[str, str]:
         """根据内容特征调整模板"""
 
@@ -785,8 +896,17 @@ class AIContentAnalyzer:
             "教程式": "按照教程的逻辑结构组织内容",
         }
 
+        # 确保 base_template 是字典格式
+        if isinstance(base_template, dict):
+            system_prompt = base_template.get("system_prompt", "")
+            user_prompt_template = base_template.get("user_prompt_template", "")
+        else:
+            # 如果 base_template 不是字典，则创建一个新的字典
+            system_prompt = str(base_template) if base_template else ""
+            user_prompt_template = "请为以下{domain}内容生成{content_type}：\n\n{transcript}\n\n请确保内容针对{target_audience}，采用{content_style}的表达方式。"
+
         # 构建调整后的系统提示词
-        adjusted_prompt = base_template
+        adjusted_prompt = system_prompt
 
         if analysis_result.target_audience in audience_adjustments:
             adjusted_prompt += f"\n\n# 目标受众调整\n{audience_adjustments[analysis_result.target_audience]}"
@@ -801,7 +921,7 @@ class AIContentAnalyzer:
 
         return {
             "system_prompt": adjusted_prompt,
-            "user_prompt_template": "请为以下{domain}内容生成{content_type}：\n\n{transcript}\n\n请确保内容针对{target_audience}，采用{content_style}的表达方式。",
+            "user_prompt_template": user_prompt_template,
         }
 
     def _get_fallback_prompt(self, content_type: str) -> Dict[str, str]:
