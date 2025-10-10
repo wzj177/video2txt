@@ -58,13 +58,13 @@ class AIContentFactory:
         self.provider = provider
         self.ai_client = create_ai_client(provider, settings)
         self.frame_extractor = create_frame_extractor()
-        # 🎯 移除frame_selector，直接使用frame_extractor的固定间隔提取
+        #  移除frame_selector，直接使用frame_extractor的固定间隔提取
         self.output_dir = Path("data/outputs")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.content_card_generator = ContentCardGenerator(
             ai_client=self.ai_client, storage_path=self._get_storage_path()
         )
-        # 🧠 新增：智能内容分析器
+        #  新增：智能内容分析器
         self.content_analyzer = AIContentAnalyzer(self.ai_client)
 
     def _get_storage_path(self) -> Path:
@@ -93,7 +93,7 @@ class AIContentFactory:
         video_path: str = "",
         audio_path: str = "",
         subtitles: List[Dict[str, Any]] = None,
-        frame_info: Dict[str, Any] = None,  # 🎯 关键修复：接收帧信息
+        frame_info: Dict[str, Any] = None,  # 关键修复：接收帧信息
         stream_callback=None,
         **kwargs,
     ) -> Dict[str, Any]:
@@ -116,11 +116,11 @@ class AIContentFactory:
             if output_type not in [t.value for t in OutputType]:
                 raise ValueError(f"不支持的输出类型: {output_type}")
 
-            # 🧠 第一步：智能内容分析
+            #  第一步：智能内容分析
             if stream_callback:
                 await stream_callback(
                     "content_analyzing",
-                    {"type": output_type, "message": "🧠 正在分析内容特征和领域..."},
+                    {"type": output_type, "message": " 正在分析内容特征和领域..."},
                 )
 
             # 进行内容分析和动态提示词生成
@@ -134,7 +134,7 @@ class AIContentFactory:
             )
 
             logger.info(
-                f"🎯 内容分析完成: {analysis_result.primary_domain.value}领域, 置信度: {analysis_result.confidence:.2f}"
+                f" 内容分析完成: {analysis_result.primary_domain.value}领域, 置信度: {analysis_result.confidence:.2f}"
             )
 
             # 获取配置
@@ -146,14 +146,14 @@ class AIContentFactory:
                 temperature=kwargs.get("temperature", 0.7),
             )
 
-            # 🎯 关键修复：使用传入的帧信息，而不是重新处理
+            #  关键修复：使用传入的帧信息，而不是重新处理
             if frame_info is None:
                 # 如果没有传入帧信息，则进行处理（向后兼容）
                 frame_info = await self._process_frames(
                     video_path, audio_path, subtitles, **kwargs
                 )
 
-            # 🧠 第二步：使用动态提示词生成内容
+            #  第二步：使用动态提示词生成内容
             kwargs.update(
                 {"analysis_result": analysis_result, "dynamic_prompts": dynamic_prompts}
             )
@@ -866,32 +866,77 @@ class AIContentFactory:
         stream_callback=None,
         **kwargs,
     ) -> Dict[str, Any]:
-        """智能生成思维导图 - 使用动态提示词"""
+        """智能生成思维导图 - 四段式结构优化版"""
         try:
             analysis_result = kwargs.get("analysis_result")
-            dynamic_prompts = kwargs.get("dynamic_prompts")
 
-            # 构建领域专用的思维导图提示词
-            domain_specific_prompt = f"""你是{analysis_result.primary_domain.value}领域的专家，擅长将该领域内容转化为结构化的思维导图。
+            # 🎯 角色定义（根据领域动态调整）
+            role_mapping = {
+                "education": "教育内容结构化专家",
+                "exam_review": "试卷评讲分析专家",
+                "cooking": "美食知识整理专家",
+                "travel": "旅行攻略规划专家",
+                "meeting": "会议管理专家",
+                "technology": "科技内容架构师",
+                "business": "商业分析专家",
+                "general": "内容结构化专家",
+            }
 
-# 领域特色
-- 针对{analysis_result.primary_domain.value}内容的特点进行结构化整理
-- 突出该领域的核心要素和关键概念
+            role_name = role_mapping.get(
+                analysis_result.primary_domain.value, "内容结构化专家"
+            )
+
+            # 构建四段式提示词
+            system_prompt = f"""# 角色
+你是一位专业的{role_name}，擅长将{analysis_result.primary_domain.value}领域内容转化为清晰的思维导图结构。
+
+# 任务
+基于转录内容生成结构化思维导图，核心要求：
+- 提炼{analysis_result.primary_domain.value}领域的核心要素和关键概念
 - 体现{analysis_result.content_style}的内容特征
 - 适合{analysis_result.target_audience}的认知水平
+- 重点关注：{', '.join(analysis_result.key_topics[:5])}
 
-# 核心话题
-重点关注：{', '.join(analysis_result.key_topics[:5])}
+# 约束条件
+1. **语言**：简体中文
+2. **结构层次**：
+   - 主干：4-6个核心模块
+   - 分支：每个模块下2-4个子点
+   - 总节点：控制在15个以内
+3. **节点要求**：
+   - 使用简洁短语，避免完整句子
+   - 体现{analysis_result.primary_domain.value}领域特色
+   - 突出核心观点和关键概念
 
-# 思维导图要求
-- 主干不超过4-6个核心模块
-- 每个模块下2-4个子点
-- 总节点控制在15个以内
-- 节点简洁有力，体现{analysis_result.primary_domain.value}领域特色
+# 输出模板
+```
+# 思维导图：{{主题标题}}
 
-请直接输出思维导图，使用简体中文。"""
+- {{主节点1}}
+  - {{子节点1.1}}
+  - {{子节点1.2}}
+- {{主节点2}}
+  - {{子节点2.1}}
+  - {{子节点2.2}}
+- {{主节点3}}
+  - {{子节点3.1}}
+  - {{子节点3.2}}
+```
 
-            user_prompt = f"请为以下{analysis_result.primary_domain.value}内容生成专业的思维导图：\n\n{transcript[:3000]}"
+请严格按照模板输出，不要添加额外解释。"""
+
+            user_prompt = f"""请为以下{analysis_result.primary_domain.value}内容生成专业的思维导图：
+
+## 转录内容：
+{transcript[:3000]}
+
+## 分析要点：
+- 主要领域：{analysis_result.primary_domain.value}
+- 内容风格：{analysis_result.content_style}
+- 目标受众：{analysis_result.target_audience}
+- 核心话题：{', '.join(analysis_result.key_topics[:5])}
+
+请生成结构清晰、层次分明的思维导图。"""
 
             # 流式生成通知
             if stream_callback:
@@ -905,7 +950,7 @@ class AIContentFactory:
 
             content = await self.ai_client.generate_content(
                 prompt=user_prompt,
-                system_prompt=domain_specific_prompt,
+                system_prompt=system_prompt,
                 max_tokens=config.max_tokens,
                 temperature=config.temperature,
             )
@@ -939,36 +984,80 @@ class AIContentFactory:
         stream_callback=None,
         **kwargs,
     ) -> Dict[str, Any]:
-        """智能生成学习闪卡 - 使用动态提示词"""
+        """智能生成学习闪卡 - 四段式结构优化版"""
         try:
             analysis_result = kwargs.get("analysis_result")
 
-            # 构建领域专用的闪卡提示词
-            domain_flashcard_prompt = f"""你是{analysis_result.primary_domain.value}领域的教学专家，专门创建该领域的高质量学习闪卡。
+            # 🎯 角色定义（根据领域动态调整）
+            role_mapping = {
+                "education": "教育学习卡片专家",
+                "exam_review": "考试复习专家",
+                "cooking": "美食教学专家",
+                "travel": "旅行知识专家",
+                "meeting": "会议管理专家",
+                "technology": "科技学习专家",
+                "business": "商业培训专家",
+                "general": "学习闪卡专家",
+            }
 
-# 领域专业性
+            role_name = role_mapping.get(
+                analysis_result.primary_domain.value, "学习闪卡专家"
+            )
+
+            # 构建四段式提示词
+            system_prompt = f"""# 角色
+你是一位专业的{role_name}，专门为{analysis_result.primary_domain.value}领域创建高质量的学习闪卡。
+
+# 任务
+基于转录内容生成学习闪卡，核心要求：
 - 深入理解{analysis_result.primary_domain.value}领域的核心概念和实践要点
 - 熟悉该领域的常见问题和学习难点
 - 了解{analysis_result.target_audience}的学习需求和认知特点
+- 重点关注：{', '.join(analysis_result.key_topics[:5])}
 
-# 核心内容焦点
-基于以下关键话题设计问题：{', '.join(analysis_result.key_topics[:5])}
+# 约束条件
+1. **语言**：简体中文
+2. **数量**：8-12张闪卡
+3. **类型分布**：
+   - 核心概念类（30%）：基础定义和重要原理
+   - 实践应用类（40%）：具体操作和方法技巧
+   - 问题解决类（20%）：常见问题和解决方案
+   - 经验总结类（10%）：关键要点和注意事项
+4. **质量标准**：
+   - 问题紧密结合{analysis_result.primary_domain.value}领域特色
+   - 关注该领域的实际应用和操作要点
+   - 适合{analysis_result.target_audience}的认知水平
+   - 体现{analysis_result.content_style}的特点
 
-# 闪卡设计原则
-1. **领域针对性**：问题紧密结合{analysis_result.primary_domain.value}领域特色
-2. **实用导向**：关注该领域的实际应用和操作要点
-3. **难度适配**：适合{analysis_result.target_audience}的认知水平
-4. **内容风格**：体现{analysis_result.content_style}的特点
+# 输出模板
+```
+**Q**: {{简洁明确的问题，具有挑战性}}
+**A**: {{详细易懂的答案，包含：}}
+- 直接答案
+- 关键理解要点
+- 实际应用提示（如适用）
+- 记忆技巧（如适用）
 
-# 闪卡类型分布（针对{analysis_result.primary_domain.value}领域）
-- 核心概念类：基础定义和重要原理
-- 实践应用类：具体操作和方法技巧
-- 问题解决类：常见问题和解决方案
-- 经验总结类：关键要点和注意事项
+---
 
-请生成8-12张高质量的{analysis_result.primary_domain.value}领域学习闪卡，使用简体中文。"""
+**Q**: {{下一个问题}}
+**A**: {{对应答案}}
+```
 
-            user_prompt = f"请为以下{analysis_result.primary_domain.value}内容生成专业的学习闪卡：\n\n{transcript[:3000]}"
+请严格按照模板输出，每张闪卡用"---"分隔。"""
+
+            user_prompt = f"""请为以下{analysis_result.primary_domain.value}内容生成专业的学习闪卡：
+
+## 转录内容：
+{transcript[:3000]}
+
+## 分析要点：
+- 主要领域：{analysis_result.primary_domain.value}
+- 内容风格：{analysis_result.content_style}
+- 目标受众：{analysis_result.target_audience}
+- 核心话题：{', '.join(analysis_result.key_topics[:5])}
+
+请生成8-12张高质量的学习闪卡，确保问题有挑战性，答案有价值。"""
 
             # 流式生成通知
             if stream_callback:
@@ -982,7 +1071,7 @@ class AIContentFactory:
 
             content = await self.ai_client.generate_content(
                 prompt=user_prompt,
-                system_prompt=domain_flashcard_prompt,
+                system_prompt=system_prompt,
                 max_tokens=config.max_tokens,
                 temperature=config.temperature,
             )
@@ -1016,33 +1105,96 @@ class AIContentFactory:
         stream_callback=None,
         **kwargs,
     ) -> Dict[str, Any]:
-        """智能生成AI分析 - 基于内容分析结果"""
+        """智能生成AI分析 - 四段式结构优化版"""
         try:
             analysis_result = kwargs.get("analysis_result")
 
-            # 构建基于分析结果的AI分析提示词
-            ai_analysis_prompt = f"""你是{analysis_result.primary_domain.value}领域的AI分析专家。请基于已有的内容分析结果进行深度分析。
+            # 🎯 角色定义（根据领域动态调整）
+            role_mapping = {
+                "education": "教育内容分析专家",
+                "exam_review": "考试评估专家",
+                "cooking": "美食内容评估师",
+                "travel": "旅行内容分析师",
+                "meeting": "会议效果评估专家",
+                "technology": "科技内容分析师",
+                "business": "商业内容评估专家",
+                "general": "内容分析专家",
+            }
 
-# 已知分析结果
+            role_name = role_mapping.get(
+                analysis_result.primary_domain.value, "内容分析专家"
+            )
+
+            # 构建四段式提示词
+            system_prompt = f"""# 角色
+你是一位专业的{role_name}，专门对{analysis_result.primary_domain.value}领域内容进行深度分析和价值评估。
+
+# 任务
+基于已有的内容分析结果进行深度分析，核心要求：
+- 从{analysis_result.primary_domain.value}领域角度评价内容价值
+- 分析内容与目标受众的匹配程度
+- 提供专业的改进建议和扩展方向
+- 识别具体应用场景和实用价值
+
+# 约束条件
+1. **语言**：简体中文
+2. **输出格式**：JSON结构
+3. **分析深度**：基于以下已知信息进行深度分析
+   - 主要领域：{analysis_result.primary_domain.value}
+   - 次要领域：{[d.value for d in analysis_result.secondary_domains]}
+   - 置信度：{analysis_result.confidence:.2f}
+   - 关键话题：{', '.join(analysis_result.key_topics)}
+   - 内容风格：{analysis_result.content_style}
+   - 目标受众：{analysis_result.target_audience}
+
+# 输出模板
+```json
+{{
+    "content_value_assessment": {{
+        "overall_score": 8.5,
+        "strengths": ["优势1", "优势2", "优势3"],
+        "weaknesses": ["不足1", "不足2"],
+        "domain_relevance": "在{analysis_result.primary_domain.value}领域的相关性评价"
+    }},
+    "audience_matching": {{
+        "match_score": 7.8,
+        "target_audience": "{analysis_result.target_audience}",
+        "suitability_analysis": "受众适配性分析",
+        "recommendations": ["建议1", "建议2"]
+    }},
+    "improvement_suggestions": [
+        "针对{analysis_result.primary_domain.value}领域的改进建议1",
+        "改进建议2",
+        "改进建议3"
+    ],
+    "application_scenarios": [
+        "应用场景1",
+        "应用场景2",
+        "应用场景3"
+    ],
+    "extension_directions": [
+        "扩展方向1",
+        "扩展方向2"
+    ]
+}}
+```
+
+请严格按照JSON格式输出，确保格式正确。"""
+
+            user_prompt = f"""请对以下{analysis_result.primary_domain.value}内容进行深度AI分析：
+
+## 转录内容：
+{transcript[:2000]}
+
+## 已知分析结果：
 - 主要领域：{analysis_result.primary_domain.value}
-- 次要领域：{[d.value for d in analysis_result.secondary_domains]}
 - 置信度：{analysis_result.confidence:.2f}
 - 关键话题：{', '.join(analysis_result.key_topics)}
 - 内容风格：{analysis_result.content_style}
 - 目标受众：{analysis_result.target_audience}
 - 内容长度：{analysis_result.content_length}
 
-# 深度分析要求
-请在已有分析基础上，进一步提供：
-1. **内容价值评估**：从{analysis_result.primary_domain.value}领域角度评价内容价值
-2. **受众匹配度**：分析内容与目标受众的匹配程度
-3. **改进建议**：针对{analysis_result.primary_domain.value}领域的专业改进建议
-4. **应用场景**：该内容在{analysis_result.primary_domain.value}领域的具体应用场景
-5. **扩展方向**：基于当前内容的进一步发展方向
-
-请以JSON格式输出详细分析结果，使用简体中文。"""
-
-            user_prompt = f"请对以下{analysis_result.primary_domain.value}内容进行深度AI分析：\n\n{transcript[:2000]}"
+请基于以上信息进行深度分析，输出结构化的JSON分析结果。"""
 
             # 流式生成通知
             if stream_callback:
@@ -1056,7 +1208,7 @@ class AIContentFactory:
 
             content = await self.ai_client.generate_content(
                 prompt=user_prompt,
-                system_prompt=ai_analysis_prompt,
+                system_prompt=system_prompt,
                 max_tokens=config.max_tokens,
                 temperature=config.temperature,
             )
@@ -1134,60 +1286,3 @@ async def generate_all_content(
     return await factory.generate_all(
         transcript, video_path, audio_path, subtitles, **kwargs
     )
-
-
-# 测试代码
-if __name__ == "__main__":
-    import asyncio
-
-    async def test_factory():
-        """测试工厂功能"""
-        # 加载settings.json
-        settings_path = Path("config/settings.json")
-        if settings_path.exists():
-            with open(settings_path, "r", encoding="utf-8") as f:
-                settings = json.load(f)
-            print("✅ 成功加载settings.json配置")
-        else:
-            print("❌ 未找到settings.json配置文件")
-            return
-
-        # 创建工厂
-        factory = AIContentFactory(settings)
-        print("✅ 成功创建AI内容生成工厂")
-
-        # 测试转录文本
-        test_transcript = """
-        人工智能（Artificial Intelligence，AI）是计算机科学的一个分支，它企图了解智能的实质，
-        并生产出一种新的能以人类智能相似的方式做出反应的智能机器。该领域的研究包括机器人、
-        语言识别、图像识别、自然语言处理和专家系统等。人工智能从诞生以来，理论和技术日益成熟，
-        应用领域也不断扩大，可以设想，未来人工智能带来的科技产品，将会是人类智慧的"容器"。
-        """
-
-        print(f"\n📝 测试转录文本: {test_transcript[:100]}...")
-
-        # 测试单个生成（带帧信息）
-        print("\n🧪 测试内容卡片生成（带帧信息）...")
-        result = await factory.generate(
-            "content_card",
-            test_transcript,
-            video_path="/Users/jiechengyang/Downloads/0815.mp4",
-            subtitles=[{"start": datetime.timedelta(seconds=0), "content": "测试内容"}],
-            language="zh",
-        )
-        print(f"内容卡片生成结果: {result}")
-
-        # 测试批量生成
-        print("\n🧪 测试批量生成...")
-        all_results = await factory.generate_all(
-            test_transcript,
-            video_path="/Users/jiechengyng/Downloads/0815.mp4",
-            subtitles=[{"start": datetime.timedelta(seconds=0), "content": "测试内容"}],
-            language="zh",
-        )
-        print(f"批量生成结果: {all_results}")
-
-
-if __name__ == "__main__":
-    # 只有直接运行此文件时才执行测试
-    asyncio.run(test_factory())

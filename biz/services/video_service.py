@@ -318,6 +318,54 @@ class VideoService:
             logger.debug(f"SQLite队列处理失败: {e}")
             return None
 
+    async def generate_ai_content(
+        self,
+        output_type: str,
+        transcript: str = "",
+        video_path: str = "",
+        audio_path: str = "",
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """生成AI内容 - 支持content_role参数"""
+        try:
+            from .ai_content_generator import create_ai_factory
+            import json
+
+            # 加载settings.json
+            settings_path = (
+                Path(__file__).parent.parent.parent / "config" / "settings.json"
+            )
+            if settings_path.exists():
+                with open(settings_path, "r", encoding="utf-8") as f:
+                    settings = json.load(f)
+            else:
+                settings = {}
+
+            # 创建AI工厂
+            factory = await create_ai_factory(settings)
+
+            # 🎯 关键：处理content_role参数
+            content_role = kwargs.get("content_role", "auto")
+            if content_role != "auto":
+                # 如果指定了特定角色，强制覆盖智能分析结果
+                logger.info(f"🎯 使用指定角色: {content_role}")
+                kwargs["force_domain"] = content_role
+
+            # 调用AI工厂生成内容
+            result = await factory.generate(
+                output_type=output_type,
+                transcript=transcript,
+                video_path=video_path,
+                audio_path=audio_path,
+                **kwargs,
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"生成AI内容失败: {e}")
+            return {"error": str(e), "success": False}
+
 
 # 全局视频服务实例
 video_service = VideoService()

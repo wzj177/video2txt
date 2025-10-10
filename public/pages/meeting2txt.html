@@ -14,8 +14,8 @@
 <div id="app" class="meeting2txt-container">
     <!-- 顶部导航 -->
     <header class="header">
-            <div class="header-content">
-                <div class="header-left">
+        <div class="header-content">
+            <div class="header-left">
                 <a href="./" class="logo">
                     <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
                         <path
@@ -68,15 +68,15 @@
                     <div class="title-info">
                         <h1 class="page-title">🎤 实时会议记录</h1>
                         <p class="page-subtitle">智能音频捕获 • 实时转录 • 自动总结</p>
-                </div>
+                    </div>
                     <div class="page-actions">
                         <button class="create-task-btn" @click="startNewMeeting" :disabled="isRecording">
-                        <span v-if="!isRecording">🎬 开始新会议</span>
-                        <span v-else>📹 录制中...</span>
-                    </button>
+                            <span v-if="!isRecording">🎬 开始新会议</span>
+                            <span v-else>📹 录制中...</span>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
             <!-- 当前录制状态 -->
             <div v-if="currentMeeting" class="current-meeting-card">
                 <div class="meeting-header">
@@ -91,11 +91,11 @@
                         </div>
                     </div>
                     <div class="meeting-actions">
-                        <button v-if="currentMeeting.status === 'recording'" 
+                        <button v-if="currentMeeting.status === 'recording'"
                                 class="btn btn-warning" @click="pauseMeeting">
                             ⏸️ 暂停
                         </button>
-                        <button v-if="currentMeeting.status === 'paused'" 
+                        <button v-if="currentMeeting.status === 'paused'"
                                 class="btn btn-success" @click="resumeMeeting">
                             ▶️ 继续
                         </button>
@@ -104,12 +104,12 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- 实时转录内容 -->
                 <div class="realtime-transcription">
                     <h3>🎯 实时转录</h3>
                     <div class="transcription-content" ref="transcriptionContainer">
-                        <div v-for="segment in transcriptionSegments" :key="segment.id" 
+                        <div v-for="segment in transcriptionSegments" :key="segment.id"
                              class="transcription-segment">
                             <span class="timestamp">{{ formatTimestamp(segment.timestamp) }}</span>
                             <span class="speaker" v-if="segment.speaker" :class="getSpeakerClass(segment.speaker)">
@@ -145,9 +145,9 @@
                             <option value="processing">处理中</option>
                             <option value="error">出错</option>
                         </select>
-                        <input type="date" v-model="filterDate" @change="filterMeetings" 
+                        <input type="date" v-model="filterDate" @change="filterMeetings"
                                placeholder="筛选日期">
-                        <input type="text" v-model="searchKeyword" @input="filterMeetings" 
+                        <input type="text" v-model="searchKeyword" @input="filterMeetings"
                                placeholder="搜索关键词...">
                     </div>
                 </div>
@@ -156,7 +156,7 @@
                     <!-- 正在进行的会议 -->
                     <div v-if="activeMeetings.length > 0" class="active-meetings">
                         <h3>🔴 正在进行</h3>
-                        <div v-for="meeting in activeMeetings" :key="meeting.id" 
+                        <div v-for="meeting in activeMeetings" :key="meeting.id"
                              class="meeting-item active">
                             <div class="meeting-info">
                                 <h4>{{ meeting.title }}</h4>
@@ -181,7 +181,7 @@
                             <p>暂无会议记录</p>
                         </div>
                         <div v-else>
-                            <div v-for="meeting in paginatedMeetings" :key="meeting.id" 
+                            <div v-for="meeting in paginatedMeetings" :key="meeting.id"
                                  class="meeting-item">
                                 <div class="meeting-info">
                                     <h4>{{ meeting.title }}</h4>
@@ -198,7 +198,8 @@
                                 </div>
                                 <div class="meeting-actions">
                                     <button class="btn btn-sm" @click="viewMeeting(meeting.id)">查看</button>
-                                    <button class="btn btn-sm" @click="downloadMeeting(meeting.id)">下载录制文件</button>
+                                    <button class="btn btn-sm" @click="downloadMeeting(meeting.id)">下载录制文件
+                                    </button>
                                     <button class="btn btn-sm btn-danger" @click="deleteMeeting(meeting.id)">删除
                                     </button>
                                 </div>
@@ -207,11 +208,11 @@
 
                         <!-- 分页 -->
                         <div v-if="totalPages > 1" class="pagination">
-                            <button class="btn btn-sm" @click="changePage(currentPage - 1)" 
+                            <button class="btn btn-sm" @click="changePage(currentPage - 1)"
                                     :disabled="currentPage <= 1">上一页
                             </button>
                             <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
-                            <button class="btn btn-sm" @click="changePage(currentPage + 1)" 
+                            <button class="btn btn-sm" @click="changePage(currentPage + 1)"
                                     :disabled="currentPage >= totalPages">下一页
                             </button>
                         </div>
@@ -231,7 +232,7 @@
                     <form @submit.prevent="createMeeting">
                         <div class="form-group">
                             <label>会议标题</label>
-                            <input type="text" v-model="meetingConfig.title" 
+                            <input type="text" v-model="meetingConfig.title"
                                    placeholder="请输入会议标题..." required>
                         </div>
                         <div class="form-group">
@@ -275,7 +276,7 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn" @click="closeMeetingDialog">取消</button>
-                    <button class="btn btn-primary" @click="createMeeting" 
+                    <button class="btn btn-primary" @click="createMeeting"
                             :disabled="!meetingConfig.title">开始录制
                     </button>
                 </div>
@@ -300,21 +301,21 @@
                         currentMeeting: null,
                         transcriptionSegments: [],
                         eventSource: null,
-                        
+
                         // 会议列表
                         meetings: [],
                         activeMeetings: [],
                         filteredMeetings: [],
-                        
+
                         // 筛选和搜索
                         filterStatus: '',
                         filterDate: '',
                         searchKeyword: '',
-                        
+
                         // 分页
                         currentPage: 1,
                         pageSize: 10,
-                        
+
                         // 对话框
                         showMeetingDialog: false,
                         meetingConfig: {
@@ -325,39 +326,42 @@
                             enableSpeakerDiarization: true,
                             enableRealTimeSummary: false
                         },
-                        
+
                         // 定时器
-                        durationTimer: null
+                        durationTimer: null,
+                        listTimer: null,
                     }
                 },
-                
+
                 computed: {
                     totalPages() {
                         return Math.ceil(this.filteredMeetings.length / this.pageSize);
                     },
-                    
+
                     paginatedMeetings() {
                         const start = (this.currentPage - 1) * this.pageSize;
                         return this.filteredMeetings.slice(start, start + this.pageSize);
                     },
-                    
+
                     currentDuration() {
                         if (!this.currentMeeting?.startTime) return '00:00:00';
                         return this.calculateDuration(this.currentMeeting.startTime);
                     }
                 },
-                
+
                 async mounted() {
                     await this.loadMeetings();
                     this.startDurationTimer();
+                    this.startListTimer();
                     this.checkPlatform();
                 },
-                
+
                 beforeUnmount() {
                     this.stopDurationTimer();
+                    this.stopListTimer();
                     this.closeEventSource();
                 },
-                
+
                 methods: {
                     // 开始新会议
                     async startNewMeeting() {
@@ -387,17 +391,17 @@
                                 );
                                 return;
                             }
-                            
+
                             // 没有活跃会议，正常打开创建页面
                             this.openCreateMeetingDialog();
-                            
+
                         } catch (error) {
                             console.error('检查活跃会议失败:', error);
                             // 检查失败时仍然允许创建
                             this.openCreateMeetingDialog();
                         }
                     },
-                    
+
                     // 打开创建会议对话框
                     openCreateMeetingDialog() {
                         layui.layer.open({
@@ -414,42 +418,42 @@
                             }
                         });
                     },
-                    
+
                     // 停止活跃会议并创建新会议
                     async stopActiveMeetingAndCreate(meetingId) {
                         try {
-                            layer.load(1, { content: '正在结束当前会议...' });
-                            
+                            layer.load(1, {content: '正在结束当前会议...'});
+
                             await http.post(`/api/tasks/meeting/${meetingId}/stop`);
-                            
+
                             layer.closeAll('loading');
-                            layer.msg('当前会议已结束', { icon: 1 });
-                            
+                            layer.msg('当前会议已结束', {icon: 1});
+
                             // 刷新会议列表
                             await this.loadMeetings();
-                            
+
                             // 打开创建新会议对话框
                             setTimeout(() => {
                                 this.openCreateMeetingDialog();
                             }, 500);
-                            
+
                         } catch (error) {
                             layer.closeAll('loading');
                             const errorMessage = error && error.message ? error.message : '结束会议失败';
-                            layer.msg(`结束会议失败: ${errorMessage}`, { icon: 2 });
+                            layer.msg(`结束会议失败: ${errorMessage}`, {icon: 2});
                         }
                     },
-                    
+
                     // 创建会议
                     async createMeeting() {
                         if (!this.meetingConfig.title.trim()) {
                             layer.msg('请输入会议标题', {icon: 0});
                             return;
                         }
-                        
+
                         try {
                             layer.load(1, {content: '正在启动录制器...'});
-                            
+
                             const response = await http.post('/api/tasks/meeting/create', {
                                 title: this.meetingConfig.title,
                                 audioSource: this.meetingConfig.audioSource,
@@ -458,23 +462,23 @@
                                 enableSpeakerDiarization: this.meetingConfig.enableSpeakerDiarization,
                                 enableRealTimeSummary: this.meetingConfig.enableRealTimeSummary
                             });
-                            
+
                             layer.closeAll('loading');
-                            
-                                this.currentMeeting = {
-                                    id: response.taskId,
-                                    title: this.meetingConfig.title,
-                                    startTime: new Date(),
-                                    status: 'recording'
-                                };
-                                
-                                this.isRecording = true;
-                                this.transcriptionSegments = [];
-                                this.showMeetingDialog = false;
-                                
-                                // 启动实时数据流
-                                this.startEventSource(response.taskId);
-                                
+
+                            this.currentMeeting = {
+                                id: response.taskId,
+                                title: this.meetingConfig.title,
+                                startTime: new Date(),
+                                status: 'recording'
+                            };
+
+                            this.isRecording = true;
+                            this.transcriptionSegments = [];
+                            this.showMeetingDialog = false;
+
+                            // 启动实时数据流
+                            this.startEventSource(response.taskId);
+
                             layer.msg('会议录制已开始', {icon: 1});
                         } catch (error) {
                             layer.closeAll('loading');
@@ -482,13 +486,13 @@
                             layer.msg(`启动失败: ${errorMessage}`, {icon: 2});
                         }
                     },
-                    
+
                     // 启动事件源
                     startEventSource(taskId) {
                         this.closeEventSource();
-                        
+
                         this.eventSource = new EventSource(`/api/tasks/meeting/${taskId}/stream`);
-                        
+
                         this.eventSource.onmessage = (event) => {
                             try {
                                 const data = JSON.parse(event.data);
@@ -497,13 +501,13 @@
                                 console.error('解析流数据失败:', error);
                             }
                         };
-                        
+
                         this.eventSource.onerror = (error) => {
                             console.error('事件源错误:', error);
                             layer.msg('实时连接中断', {icon: 0});
                         };
                     },
-                    
+
                     // 处理流消息
                     handleStreamMessage(data) {
                         switch (data.type) {
@@ -521,7 +525,7 @@
                                 break;
                         }
                     },
-                    
+
                     // 添加转录片段
                     addTranscriptionSegment(data) {
                         const segment = {
@@ -531,9 +535,9 @@
                             speaker: data.speaker || null,
                             confidence: data.confidence || null
                         };
-                        
+
                         this.transcriptionSegments.push(segment);
-                        
+
                         // 自动滚动到底部
                         this.$nextTick(() => {
                             const container = this.$refs.transcriptionContainer;
@@ -542,33 +546,33 @@
                             }
                         });
                     },
-                    
+
                     // 暂停会议
                     async pauseMeeting() {
                         if (!this.currentMeeting) return;
-                        
+
                         try {
                             await http.post(`/api/tasks/meeting/${this.currentMeeting.id}/pause`);
-                                this.currentMeeting.status = 'paused';
+                            this.currentMeeting.status = 'paused';
                             layer.msg('录制已暂停', {icon: 1});
                         } catch (error) {
                             layer.msg(`暂停失败: ${error.message}`, {icon: 2});
                         }
                     },
-                    
+
                     // 继续会议
                     async resumeMeeting() {
                         if (!this.currentMeeting) return;
-                        
+
                         try {
                             await http.post(`/api/tasks/meeting/${this.currentMeeting.id}/resume`);
-                                this.currentMeeting.status = 'recording';
+                            this.currentMeeting.status = 'recording';
                             layer.msg('录制已继续', {icon: 1});
                         } catch (error) {
                             layer.msg(`继续失败: ${error.message}`, {icon: 2});
                         }
                     },
-                    
+
                     // 停止会议
                     async stopMeeting(meetingId = null) {
                         // 如果传入了meetingId，使用传入的ID，否则使用当前会议ID
@@ -592,9 +596,9 @@
                         }, async (index) => {
                             try {
                                 layer.load(1, {content: '正在结束录制并生成总结...'});
-                                
+
                                 await http.post(`/api/tasks/meeting/${targetMeetingId}/stop`);
-                                
+
                                 layer.closeAll('loading');
                                 layer.close(index);
                                 // 如果停止的是当前会议，清理当前状态
@@ -604,10 +608,10 @@
                                     this.transcriptionSegments = [];
                                     this.closeEventSource();
                                 }
-                                    
-                                    // 刷新会议列表
-                                    await this.loadMeetings();
-                                    
+
+                                // 刷新会议列表
+                                await this.loadMeetings();
+
                                 layer.msg('会议记录已完成', {icon: 1});
                             } catch (error) {
                                 layer.closeAll('loading');
@@ -616,7 +620,7 @@
                             }
                         });
                     },
-                    
+
                     // 关闭事件源
                     closeEventSource() {
                         if (this.eventSource) {
@@ -624,68 +628,68 @@
                             this.eventSource = null;
                         }
                     },
-                    
+
                     // 加载会议列表
                     async loadMeetings() {
                         try {
                             const result = await http.get('/api/tasks/meeting/list');
                             this.meetings = result.meetings
-                                this.updateActiveMeetings();
-                                this.filterMeetings();
-                                
-                                // 将刷新方法暴露给子页面
-                                window.refreshMeetingList = this.loadMeetings;
+                            this.updateActiveMeetings();
+                            this.filterMeetings();
+
+                            // 将刷新方法暴露给子页面
+                            window.refreshMeetingList = this.loadMeetings;
                         } catch (error) {
                             console.error('加载会议列表失败:', error);
                         }
                     },
-                    
+
                     // 更新活跃会议
                     updateActiveMeetings() {
-                        this.activeMeetings = this.meetings.filter(meeting => 
+                        this.activeMeetings = this.meetings.filter(meeting =>
                             ['recording', 'paused', 'processing'].includes(meeting.status)
                         );
                     },
-                    
+
                     // 筛选会议
                     filterMeetings() {
-                        let filtered = this.meetings.filter(meeting => 
+                        let filtered = this.meetings.filter(meeting =>
                             !['recording', 'paused', 'processing'].includes(meeting.status)
                         );
-                        
+
                         if (this.filterStatus) {
                             filtered = filtered.filter(meeting => meeting.status === this.filterStatus);
                         }
-                        
+
                         if (this.filterDate) {
                             filtered = filtered.filter(meeting => {
                                 const meetingDate = new Date(meeting.startTime).toISOString().split('T')[0];
                                 return meetingDate === this.filterDate;
                             });
                         }
-                        
+
                         if (this.searchKeyword) {
                             const keyword = this.searchKeyword.toLowerCase();
-                            filtered = filtered.filter(meeting => 
+                            filtered = filtered.filter(meeting =>
                                 meeting.title.toLowerCase().includes(keyword)
                             );
                         }
-                        
-                        this.filteredMeetings = filtered.sort((a, b) => 
+
+                        this.filteredMeetings = filtered.sort((a, b) =>
                             new Date(b.startTime) - new Date(a.startTime)
                         );
-                        
+
                         // 重置到第一页
                         this.currentPage = 1;
                     },
-                    
+
                     // 分页
                     changePage(page) {
                         if (page >= 1 && page <= this.totalPages) {
                             this.currentPage = page;
                         }
                     },
-                    
+
                     // 查看会议
                     viewMeeting(meetingId) {
                         // 如果是活跃会议，跳转到会议创建页面的录制模式
@@ -718,7 +722,7 @@
                             })
                         }
                     },
-                    
+
                     // 下载会议
                     async downloadMeeting(meetingId) {
                         try {
@@ -726,19 +730,19 @@
                                 responseType: 'blob'
                             });
 
-                            const url = window.URL.createObjectURL(new Blob([response], { type: 'audio/wav' }));
+                            const url = window.URL.createObjectURL(new Blob([response], {type: 'audio/wav'}));
                             const link = document.createElement('a');
                             link.href = url;
                             link.download = `meeting_${meetingId}.wav`;
                             link.click();
                             window.URL.revokeObjectURL(url);
-                            
+
                             layer.msg('录制文件下载成功', {icon: 1});
                         } catch (error) {
                             layer.msg(`下载失败: ${error.message}`, {icon: 2});
                         }
                     },
-                    
+
                     // 删除会议
                     async deleteMeeting(meetingId) {
                         if (!meetingId) {
@@ -780,12 +784,12 @@
                             }
                         });
                     },
-                    
+
                     // 关闭对话框
                     closeMeetingDialog() {
                         this.showMeetingDialog = false;
                     },
-                    
+
                     // 开始持续时间计时器
                     startDurationTimer() {
                         this.durationTimer = setInterval(() => {
@@ -793,7 +797,6 @@
                             this.$forceUpdate();
                         }, 1000);
                     },
-                    
                     // 停止持续时间计时器
                     stopDurationTimer() {
                         if (this.durationTimer) {
@@ -801,36 +804,47 @@
                             this.durationTimer = null;
                         }
                     },
-                    
+                    startListTimer() {
+                        this.listTimer = setInterval(() => {
+                            // 强制更新计算属性
+                            this.loadMeetings();
+                        }, 5000);
+                    },
+                    stopListTimer() {
+                        if (this.listTimer) {
+                            clearInterval(this.listTimer);
+                            this.listTimer = null;
+                        }
+                    },
                     // 格式化时间
                     formatTime(time) {
                         return new Date(time).toLocaleString();
                     },
-                    
+
                     // 格式化时间戳
                     formatTimestamp(time) {
                         return new Date(time).toLocaleTimeString();
                     },
-                    
+
                     // 计算持续时间
                     calculateDuration(startTime) {
                         const now = new Date();
                         const start = new Date(startTime);
                         const diff = Math.floor((now - start) / 1000);
-                        
+
                         const hours = Math.floor(diff / 3600);
                         const minutes = Math.floor((diff % 3600) / 60);
                         const seconds = diff % 60;
-                        
+
                         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                     },
-                    
+
                     // 格式化持续时间
                     formatDuration(seconds) {
                         const hours = Math.floor(seconds / 3600);
                         const minutes = Math.floor((seconds % 3600) / 60);
                         const secs = seconds % 60;
-                        
+
                         if (hours > 0) {
                             return `${hours}小时${minutes}分钟`;
                         } else if (minutes > 0) {
@@ -839,7 +853,7 @@
                             return `${secs}秒`;
                         }
                     },
-                    
+
                     // 获取状态文本
                     getStatusText(status) {
                         const statusMap = {

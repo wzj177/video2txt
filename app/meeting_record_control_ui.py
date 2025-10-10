@@ -836,71 +836,6 @@ class MeetingControlGUI:
 
         threading.Thread(target=stop, daemon=True).start()
 
-    async def _stop_recording_async(self):
-        """异步停止录制"""
-        try:
-            task_id = self.current_meeting["id"]
-            meeting_title = self.current_meeting["title"]
-
-            logger.info(f"开始停止会议录制: {task_id}")
-
-            # 并行执行停止操作，提高响应速度
-            import asyncio
-
-            # 创建停止任务
-            stop_task = realtime_meeting_service.stop_meeting_processor(task_id)
-            update_task = task_service.update_task(
-                "meeting",
-                task_id,
-                {
-                    "status": "stopping",
-                    "progress": 90,
-                    "current_step": "正在停止录制...",
-                },
-            )
-
-            # 并行执行
-            stop_success, _ = await asyncio.gather(
-                stop_task, update_task, return_exceptions=True
-            )
-
-            if isinstance(stop_success, Exception):
-                logger.error(f"停止会议处理器失败: {stop_success}")
-                stop_success = False
-
-            # 快速更新最终状态
-            await task_service.update_task(
-                "meeting",
-                task_id,
-                {
-                    "status": "completed",
-                    "progress": 100,
-                    "current_step": "会议录制已完成",
-                    "completed_at": datetime.now().isoformat(),
-                },
-            )
-
-            # 异步发送通知，不阻塞返回
-            def send_notification():
-                try:
-                    notification_service.notify_meeting_status(
-                        meeting_title=meeting_title,
-                        status="completed",
-                        message_extra="录制已完成，正在生成会议总结...",
-                    )
-                except Exception as e:
-                    logger.error(f"发送通知失败: {e}")
-
-            # 在后台发送通知
-            threading.Thread(target=send_notification, daemon=True).start()
-
-            logger.info(f"✅ 会议录制已停止: {task_id}")
-            return True
-
-        except Exception as e:
-            logger.error(f"异步停止录制失败: {e}")
-            return False
-
     def _close_after_stop_success(self):
         """停止成功后关闭窗口"""
         # 检查是否录制到了声音（简单检查录制时长）
@@ -1025,8 +960,13 @@ class MeetingControlGUI:
                 if time_diff > 30 and not self.no_audio_warning_shown:
                     self.show_no_audio_warning()
                     self.no_audio_warning_shown = True
+                    # 更新最后检查时间，避免连续警告
+                    self.last_audio_check_time = current_time
                 elif time_diff <= 30:
                     self.no_audio_warning_shown = False
+                    # 如果在30秒内检测到音频活动，更新检查时间
+                    if time_diff > 0:  # 确保有时间差才更新
+                        self.last_audio_check_time = current_time
 
             # 30秒后再次检查
             self.audio_detection_timer = self.root.after(

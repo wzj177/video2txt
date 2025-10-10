@@ -180,11 +180,15 @@ class ContentCardGenerator:
             else:
                 # 使用默认系统提示词
                 system_prompt = self._build_system_prompt(
-                    image_strategy, keyframes_path
+                    image_strategy, keyframes_path, content_domain
                 )
 
             user_prompt = self._build_user_prompt(
-                transcript, srt_frame_mapping, frame_list, keyframes_path
+                transcript,
+                srt_frame_mapping or semantic_matches,
+                frame_list,
+                keyframes_path,
+                content_domain,
             )
 
             # 5. 生成内容
@@ -201,7 +205,10 @@ class ContentCardGenerator:
                 temperature=config.temperature,
             )
 
-            # 6. 返回结果
+            # 6. 后处理兜底 - 修复格式错误
+            content = self._post_process_content(content)
+
+            # 7. 返回结果
             if stream_callback:
                 await stream_callback(
                     "ai_content_chunk", {"type": "content_card", "content": content}
@@ -387,92 +394,160 @@ class ContentCardGenerator:
 **⚠️ 严禁使用未列出的图片文件名！**
 """
 
-    def _build_system_prompt(self, image_strategy: str, keyframes_path) -> str:
-        """构建系统提示词"""
-        return f"""# 角色设定
-你是一位资深的教育内容专家，擅长将教学视频转化为结构化、高价值的知识卡片。
+    def _build_system_prompt(
+        self, image_strategy: str, keyframes_path, content_domain: str = "general"
+    ) -> str:
+        """构建系统提示词 - 四段式结构优化版"""
 
-# 核心任务
-基于转录内容和精确的SRT-帧匹配关系，生成图文并茂的内容卡片。
+        # 🎯 角色定义（根据领域动态调整）
+        role_mapping = {
+            "education": "教育内容专家",
+            "exam_review": "试卷评讲专家",
+            "cooking": "美食教学专家",
+            "travel": "旅行攻略专家",
+            "meeting": "会议纪要专家",
+            "technology": "科技解说专家",
+            "business": "商业分析专家",
+            "general": "视频知识萃取专家",
+        }
+
+        role_name = role_mapping.get(content_domain, "视频知识萃取专家")
+
+        return f"""# 角色
+你是一位专业的{role_name}，擅长将视频内容转化为结构化、高价值、图文精准对齐的知识卡片。
+
+# 任务
+基于转录内容和语义匹配结果，生成图文并茂的内容卡片。核心要求：
+- **语义对齐优先**：图片必须与其匹配的语义段落同时出现
+- **内容深度展开**：将匹配段落扩展为完整讲解，而非简单复述
+- **结构化呈现**：确保知识点完整覆盖，逻辑清晰
 
 {image_strategy}
 
-## 内容质量要求
-1. **结构完整性**：包含标题、摘要、分章节、总结、思考等完整结构
-2. **内容深度挖掘**：将转录内容展开为详细段落，不仅仅是简单整理
-3. **图文精确匹配**：严格按照SRT-帧匹配关系使用图片
-4. **知识完整性**：覆盖转录中的所有知识点，不遗漏
-5. **视觉丰富性**：充分利用帧资源增强表达效果
+# 约束条件
+1. **语言**：简体中文
+2. **图片规则**：
+   - 仅使用 `image_strategy` 中列出的图片
+   - 图片必须插入在**匹配段落的正文中**
+   - 格式：`![图片名](file://{keyframes_path}/图片名)`
+3. **禁用区域**：`# 总结` 和 `# 思考` 段落严禁插入图片
+4. **格式禁忌**：
+   - ❌ 禁止 `## # 摘要`、`## ## 步骤` 等错误标题
+   - ✅ 正确：`# 摘要`、`## 操作步骤`
+5. **🚫 严禁AI助手语言**：
+   - ❌ 绝对禁止："当然可以！"、"以下是"、"我来为您"、"让我"
+   - ❌ 绝对禁止："希望对您有帮助"、"欢迎告诉我"、"需要其他版本"
+   - ❌ 绝对禁止：任何AI角色扮演、客服语言、推广话语
+   - ✅ 要求：直接开始内容，直接结束内容，零AI痕迹
 
-## 文体规范
-- **开篇**：用「# 标题」概括视频核心价值
-- **摘要**：用「# 摘要」概括视频核心内容  
-- **章节**：用「## 章节名」组织主要内容
-- **总结**：用「# 总结」总结中心思想（🚫 此段落严禁插入图片）
-- **思考**：用「# 思考」提出思考问题（🚫 此段落严禁插入图片）
+# 输出模板
+```
+# {{视频核心主题}}
 
-## 🚫 图片禁用区域
-- **总结段落**：严禁在「# 总结」段落中插入任何图片
-- **思考段落**：严禁在「# 思考」段落中插入任何图片
-- **理由**：这两个段落是概括性和反思性内容，不需要具体的视觉辅助
+# 摘要
+{{3-5句话概括全文价值，突出知识点和实用性}}
 
-## ⚠️ Markdown格式严格要求
-**绝对禁止使用多余的#符号**：
-- ❌ 错误格式：`## # 摘要`、`## ## 步骤一`、`## # 总结`
-- ✅ 正确格式：`# 摘要`、`## 步骤一`、`# 总结`
-- **规则**：一级标题只用一个#，二级标题只用两个##，绝不重复使用
+## {{章节1：基于语义段落1}}
+{{将匹配段落扩展为详细内容，在相关位置插入图片}}
+![xxx.jpg](file://{keyframes_path}/xxx.jpg)
 
-**重要要求：必须使用简体中文输出，图片使用绝对路径格式。**
+## {{章节2：基于语义段落2}}
+{{扩展内容，确保图文语义对齐}}
 
-请直接输出完整内容，不要解释说明。"""
+# 总结
+{{提炼中心思想，无图纯文本}}
+
+# 思考
+{{提出2-3个启发性问题，无图纯文本}}
+```
+
+请严格按照模板输出，不要添加额外解释。"""
 
     def _build_user_prompt(
-        self, transcript: str, matches, frame_list: List[Dict[str, Any]], keyframes_path
+        self,
+        transcript: str,
+        matches,
+        frame_list: List[Dict[str, Any]],
+        keyframes_path,
+        content_domain: str = "general",
     ) -> str:
-        """构建用户提示词"""
-        frame_names = [f["filename"] for f in frame_list]
-        frames_list = ", ".join(frame_names)
+        """构建用户提示词 - 完全基于语义匹配结果 + Few-shot示例"""
 
-        matching_guide = ""
+        # 🎯 提取语义匹配段落（去重）
+        semantic_segments = []
+        used_segments = set()
+
         if matches:
-            matching_guide = "\n\n## 🎯 精确匹配指南：\n"
-            matching_guide += (
-                "**重要**：每段内容都已精确匹配到最佳帧，请严格按照匹配关系使用！\n"
-            )
-            matching_guide += f"**可用图片**: {frames_list}\n"
+            for match in matches:
+                # 处理不同类型的匹配结果
+                if hasattr(match, "matched_text_segment"):
+                    # 语义匹配结果
+                    seg_key = match.matched_text_segment[:60]
+                    if seg_key not in used_segments:
+                        semantic_segments.append(
+                            {
+                                "text": match.matched_text_segment,
+                                "frame": match.frame_filename,
+                                "score": getattr(match, "semantic_score", 0.8),
+                                "reason": getattr(match, "match_reason", "语义匹配"),
+                            }
+                        )
+                        used_segments.add(seg_key)
+                else:
+                    # SRT时间匹配结果（向后兼容）
+                    seg_key = match.get("content", "")[:60]
+                    if seg_key not in used_segments:
+                        semantic_segments.append(
+                            {
+                                "text": match.get("content", ""),
+                                "frame": match.get("frame", {}).get("filename", ""),
+                                "score": 0.7,
+                                "reason": match.get("match_quality", "时间匹配"),
+                            }
+                        )
+                        used_segments.add(seg_key)
+
+        # 🎯 构建语义匹配指南
+        if semantic_segments:
+            guide = "## 🎯 语义匹配映射（请严格遵循）\n"
+            for i, seg in enumerate(semantic_segments[:5]):  # 最多5条
+                guide += (
+                    f'- **图片**: `{seg["frame"]}`\n'
+                    f'  **匹配段落**: "{seg["text"][:50]}..."\n'
+                    f'  **置信度**: {seg["score"]:.2f} | **类型**: {seg["reason"]}\n\n'
+                )
+            if len(semantic_segments) > 5:
+                guide += f"...（共 {len(semantic_segments)} 个语义匹配）\n"
         else:
-            matching_guide = f"\n\n## 🎯 图片使用指南：\n**可用图片**: {frames_list}\n"
+            frame_names = [f["filename"] for f in frame_list]
+            frames_list = ", ".join(frame_names)
+            guide = f"## ⚠️ 无有效语义匹配，可用图片: {frames_list}\n"
 
-        return f"""请为以下转录内容生成图文并茂的内容卡片：
+        # 🔥 Few-shot 示例（根据领域动态调整）
+        example = self._get_few_shot_example(content_domain, keyframes_path)
 
-## 📝 转录内容：
-{transcript[:3000] if transcript else '暂无转录内容'}{matching_guide}
+        return f"""{example}
 
-**🚨 严格要求**：
-1. **只能使用列出的图片文件**：{frames_list}
-2. **强制图文混排**：图片必须插入到相关内容段落中
-3. **图片格式**：![图片名](file://{keyframes_path}/图片名)
-4. **图片名**：图片文件名，不包含路径，比如：data/outputs/video_20250906_211458_669/keyframes/00_02.jpg 的图片名就是00_02.jpg
-5. **语义优先匹配**：图片应该与其周围2-3句话的语义内容高度相关
-6. **禁用区域**：「总结」和「思考」段落严禁插入图片
-7. **绝对禁止**：将所有图片集中在文章最后
+【你的任务】
+请基于以下转录内容和**语义匹配结果**，生成知识卡片：
 
-### 🎯 智能匹配策略：
-- **写到某个概念时**：立即插入该概念出现时间点的对应图片
-- **描述操作步骤时**：在步骤说明中插入操作演示的对应图片  
-- **引用数据图表时**：在数据分析段落插入图表出现时的图片
-- **强调重点内容时**：在重点段落插入关键时刻的图片
+## 📝 转录全文（供上下文参考）：
+{transcript[:3000] if transcript else '无转录内容'}
 
-**🚨 Markdown格式严格限制（SenseVoice专用）**：
-- ❌ **绝对禁止**：`## # 摘要`、`## ## 步骤一`、`## # 总结` 等多余#符号
-- ✅ **正确格式**：`# 摘要`、`## 步骤一`、`# 总结`
-- **规则**：每个标题只使用对应数量的#，不要重复或叠加使用"""
+{guide}
+
+**关键指令**：
+- 每个 `## 章节` 应对应一个语义匹配段落
+- 在章节正文中插入匹配的图片（格式：`![xxx.jpg](file://{keyframes_path}/xxx.jpg)`）
+- `# 总结` 和 `# 思考` 段落禁止插入任何图片
+- 输出纯Markdown，不要额外解释
+"""
 
     async def _generate_text_only_content(
         self, config, transcript: str, stream_callback
     ) -> Dict[str, Any]:
         """生成纯文本内容（无帧时的回退方案）"""
-        system_prompt = """你是一位资深的教育内容专家。请基于转录内容生成结构化的知识卡片，包含标题、摘要、章节、总结、思考等完整结构。使用简体中文输出。"""
+        system_prompt = """你是一位专业视频知识萃取专家，擅长将教学视频转化为结构化、高价值的知识卡片，包含标题、摘要、章节、总结、思考等完整结构。使用简体中文输出。"""
 
         user_prompt = f"请为以下转录内容生成结构化知识卡片：\n\n{transcript[:3000] if transcript else '暂无转录内容'}"
 
@@ -501,3 +576,189 @@ class ContentCardGenerator:
             "content": content,
             "format": "markdown",
         }
+
+    def _get_few_shot_example(self, content_domain: str, keyframes_path: str) -> str:
+        """根据内容领域获取Few-shot示例"""
+
+        examples = {
+            "cooking": f"""
+【输出示例 - 烹饪教学】
+# 宫保鸡丁的正宗做法详解
+
+# 摘要
+本文系统讲解宫保鸡丁的制作全流程，从食材准备到火候控制。关键技巧包括鸡肉腌制、花生米炸制和酱汁调配，适合家庭厨房复现。
+
+## 食材准备与预处理
+首先将鸡胸肉切成1.5厘米见方的丁，加入料酒、淀粉腌制10分钟。同时准备干辣椒段、花椒和炸好的花生米。![frame_00_30.jpg](file://{keyframes_path}/frame_00_30.jpg)
+
+## 烹饪与调味关键
+热锅凉油下鸡丁快速滑炒至变色，加入干辣椒和花椒爆香，最后倒入调好的酱汁（生抽2勺、醋1勺、糖1勺）翻炒均匀。
+
+# 总结
+宫保鸡丁的核心在于"快炒"和"酸甜平衡"，掌握这两点即可复刻餐厅风味。
+
+# 思考
+如何调整配方使其更适合儿童口味？能否用鸡腿肉替代鸡胸肉？
+""",
+            "exam_review": f"""
+【输出示例 - 试卷评讲】
+# 数学选择题解题技巧详解
+
+# 摘要
+本次评讲重点分析选择题的解题策略，包括排除法、特值法和图像法。通过典型例题演示，帮助学生掌握快速准确的解题思路。
+
+## 排除法的应用技巧
+对于复杂的函数题，可以通过代入特殊值快速排除错误选项。如本题中x=0时，只有选项B符合条件。![question_01.jpg](file://{keyframes_path}/question_01.jpg)
+
+## 图像法解决函数问题
+当题目涉及函数性质时，画出大致图像能直观判断答案。注意函数的单调性和特殊点的位置。
+
+# 总结
+选择题重在方法，掌握排除法、特值法和图像法，能大幅提高解题效率和准确率。
+
+# 思考
+在什么情况下应该优先使用排除法？如何快速识别适合用图像法的题目？
+""",
+            "meeting": f"""
+【输出示例 - 会议纪要】
+# 产品规划会议纪要
+
+# 摘要
+本次会议确定了Q4产品路线图，重点讨论了用户反馈处理、新功能开发优先级和资源分配方案。会议达成3项关键决议，明确了各部门职责。
+
+## 用户反馈处理机制
+产品经理汇报了近期用户反馈统计，主要集中在界面优化和性能提升两个方面。![feedback_chart.jpg](file://{keyframes_path}/feedback_chart.jpg) 决定建立快速响应机制，48小时内给出初步方案。
+
+## 新功能开发优先级
+技术总监提出了功能开发的优先级排序：1）核心功能优化 2）用户体验改进 3）新特性开发。预计Q4完成前两项，新特性推至Q1。
+
+# 总结
+会议明确了Q4工作重点，建立了用户反馈快速响应机制，确保产品迭代节奏稳定推进。
+
+# 思考
+如何平衡新功能开发与现有功能优化？用户反馈的优先级如何科学评估？
+""",
+            "education": f"""
+【输出示例 - 教育内容】
+# Python函数基础知识详解
+
+# 摘要
+本节课介绍Python函数的定义、参数传递和返回值机制。通过实例演示函数的创建和调用过程，帮助初学者建立函数编程思维。
+
+## 函数的定义与语法
+Python中使用def关键字定义函数，基本语法为def function_name(parameters)。函数名应该具有描述性，参数可以设置默认值。![function_syntax.jpg](file://{keyframes_path}/function_syntax.jpg)
+
+## 参数传递机制
+Python支持位置参数、关键字参数和可变参数。理解不同参数类型的使用场景，能让代码更加灵活和可读。
+
+# 总结
+函数是代码复用的基础，掌握函数定义、调用和参数传递，是Python编程的重要基础技能。
+
+# 思考
+什么时候应该将代码封装成函数？如何设计函数的参数结构更合理？
+""",
+            "meeting": f"""
+【输出示例 - 会议纪要】
+# 产品规划会议纪要
+
+# 摘要
+本次会议确定了Q4产品路线图，重点讨论了用户反馈处理、新功能开发优先级和资源分配方案。会议达成3项关键决议，明确了各部门职责和时间节点。
+
+## 用户反馈处理机制优化
+产品经理汇报了近期用户反馈统计，主要集中在界面优化和性能提升两个方面。![feedback_chart.jpg](file://{keyframes_path}/feedback_chart.jpg) 决定建立快速响应机制，技术部门负责48小时内给出初步方案，产品部门跟进用户沟通。
+
+## 新功能开发优先级确认
+技术总监提出了功能开发的优先级排序：1）核心功能优化（优先级最高）2）用户体验改进（中等优先级）3）新特性开发（较低优先级）。预计Q4完成前两项，新特性推至Q1开发。
+
+## 资源分配与时间安排
+人力资源部确认了项目人员配置，开发团队增加2名前端工程师，测试团队保持现有规模。项目里程碑设定为每两周一次评审，月底进行阶段性总结。
+
+# 总结
+会议明确了Q4工作重点，建立了用户反馈快速响应机制，确保产品迭代节奏稳定推进。各部门职责分工明确，时间节点具体可执行。
+
+# 思考
+如何平衡新功能开发与现有功能优化的资源投入？用户反馈的优先级评估标准是否需要进一步细化？
+""",
+        }
+
+        return examples.get(content_domain, examples["education"])
+
+    def _post_process_content(self, content: str) -> str:
+        """后处理内容 - 修复常见格式错误并移除AI第一人称话语"""
+        import re
+
+        # 🚫 移除AI第一人称开头话语
+        # 匹配常见的AI开头模式
+        ai_intro_patterns = [
+            r"^当然可以！.*?[\n\r]+",
+            r"^好的[！，。]*.*?为您.*?[\n\r]+",
+            r"^根据.*?内容.*?以下是.*?[\n\r]+",
+            r"^以下是.*?为.*?设计的.*?[\n\r]+",
+            r"^我来为您.*?[\n\r]+",
+            r"^让我.*?为您.*?[\n\r]+",
+            r"^这里是.*?内容卡片.*?[\n\r]+",
+            r"^当然可以！以下是一张专为.*?[\n\r]+",
+            r"^.*?专为.*?设计的.*?内容卡片.*?[\n\r]+",
+        ]
+
+        for pattern in ai_intro_patterns:
+            content = re.sub(pattern, "", content, flags=re.MULTILINE | re.DOTALL)
+
+        # 🚫 移除AI第一人称结尾话语
+        # 匹配常见的AI结尾模式
+        ai_outro_patterns = [
+            r"[\n\r]+---[\n\r]*📚.*?欢迎继续探索.*?$",
+            r"[\n\r]+这些卡片既可用于.*?告诉我哦！.*?$",
+            r"[\n\r]+需要.*?版.*?也可以告诉我.*?$",
+            r"[\n\r]+希望这.*?对您有帮助.*?$",
+            r"[\n\r]+如果您需要.*?请告诉我.*?$",
+            r"[\n\r]+以上就是.*?如有需要.*?$",
+            r"[\n\r]+想提升.*?欢迎访问.*?自己。.*?$",
+            r"[\n\r]+.*?欢迎访问.*?www\..*?$",
+            r"[\n\r]+.*?需要PPT版.*?告诉我.*?$",
+            r"[\n\r]+需要我将这张卡片做成.*?欢迎告诉我.*?$",
+            r"[\n\r]+.*?欢迎告诉我~.*?$",
+            r"[\n\r]+.*?告诉我~.*?$",
+        ]
+
+        for pattern in ai_outro_patterns:
+            content = re.sub(pattern, "", content, flags=re.MULTILINE | re.DOTALL)
+
+        # 🚫 移除多余的分隔线和AI提示语
+        content = re.sub(r"^---+[\n\r]*", "", content, flags=re.MULTILINE)
+        content = re.sub(
+            r"[\n\r]+---+[\n\r]*$", "", content, flags=re.MULTILINE | re.DOTALL
+        )
+
+        # 移除AI角色扮演的话语
+        content = re.sub(
+            r"📌.*?欢迎.*?网.*?www\..*?[\n\r]+", "", content, flags=re.MULTILINE
+        )
+        content = re.sub(
+            r"🎧.*?语音小贴士.*?回味空间。[\n\r]+",
+            "",
+            content,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+
+        # 修复多余的#符号（SenseVoice专用）
+        content = re.sub(r"#{2,}\s*#\s*(摘要|总结|思考)", r"# \1", content)
+        content = re.sub(r"#{3,}\s*#{2,}\s*([^#\n]+)", r"## \1", content)
+
+        # 修复标题格式
+        content = re.sub(r"^##\s*#\s*([^#\n]+)", r"# \1", content, flags=re.MULTILINE)
+        content = re.sub(
+            r"^###\s*##\s*([^#\n]+)", r"## \1", content, flags=re.MULTILINE
+        )
+
+        # 确保标题前后有空行
+        content = re.sub(r"\n(#{1,2}\s+[^\n]+)\n", r"\n\n\1\n\n", content)
+
+        # 清理多余的空行
+        content = re.sub(r"\n{3,}", "\n\n", content)
+
+        # 清理开头和结尾的空行
+        content = content.strip()
+
+        logger.info("✅ 内容后处理完成，移除了AI第一人称话语并修复了格式错误")
+        return content

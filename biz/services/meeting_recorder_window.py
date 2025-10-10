@@ -320,11 +320,44 @@ class MeetingRecorderWindow:
                 )
 
     def _check_audio_recorded(self) -> bool:
-        """检查是否录制到音频（简单实现）"""
-        # 这里应该检查实际的音频数据
-        # 暂时返回True，实际实现需要检查音频缓冲区
-        elapsed = datetime.now() - self.start_time
-        return elapsed.total_seconds() > 5  # 至少录制5秒
+        """检查是否录制到音频（改进实现）"""
+        try:
+            # 检查是否有音频文件生成
+            from pathlib import Path
+
+            data_dir = Path(__file__).parent.parent.parent / "data" / "temp_audio"
+
+            # 检查是否有最近生成的音频文件
+            if data_dir.exists():
+                audio_files = list(data_dir.glob("*.wav"))
+                if audio_files:
+                    # 检查最新的音频文件
+                    latest_file = max(audio_files, key=lambda f: f.stat().st_mtime)
+                    file_size = latest_file.stat().st_size
+
+                    # 如果文件大于100KB，认为有有效录音
+                    if file_size > 100 * 1024:  # 100KB
+                        logger.info(
+                            f"✅ 检测到有效音频文件: {latest_file.name} ({file_size/1024:.1f}KB)"
+                        )
+                        return True
+
+            # 备用检查：至少录制5秒
+            elapsed = datetime.now() - self.start_time
+            has_time = elapsed.total_seconds() > 5
+
+            if has_time:
+                logger.info(f"✅ 录制时长足够: {elapsed.total_seconds():.1f}秒")
+            else:
+                logger.warning(f"⚠️ 录制时长不足: {elapsed.total_seconds():.1f}秒")
+
+            return has_time
+
+        except Exception as e:
+            logger.error(f"检查音频录制状态失败: {e}")
+            # 出错时，如果录制时间超过5秒就认为有效
+            elapsed = datetime.now() - self.start_time
+            return elapsed.total_seconds() > 5
 
     def on_window_close(self):
         """窗口关闭事件"""

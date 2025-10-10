@@ -1197,15 +1197,23 @@ class VideoProcessor:
                         },
                     )
 
+                    # 🎯 传递content_role参数
+                    generate_kwargs = {
+                        "video_path": video_path,
+                        "audio_path": audio_path,
+                        "subtitles": subtitles,
+                        "frame_info": frame_info,
+                        "language": config.get("language", "zh"),
+                        "task_id": task_id,
+                    }
+
+                    # 如果配置中有content_role，传递给AI生成器
+                    if "content_role" in config:
+                        generate_kwargs["force_domain"] = config["content_role"]
+                        logger.info(f"🎯 使用指定内容角色: {config['content_role']}")
+
                     result = await ai_factory.generate(
-                        output_type,
-                        transcript_text,
-                        video_path=video_path,
-                        audio_path=audio_path,
-                        subtitles=subtitles,
-                        frame_info=frame_info,
-                        language=config.get("language", "zh"),
-                        task_id=task_id,
+                        output_type, transcript_text, **generate_kwargs
                     )
 
                     if result.get("success"):

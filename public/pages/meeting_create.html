@@ -736,7 +736,7 @@
                         switch(this.currentMeeting.status) {
                             case 'recording': return '🔴 正在录制中...';
                             case 'paused': return '⏸️ 录制已暂停';
-                            case 'completed': return '✅ 录制已完成，可以编辑转录内容';
+                            case 'finished': return '✅ 录制已完成，可以编辑转录内容';
                             default: return '状态未知';
                         }
                     },
@@ -768,7 +768,7 @@
                         }, async (index) => {
                             try {
                                 await http.post(`/api/tasks/meeting/${this.currentTaskId}/stop`);
-                                this.currentMeeting.status = 'completed';
+                                this.currentMeeting.status = 'finished';
                                 this.generateEditableTranscript();
                                 layer.close(index);
                                 layer.msg('会议已结束，可以编辑转录内容', { icon: 1 });
@@ -896,7 +896,7 @@
                     },
                     
                     handleMeetingCompleted(data) {
-                        this.currentMeeting.status = 'completed';
+                        this.currentMeeting.status = 'finished';
                         this.generateEditableTranscript();
                         layer.msg('会议录制已完成！', { icon: 1 });
                     },

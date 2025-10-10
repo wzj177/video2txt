@@ -299,21 +299,49 @@ class VoiceAnalysisService:
             recognition_result = self.voice_core.recognize_file(audio_path)
 
             if not recognition_result or not recognition_result.get("text"):
-                # 检查是否是静音音频
-                logger.warning(f"音频文件可能为静音或无有效语音内容: {audio_path}")
-                return {
-                    "segments": [],
-                    "full_transcript": "",
-                    "speakers": {},
-                    "recognition_info": {
-                        "model": "sensevoice",
-                        "language": "zh",
-                        "processing_time": 0,
-                        "confidence": 0.0,
-                        "status": "empty_audio",
-                    },
-                    "warning": "音频内容为空或无法识别",
-                }
+                # 🔄 第一次识别失败，尝试用不同参数重新识别
+                logger.info(f"🔄 首次识别为空，尝试降低VAD敏感度重新识别: {audio_path}")
+
+                try:
+                    # 尝试强制使用中文识别，降低VAD敏感度
+                    recognition_result = self.voice_core.recognize_file(
+                        audio_path, language="zh"
+                    )
+
+                    if recognition_result and recognition_result.get("text"):
+                        logger.info(
+                            f"✅ 重新识别成功: {recognition_result.get('text')[:50]}..."
+                        )
+                    else:
+                        # 最后尝试：使用auto语言检测
+                        recognition_result = self.voice_core.recognize_file(
+                            audio_path, language="auto"
+                        )
+
+                        if recognition_result and recognition_result.get("text"):
+                            logger.info(
+                                f"✅ 自动语言检测识别成功: {recognition_result.get('text')[:50]}..."
+                            )
+
+                except Exception as e:
+                    logger.warning(f"重新识别也失败: {e}")
+
+                # 如果重新识别仍然失败
+                if not recognition_result or not recognition_result.get("text"):
+                    logger.warning(f"音频文件可能为静音或无有效语音内容: {audio_path}")
+                    return {
+                        "segments": [],
+                        "full_transcript": "",
+                        "speakers": {},
+                        "recognition_info": {
+                            "model": "sensevoice",
+                            "language": "zh",
+                            "processing_time": 0,
+                            "confidence": 0.0,
+                            "status": "empty_audio",
+                        },
+                        "warning": "音频内容为空或无法识别",
+                    }
 
             full_transcript = recognition_result["text"]
 

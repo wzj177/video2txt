@@ -425,13 +425,15 @@ class SenseVoiceEngine(BaseVoiceEngine):
 
             # 根据音频长度和用途选择不同的参数
             if is_short_audio and not self.use_vad:
-                # 短音频批量模式
+                # 短音频批量模式 - 降低VAD敏感度，适合实时转录
                 res = self.model.generate(
                     input=audio_path,
                     cache={},
                     language=language,  # "zh", "en", "yue", "ja", "ko", "nospeech", "auto"
                     use_itn=True,  # 包含标点与逆文本正则化
                     batch_size=64,  # 批量大小
+                    # 实时转录优化：降低VAD阈值，提高短音频识别率
+                    vad_kwargs={"max_single_segment_time": 30000},  # 允许更长的单段时间
                 )
             else:
                 # 长音频VAD模式 - 优化时间戳分割

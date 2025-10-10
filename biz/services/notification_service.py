@@ -190,6 +190,10 @@ class NotificationService:
             "paused": {"title": "⏸️ 会议记录暂停", "emoji": "⏸️"},
             "resumed": {"title": "▶️ 会议记录继续", "emoji": "▶️"},
             "completed": {"title": "✅ 会议记录完成", "emoji": "🎉"},
+            "finished": {
+                "title": "🎉 会议记录任务完成",
+                "emoji": "✅",
+            },  # 添加 finished 状态
             "error": {"title": "❌ 会议记录出错", "emoji": "⚠️"},
         }
 
@@ -203,7 +207,7 @@ class NotificationService:
         if message_extra:
             message += f"\n\n{message_extra}"
 
-        timeout = 15 if status in ["completed", "error"] else 8
+        timeout = 15 if status in ["completed", "finished", "error"] else 8
 
         return self.show_notification(
             title=status_info["title"], message=message, timeout=timeout

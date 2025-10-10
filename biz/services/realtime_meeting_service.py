@@ -49,7 +49,7 @@ class RealtimeMeetingProcessor:
 
         # 转录相关
         self.last_transcribe_time = 0
-        self.transcribe_interval = 3.0  # 每3秒转录一次
+        self.transcribe_interval = 5.0  # 每5秒转录一次（增加间隔）
         self.accumulated_audio = []
         self.accumulated_text = []
 
@@ -261,8 +261,8 @@ class RealtimeMeetingProcessor:
                     >= self.transcribe_interval
                 ):
 
-                    # 获取音频数据
-                    audio_data = self.audio_buffer.get_latest_audio(duration=5.0)
+                    # 获取音频数据（增加到10秒，提高识别准确性）
+                    audio_data = self.audio_buffer.get_latest_audio(duration=10.0)
 
                     if audio_data is not None and len(audio_data) > 0:
                         # 执行转录
@@ -595,14 +595,28 @@ class RealtimeMeetingProcessor:
                 )
                 return
 
-            # 保存音频文件（如果有音频数据）
+            # 保存音频文件到项目data目录
             audio_file_path = None
-            if self.accumulated_audio and self.audio_file_path:
+            if self.audio_buffer and self.audio_buffer.get_duration() > 0:
                 try:
-                    # 这里应该保存音频文件
-                    # 简化实现，实际需要使用音频库
-                    audio_file_path = str(self.audio_file_path)
-                    logger.info(f"音频文件路径: {audio_file_path}")
+                    # 确保data目录存在
+                    from pathlib import Path
+
+                    data_dir = (
+                        Path(__file__).parent.parent.parent / "data" / "temp_audio"
+                    )
+                    data_dir.mkdir(parents=True, exist_ok=True)
+
+                    # 创建最终音频文件路径
+                    final_audio_path = data_dir / f"meeting_{self.task_id}_final.wav"
+
+                    # 保存音频缓冲区到文件
+                    if self.audio_buffer.save_to_file(str(final_audio_path)):
+                        audio_file_path = str(final_audio_path)
+                        logger.info(f"✅ 音频文件已保存: {audio_file_path}")
+                    else:
+                        logger.error("❌ 音频缓冲区保存失败")
+
                 except Exception as e:
                     logger.error(f"保存音频文件失败: {e}")
 
@@ -625,15 +639,22 @@ class RealtimeMeetingProcessor:
             else:
                 ai_results = {}
 
+            # 准备完整的转录文本
+            full_transcript = (
+                "\n".join(self.accumulated_text) if self.accumulated_text else ""
+            )
+
             # 更新最终结果
             await task_service.update_task(
                 "meeting",
                 self.task_id,
                 {
-                    "status": "completed",
+                    "status": "finished",  # 修改为 finished
                     "progress": 100,
                     "current_step": "会议记录完成",
                     "results": ai_results,
+                    "transcript": full_transcript,  # 添加完整转录文本
+                    "transcript_segments": len(self.accumulated_text),  # 转录段数
                     "duration": (
                         len(self.accumulated_text) * self.transcribe_interval
                         if self.accumulated_text
@@ -657,7 +678,7 @@ class RealtimeMeetingProcessor:
 
             notification_service.notify_meeting_status(
                 meeting_title=meeting_title,
-                status="completed",
+                status="finished",  # 使用 finished 状态
                 duration=duration_text,
                 message_extra=f"已生成转录文本和{'AI内容' if self.config.get('enable_realtime_summary') else '基础总结'}",
             )
@@ -686,14 +707,29 @@ class RealtimeMeetingProcessor:
     async def _generate_ai_content(
         self, transcript: str, audio_path: Optional[str] = None
     ):
-        """生成AI内容"""
+        """生成AI内容 - 会议专用，传入meeting role"""
         try:
             ai_results = {}
 
+            # 🎯 会议专用：传入meeting role
+            meeting_kwargs = {
+                "content_role": "meeting",  # 强制指定为会议角色
+                "transcript": transcript,
+                "audio_path": audio_path,
+            }
+
             # 使用video_service生成内容
-            # 内容摘要
+            # 内容卡片 (会议纪要)
+            content_card_result = await video_service.generate_ai_content(
+                "content_card", **meeting_kwargs
+            )
+
+            if content_card_result.get("success"):
+                ai_results["meeting_notes"] = content_card_result.get("content", "")
+
+            # AI分析
             summary_result = await video_service.generate_ai_content(
-                "ai_analysis", transcript=transcript, audio_path=audio_path
+                "ai_analysis", **meeting_kwargs
             )
 
             if summary_result.get("success"):
@@ -701,20 +737,21 @@ class RealtimeMeetingProcessor:
 
             # 思维导图
             mindmap_result = await video_service.generate_ai_content(
-                "mind_map", transcript=transcript, audio_path=audio_path
+                "mind_map", **meeting_kwargs
             )
 
             if mindmap_result.get("success"):
                 ai_results["mindmap"] = mindmap_result.get("content", "")
 
-            # 学习闪卡
+            # 学习闪卡 (会议要点)
             flashcards_result = await video_service.generate_ai_content(
-                "flashcards", transcript=transcript, audio_path=audio_path
+                "flashcards", **meeting_kwargs
             )
 
             if flashcards_result.get("success"):
                 ai_results["flashcards"] = flashcards_result.get("content", "")
 
+            logger.info(f"✅ 会议AI内容生成完成，使用meeting角色")
             return ai_results
 
         except Exception as e:

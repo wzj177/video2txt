@@ -255,7 +255,7 @@ async def stream_meeting_results(task_id: str):
                     current_task = await task_service.get_task_by_id("meeting", task_id)
                     if not current_task or current_task.get("status") in [
                         "stopped",
-                        "completed",
+                        "finished",
                         "error",
                     ]:
                         yield f"data: {json.dumps({'type': 'disconnected', 'message': '监控已停止'})}\n\n"

@@ -416,6 +416,11 @@ class AudioBuffer:
         with self.lock:
             self.buffer = np.array([], dtype=np.float32)
 
+    def get_duration(self) -> float:
+        """获取缓冲区中音频的时长（秒）"""
+        with self.lock:
+            return len(self.buffer) / self.sample_rate
+
     def save_to_file(self, filepath: str, duration: float = None):
         """保存音频到文件"""
         try:
