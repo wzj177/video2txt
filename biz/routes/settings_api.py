@@ -66,6 +66,96 @@ def save_settings(settings: Dict[str, Any]) -> bool:
         return False
 
 
+def get_role_mapping(category: str = "content_generator") -> Dict[str, str]:
+    """获取角色映射配置
+    
+    Args:
+        category: 角色类别 (content_generator, flashcard_generator, ai_analysis, content_card)
+    
+    Returns:
+        角色映射字典
+    """
+    try:
+        settings = load_settings()
+        role_mapping = settings.get("role_mapping", {})
+        
+        # 获取指定类别的角色映射
+        category_mapping = role_mapping.get(category, {})
+        
+        # 如果指定类别不存在，返回默认的content_generator映射
+        if not category_mapping:
+            category_mapping = role_mapping.get("content_generator", {})
+        
+        # 如果还是没有，返回默认映射
+        if not category_mapping:
+            category_mapping = {
+                "education": "教育内容专家",
+                "exam_review": "试卷评讲专家", 
+                "cooking": "美食知识专家",
+                "travel": "旅行攻略专家",
+                "meeting": "会议管理专家",
+                "technology": "科技内容专家",
+                "business": "商业分析专家",
+                "general": "内容专家",
+            }
+            
+        return category_mapping
+    except Exception as e:
+        logger.error(f"获取角色映射失败: {e}")
+        # 返回默认映射
+        return {
+            "education": "教育内容专家",
+            "exam_review": "试卷评讲专家",
+            "cooking": "美食知识专家", 
+            "travel": "旅行攻略专家",
+            "meeting": "会议管理专家",
+            "technology": "科技内容专家",
+            "business": "商业分析专家",
+            "general": "内容专家",
+        }
+
+
+def get_role_name(domain: str, category: str = "content_generator", default: str = "内容专家") -> str:
+    """获取指定领域的角色名称
+    
+    Args:
+        domain: 领域名称
+        category: 角色类别
+        default: 默认角色名称
+    
+    Returns:
+        角色名称
+    """
+    try:
+        role_mapping = get_role_mapping(category)
+        return role_mapping.get(domain, default)
+    except Exception as e:
+        logger.error(f"获取角色名称失败: {e}")
+        return default
+
+
+def get_prompt_template(template_type: str, prompt_part: str = "system_prompt") -> str:
+    """从配置文件获取提示词模板
+    
+    Args:
+        template_type: 模板类型 (mind_map, flashcards, ai_analysis)
+        prompt_part: 提示词部分 (system_prompt, user_prompt)
+    
+    Returns:
+        提示词模板字符串
+    """
+    try:
+        settings = load_settings()
+        prompt_templates = settings.get("prompt_templates", {})
+        template = prompt_templates.get(template_type, {})
+        
+        return template.get(prompt_part, "")
+        
+    except Exception as e:
+        logger.error(f"读取提示词模板失败: {e}")
+        return ""
+
+
 @settings_router.get("/openai")
 async def get_openai_settings() -> Dict[str, Any]:
     """获取OpenAI配置"""
@@ -267,6 +357,33 @@ async def update_system_settings(config: Dict[str, Any]) -> Dict[str, Any]:
         else:
             return {"success": False, "error": "保存配置失败"}
 
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.get("/role_mapping")
+async def get_role_mapping_api() -> Dict[str, Any]:
+    """获取角色映射配置API"""
+    try:
+        settings = load_settings()
+        role_mapping = settings.get("role_mapping", {})
+        
+        return {"success": True, "data": role_mapping}
+    except Exception as e:
+        return {"success": False, "error": str(e), "data": {}}
+
+
+@settings_router.post("/role_mapping")
+async def update_role_mapping(role_mapping: Dict[str, Any]) -> Dict[str, Any]:
+    """更新角色映射配置"""
+    try:
+        settings = load_settings()
+        settings["role_mapping"] = role_mapping
+        
+        if save_settings(settings):
+            return {"success": True, "message": "角色映射配置已更新"}
+        else:
+            return {"success": False, "error": "保存配置失败"}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

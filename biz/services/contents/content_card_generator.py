@@ -399,19 +399,9 @@ class ContentCardGenerator:
     ) -> str:
         """构建系统提示词 - 四段式结构优化版"""
 
-        # 🎯 角色定义（根据领域动态调整）
-        role_mapping = {
-            "education": "教育内容专家",
-            "exam_review": "试卷评讲专家",
-            "cooking": "美食教学专家",
-            "travel": "旅行攻略专家",
-            "meeting": "会议纪要专家",
-            "technology": "科技解说专家",
-            "business": "商业分析专家",
-            "general": "视频知识萃取专家",
-        }
-
-        role_name = role_mapping.get(content_domain, "视频知识萃取专家")
+        # 🎯 角色定义（从配置文件读取）
+        from biz.routes.settings_api import get_role_name
+        role_name = get_role_name(content_domain, "content_card", "视频知识萃取专家")
 
         return f"""# 角色
 你是一位专业的{role_name}，擅长将视频内容转化为结构化、高价值、图文精准对齐的知识卡片。

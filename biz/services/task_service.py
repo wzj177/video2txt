@@ -164,6 +164,7 @@ class TaskService:
                         engine=config_data.get("engine", "sensevoice"),
                         capture_mode=config_data.get("capture_mode", "system"),
                         realtime=config_data.get("realtime", True),
+                        results=task_data.get("results", {}),  # 添加results字段支持
                     )
                 else:
                     raise ValueError(f"不支持的任务类型: {task_type}")
@@ -241,9 +242,31 @@ class TaskService:
                 # 删除上传的文件
                 task_data = await self.get_task(task_type, task_id)
                 if task_data:
-                    input_path = task_data.get("input_path", {})
+                    # 检查多个可能的文件路径字段
+                    file_paths_to_delete = []
+                    
+                    # 检查 input_path 字段
+                    input_path = task_data.get("input_path")
                     if input_path:
-                        await self._delete_physical_file(input_path)
+                        file_paths_to_delete.append(input_path)
+                    
+                    # 检查 config.audio_file_path 字段（会议任务）
+                    config = task_data.get("config", {})
+                    if isinstance(config, dict):
+                        audio_file_path = config.get("audio_file_path")
+                        if audio_file_path:
+                            file_paths_to_delete.append(audio_file_path)
+                    
+                    # 检查其他可能的文件路径字段
+                    for field in ["audio_file_path", "file_path", "source_file", "original_file"]:
+                        field_value = task_data.get(field)
+                        if field_value:
+                            file_paths_to_delete.append(field_value)
+                    
+                    # 删除所有找到的文件
+                    for file_path in file_paths_to_delete:
+                        await self._delete_physical_file(file_path)
+                        logger.info(f"删除任务关联文件: {file_path}")
 
                 # 删除任务
                 success = await repo.delete(task_id)

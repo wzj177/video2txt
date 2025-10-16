@@ -1260,8 +1260,16 @@ class VideoProcessor:
                 # 同时生成FreeMind格式
                 mm_filename = "思维导图.mm"
                 mm_file_path = output_dir / mm_filename
-                mm_content = self._convert_to_freemind(content)
-                mm_file_path.write_text(mm_content, encoding="utf-8")
+                
+                # 使用 AI 内容生成器的完整 export_xmind_format 方法
+                from .ai_content_generator import AIContentGenerator
+                ai_generator = AIContentGenerator()
+                success = ai_generator.export_xmind_format(content, str(mm_file_path))
+                
+                if not success:
+                    # 如果导出失败，使用简化的备用方法
+                    mm_content = self._convert_to_freemind(content)
+                    mm_file_path.write_text(mm_content, encoding="utf-8")
 
                 return {
                     "name": filename,
@@ -1282,11 +1290,25 @@ class VideoProcessor:
                 file_path = output_dir / filename
                 file_path.write_text(content, encoding="utf-8")
 
-                # 同时生成Anki格式
+                # 使用新的Anki导出功能
                 anki_filename = "学习闪卡-Anki格式.csv"
                 anki_file_path = output_dir / anki_filename
-                anki_content = self._convert_to_anki(content)
-                anki_file_path.write_text(anki_content, encoding="utf-8")
+                
+                # 调用AI生成器的Anki导出功能
+                try:
+                    from .ai_content_generator import AIContentGenerator
+                    ai_generator = AIContentGenerator()
+                    anki_success = ai_generator.export_anki_format(content, str(anki_file_path))
+                    if not anki_success:
+                        logger.warning("Anki格式导出失败，使用备用方法")
+                        # 备用：使用原有的转换方法
+                        anki_content = self._convert_to_anki(content)
+                        anki_file_path.write_text(anki_content, encoding="utf-8")
+                except Exception as e:
+                    logger.error(f"Anki导出异常: {e}")
+                    # 备用：使用原有的转换方法
+                    anki_content = self._convert_to_anki(content)
+                    anki_file_path.write_text(anki_content, encoding="utf-8")
 
                 # 生成JSON格式的闪卡文件
                 json_filename = "flashcards.json"

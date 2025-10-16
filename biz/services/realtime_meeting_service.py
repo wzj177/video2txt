@@ -12,7 +12,7 @@ import json
 import tempfile
 import os
 import numpy as np
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional, Callable, List
 from pathlib import Path
 from datetime import datetime
 import sys
@@ -595,8 +595,10 @@ class RealtimeMeetingProcessor:
                 )
                 return
 
-            # 保存音频文件到项目data目录
+            # 保存音频文件到项目data目录并进行完整分析
             audio_file_path = None
+            detailed_analysis = None
+
             if self.audio_buffer and self.audio_buffer.get_duration() > 0:
                 try:
                     # 确保data目录存在
@@ -614,6 +616,13 @@ class RealtimeMeetingProcessor:
                     if self.audio_buffer.save_to_file(str(final_audio_path)):
                         audio_file_path = str(final_audio_path)
                         logger.info(f"✅ 音频文件已保存: {audio_file_path}")
+
+                        # 🎯 进行完整的语音分析（说话人分离 + 情感分析）
+                        logger.info("🔍 开始进行完整的语音分析...")
+                        detailed_analysis = await self._perform_detailed_analysis(
+                            audio_file_path
+                        )
+
                     else:
                         logger.error("❌ 音频缓冲区保存失败")
 
@@ -644,6 +653,25 @@ class RealtimeMeetingProcessor:
                 "\n".join(self.accumulated_text) if self.accumulated_text else ""
             )
 
+            # 🎯 整合详细分析结果到最终数据
+            final_results = ai_results.copy() if ai_results else {}
+
+            if detailed_analysis and detailed_analysis.get("success"):
+                # 添加详细的语音分析结果
+                final_results.update(
+                    {
+                        "segments": detailed_analysis.get("segments", []),
+                        "speakers": detailed_analysis.get("speakers", {}),
+                        "analysis_summary": detailed_analysis.get(
+                            "analysis_summary", {}
+                        ),
+                        "keywords": detailed_analysis.get("keywords", []),
+                    }
+                )
+                logger.info(
+                    f"✅ 集成详细分析结果: {len(detailed_analysis.get('segments', []))} 个分段, {len(detailed_analysis.get('speakers', {}))} 个说话人"
+                )
+
             # 更新最终结果
             await task_service.update_task(
                 "meeting",
@@ -652,7 +680,7 @@ class RealtimeMeetingProcessor:
                     "status": "finished",  # 修改为 finished
                     "progress": 100,
                     "current_step": "会议记录完成",
-                    "results": ai_results,
+                    "results": final_results,  # 使用整合后的结果
                     "transcript": full_transcript,  # 添加完整转录文本
                     "transcript_segments": len(self.accumulated_text),  # 转录段数
                     "duration": (
@@ -757,6 +785,233 @@ class RealtimeMeetingProcessor:
         except Exception as e:
             logger.error(f"生成AI内容失败: {e}")
             return {}
+
+    async def _perform_detailed_analysis(self, audio_file_path: str) -> Dict[str, Any]:
+        """执行详细的语音分析（说话人分离 + 情感分析）"""
+        try:
+            from .voice_analysis_service import voice_analysis_service
+
+            # 检查配置是否启用高级分析
+            enable_diarization = self.config.get("enable_speaker_diarization", True)
+            enable_emotion = self.config.get("enable_ai_analysis", True)
+
+            logger.info(
+                f"🎯 语音分析配置: 说话人分离={enable_diarization}, 情感分析={enable_emotion}"
+            )
+
+            # 执行完整的语音分析
+            analysis_result = await voice_analysis_service.analyze_audio_file(
+                audio_path=audio_file_path,
+                enable_diarization=enable_diarization,
+                enable_emotion=enable_emotion,
+                language=self.config.get("language", "auto"),
+            )
+
+            if not analysis_result or not analysis_result.get("success"):
+                logger.warning("语音分析失败，使用基础转录结果")
+                return self._create_fallback_analysis()
+
+            # 提取分析结果
+            segments = analysis_result.get("segments", [])
+            speakers_info = analysis_result.get("speakers", {})
+
+            logger.info(
+                f"✅ 语音分析完成: {len(segments)} 个分段, {len(speakers_info)} 个说话人"
+            )
+
+            # 生成分析摘要
+            analysis_summary = self._generate_analysis_summary(segments, speakers_info)
+
+            # 提取关键词
+            keywords = self._extract_keywords_from_segments(segments)
+
+            return {
+                "success": True,
+                "segments": segments,
+                "speakers": speakers_info,
+                "analysis_summary": analysis_summary,
+                "keywords": keywords,
+                "processing_info": {
+                    "total_segments": len(segments),
+                    "total_speakers": len(speakers_info),
+                    "analysis_duration": analysis_result.get("processing_time", 0),
+                    "diarization_enabled": enable_diarization,
+                    "emotion_enabled": enable_emotion,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"详细语音分析失败: {e}")
+            return self._create_fallback_analysis()
+
+    def _create_fallback_analysis(self) -> Dict[str, Any]:
+        """创建回退分析结果（当高级分析失败时使用）"""
+        try:
+            # 基于已有的转录文本创建基础分段
+            segments = []
+            current_time = 0.0
+
+            for i, text in enumerate(self.accumulated_text):
+                if text.strip():
+                    segment = {
+                        "text": text.strip(),
+                        "speaker": "Speaker_1",  # 默认说话人
+                        "emotion": "neutral",  # 默认情感
+                        "confidence": 0.8,
+                        "start": current_time,
+                        "end": current_time + self.transcribe_interval,
+                        "duration": self.transcribe_interval,
+                        "language": "zh",
+                    }
+                    segments.append(segment)
+                    current_time += self.transcribe_interval
+
+            speakers_info = {
+                "Speaker_1": {
+                    "name": "Speaker_1",
+                    "segments": len(segments),
+                    "total_duration": current_time,
+                    "emotions": {"neutral": len(segments)},
+                }
+            }
+
+            return {
+                "success": True,
+                "segments": segments,
+                "speakers": speakers_info,
+                "analysis_summary": {
+                    "total_speakers": 1,
+                    "dominant_emotion": "neutral",
+                    "meeting_tone": "neutral",
+                },
+                "keywords": [],
+                "fallback": True,
+            }
+
+        except Exception as e:
+            logger.error(f"创建回退分析失败: {e}")
+            return {"success": False, "error": str(e)}
+
+    def _generate_analysis_summary(
+        self, segments: List[Dict], speakers_info: Dict
+    ) -> Dict[str, Any]:
+        """生成分析摘要"""
+        try:
+            # 统计情感分布
+            emotion_counts = {}
+            total_segments = len(segments)
+
+            for segment in segments:
+                emotion = segment.get("emotion", "neutral")
+                emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
+
+            # 找出主导情感
+            dominant_emotion = (
+                max(emotion_counts.items(), key=lambda x: x[1])[0]
+                if emotion_counts
+                else "neutral"
+            )
+
+            # 计算说话时间分布
+            speaker_durations = {}
+            for speaker_id, info in speakers_info.items():
+                speaker_durations[speaker_id] = info.get("total_duration", 0)
+
+            return {
+                "total_speakers": len(speakers_info),
+                "total_segments": total_segments,
+                "dominant_emotion": dominant_emotion,
+                "emotion_distribution": emotion_counts,
+                "speaker_durations": speaker_durations,
+                "meeting_tone": self._determine_meeting_tone(emotion_counts),
+                "interaction_level": (
+                    "high"
+                    if len(speakers_info) > 2
+                    else "medium" if len(speakers_info) == 2 else "low"
+                ),
+            }
+
+        except Exception as e:
+            logger.error(f"生成分析摘要失败: {e}")
+            return {}
+
+    def _determine_meeting_tone(self, emotion_counts: Dict[str, int]) -> str:
+        """确定会议整体氛围"""
+        if not emotion_counts:
+            return "neutral"
+
+        total = sum(emotion_counts.values())
+        positive_emotions = ["happy", "excited", "positive"]
+        negative_emotions = ["angry", "sad", "frustrated", "negative"]
+
+        positive_ratio = (
+            sum(emotion_counts.get(e, 0) for e in positive_emotions) / total
+        )
+        negative_ratio = (
+            sum(emotion_counts.get(e, 0) for e in negative_emotions) / total
+        )
+
+        if positive_ratio > 0.4:
+            return "positive"
+        elif negative_ratio > 0.3:
+            return "tense"
+        else:
+            return "neutral"
+
+    def _extract_keywords_from_segments(self, segments: List[Dict]) -> List[str]:
+        """从分段中提取关键词"""
+        try:
+            # 合并所有文本
+            all_text = " ".join([seg.get("text", "") for seg in segments])
+
+            if not all_text.strip():
+                return []
+
+            # 简单的关键词提取（可以后续优化为更高级的NLP）
+            import re
+            from collections import Counter
+
+            # 移除标点符号，分词
+            words = re.findall(r"\b\w+\b", all_text.lower())
+
+            # 过滤停用词（简化版）
+            stop_words = {
+                "的",
+                "了",
+                "在",
+                "是",
+                "我",
+                "你",
+                "他",
+                "她",
+                "它",
+                "我们",
+                "你们",
+                "他们",
+                "这",
+                "那",
+                "这个",
+                "那个",
+                "一个",
+                "和",
+                "与",
+                "或",
+                "但是",
+                "然后",
+                "所以",
+            }
+
+            filtered_words = [w for w in words if len(w) > 1 and w not in stop_words]
+
+            # 统计词频，返回前10个关键词
+            word_counts = Counter(filtered_words)
+            keywords = [word for word, count in word_counts.most_common(10)]
+
+            return keywords
+
+        except Exception as e:
+            logger.error(f"提取关键词失败: {e}")
+            return []
 
     async def _cleanup(self):
         """清理资源"""

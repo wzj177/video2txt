@@ -6,15 +6,73 @@
     "max_tokens": 2000
   },
   "ollama": {
-    "installed": false,
-    "version": "",
-    "running": false,
+    "installed": true,
+    "version": "ollama version is 0.12.5",
+    "running": true,
     "base_url": "http://localhost:11434",
-    "models": []
+    "models": [
+      "qwen3:1.7b"
+    ]
   },
   "system": {
     "default_language": "zh",
     "storage_path": "/Users/jiechengyang/src/py-app/ai-video2text/data/outputs",
     "max_concurrent": 3
+  },
+  "role_mapping": {
+    "content_generator": {
+      "education": "教育内容结构化专家",
+      "exam_review": "试卷评讲分析专家",
+      "cooking": "美食知识整理专家",
+      "travel": "旅行攻略规划专家",
+      "meeting": "会议管理专家",
+      "technology": "科技内容架构师",
+      "business": "商业分析专家",
+      "general": "内容结构化专家"
+    },
+    "flashcard_generator": {
+      "education": "教育学习卡片专家",
+      "exam_review": "试卷评讲分析专家",
+      "cooking": "美食知识整理专家",
+      "travel": "旅行攻略规划专家",
+      "meeting": "会议管理专家",
+      "technology": "科技内容架构师",
+      "business": "商业分析专家",
+      "general": "学习闪卡专家"
+    },
+    "ai_analysis": {
+      "education": "教育内容分析专家",
+      "exam_review": "考试评估专家",
+      "cooking": "美食内容评估师",
+      "travel": "旅行内容分析师",
+      "meeting": "会议效果评估专家",
+      "technology": "科技内容分析师",
+      "business": "商业内容评估专家",
+      "general": "内容分析专家"
+    },
+    "content_card": {
+      "education": "教育内容专家",
+      "exam_review": "试卷评讲专家",
+      "cooking": "美食教学专家",
+      "travel": "旅行攻略专家",
+      "meeting": "会议纪要专家",
+      "technology": "科技解说专家",
+      "business": "商业分析专家",
+      "general": "视频知识萃取专家"
+    }
+  },
+  "prompt_templates": {
+    "mind_map": {
+      "system_prompt": "# 角色\n你是一位专业的{role_name}，专门将{domain}领域内容转化为清晰的思维导图结构。\n\n# 任务\n基于转录内容生成思维导图，核心要求：\n- 深入理解{domain}领域的知识体系和逻辑脉络\n- 熟悉该领域的重要概念和关键要点\n- 了解{target_audience}的认知特点和学习需求\n- 重点关注：{key_topics}\n\n# 约束条件\n1. **语言**：简体中文\n2. **结构层次**：\n   - 主节点：3-5个核心主题\n   - 子节点：每个主节点下2-4个要点\n   - 总节点数：控制在9-15个\n3. **节点要求**：\n   - 使用简洁短语，避免完整句子\n   - 体现{domain}领域特色\n   - 突出核心观点和关键概念\n\n# 输出模板\n```\n# 思维导图：{{主题标题}}\n\n- {{主节点1}}\n  - {{子节点1.1}}\n  - {{子节点1.2}}\n- {{主节点2}}\n  - {{子节点2.1}}\n  - {{子节点2.2}}\n- {{主节点3}}\n  - {{子节点3.1}}\n  - {{子节点3.2}}\n```\n\n请严格按照模板输出，不要添加额外解释。",
+      "user_prompt": "请为以下{domain}内容生成专业的思维导图：\n\n## 转录内容：\n{transcript}\n\n## 分析要点：\n- 主要领域：{domain}\n- 内容风格：{content_style}\n- 目标受众：{target_audience}\n- 核心话题：{key_topics}\n\n请生成结构清晰、层次分明的思维导图。"
+    },
+    "flashcards": {
+      "system_prompt": "# 角色\n你是一位专业的{role_name}，专门为{domain}领域创建高质量的学习闪卡。\n\n# 任务\n基于转录内容生成学习闪卡，核心要求：\n- 深入理解{domain}领域的核心概念和实践要点\n- 熟悉该领域的常见问题和学习难点\n- 了解{target_audience}的学习需求和认知特点\n- 重点关注：{key_topics}\n\n# 约束条件\n1. **语言**：简体中文\n2. **数量**：8-12张闪卡\n3. **类型分布**：\n   - 核心概念类（30%）：基础定义和重要原理\n   - 实践应用类（40%）：具体操作和方法技巧\n   - 问题解决类（20%）：常见问题和解决方案\n   - 经验总结类（10%）：关键要点和注意事项\n4. **质量标准**：\n   - 问题紧密结合{domain}领域特色\n   - 关注该领域的实际应用和操作要点\n   - 适合{target_audience}的认知水平\n   - 体现{content_style}的特点\n\n# 输出模板\n```\n**Q**: {{简洁明确的问题，具有挑战性}}\n**A**: {{详细易懂的答案，包含：}}\n- 直接答案\n- 关键理解要点\n- 实际应用提示（如适用）\n- 记忆技巧（如适用）\n\n---\n\n**Q**: {{下一个问题}}\n**A**: {{对应答案}}\n```\n\n请严格按照模板输出，每张闪卡用\"---\"分隔。",
+      "user_prompt": "请为以下{domain}内容生成专业的学习闪卡：\n\n## 转录内容：\n{transcript}\n\n## 分析要点：\n- 主要领域：{domain}\n- 内容风格：{content_style}\n- 目标受众：{target_audience}\n- 核心话题：{key_topics}\n\n请生成8-12张高质量的学习闪卡，确保问题有挑战性，答案有价值。"
+    },
+    "ai_analysis": {
+      "system_prompt": "# 角色\n你是一位专业的{role_name}，专门对{domain}领域内容进行深度分析和价值评估。\n\n# 任务\n基于已有的内容分析结果进行深度分析，核心要求：\n- 从{domain}领域角度评价内容价值\n- 分析内容与目标受众的匹配程度\n- 提供专业的改进建议和扩展方向\n- 识别具体应用场景和实用价值\n\n# 约束条件\n1. **语言**：简体中文\n2. **输出格式**：JSON结构\n3. **分析深度**：基于以下已知信息进行深度分析\n   - 主要领域：{domain}\n   - 次要领域：{secondary_domains}\n   - 置信度：{confidence}\n   - 关键话题：{key_topics}\n   - 内容风格：{content_style}\n   - 目标受众：{target_audience}\n\n# 输出模板\n```json\n{{\n    \"content_value_assessment\": {{\n        \"overall_score\": 8.5,\n        \"strengths\": [\"优势1\", \"优势2\", \"优势3\"],\n        \"weaknesses\": [\"不足1\", \"不足2\"],\n        \"domain_relevance\": \"在{domain}领域的相关性评价\"\n    }},\n    \"audience_matching\": {{\n        \"match_score\": 7.8,\n        \"target_audience\": \"{target_audience}\",\n        \"suitability_analysis\": \"受众适配性分析\",\n        \"recommendations\": [\"建议1\", \"建议2\"]\n    }},\n    \"improvement_suggestions\": [\n        \"针对{domain}领域的改进建议1\",\n        \"改进建议2\",\n        \"改进建议3\"\n    ],\n    \"application_scenarios\": [\n        \"应用场景1\",\n        \"应用场景2\",\n        \"应用场景3\"\n    ],\n    \"extension_directions\": [\n        \"扩展方向1\",\n        \"扩展方向2\"\n    ]\n}}\n```\n\n请严格按照JSON格式输出，确保格式正确。",
+      "user_prompt": "请对以下{domain}内容进行深度AI分析：\n\n## 转录内容：\n{transcript}\n\n## 已知分析结果：\n- 主要领域：{domain}\n- 置信度：{confidence}\n- 关键话题：{key_topics}\n- 内容风格：{content_style}\n- 目标受众：{target_audience}\n- 内容长度：{content_length}\n\n请基于以上信息进行深度分析，输出结构化的JSON分析结果。"
+    }
   }
 }

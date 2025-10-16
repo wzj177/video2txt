@@ -404,6 +404,676 @@
             line-height: 1.6;
         }
         
+        /* 智能速览样式 */
+        .smart-overview-header {
+            margin-bottom: 25px;
+        }
+
+        .keywords-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+        
+        .keyword-chip {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .keyword-chip:hover {
+            transform: scale(1.05);
+        }
+
+        .expand-all {
+            color: #667eea;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: auto;
+            align-self: center;
+        }
+
+        .summary-card {
+            background: rgba(39, 174, 96, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(39, 174, 96, 0.1);
+            margin-bottom: 25px;
+        }
+        
+        .summary-text {
+            color: #333;
+            line-height: 1.8;
+            font-size: 16px;
+            white-space: pre-wrap;
+        }
+
+        .subsection-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 25px 0 15px 0;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .key-points-list, .actions-list, .decisions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .point-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #667eea;
+        }
+
+        .action-item {
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #27ae60;
+        }
+
+        .decision-item {
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #3498db;
+        }
+
+        .action-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        /* 原有关键词样式保留兼容 */
+        .keywords-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+        
+        .keyword-tag {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+        
+        /* 核心要点样式 */
+        .key-points-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .key-point-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #667eea;
+        }
+        
+        .point-number {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .point-content {
+            flex: 1;
+            color: #333;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+        
+        /* 行动项和决议样式 */
+        .action-items-container, .decisions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .action-item, .decision-item {
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #27ae60;
+        }
+        
+        .decision-item {
+            border-left-color: #3498db;
+        }
+        
+        .action-content, .decision-content {
+            color: #333;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .action-assignee, .action-deadline, .decision-impact {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .action-assignee::before {
+            content: "👤 ";
+        }
+        
+        .action-deadline::before {
+            content: "⏰ ";
+        }
+        
+        .decision-impact::before {
+            content: "📊 ";
+        }
+        
+        /* 优化的章节样式 - 时间轴设计 */
+        .chapters-timeline {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .chapter-timeline-item {
+            display: flex;
+            gap: 20px;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .chapter-timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .chapter-time-marker {
+            width: 80px;
+            text-align: right;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+            padding-top: 5px;
+        }
+
+        .chapter-content-area {
+            flex: 1;
+        }
+
+        .chapter-title-new {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+
+        .chapter-description-new {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .collapse-button {
+            text-align: center;
+            padding: 15px;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 14px;
+            border-top: 1px solid rgba(102, 126, 234, 0.1);
+            margin-top: 15px;
+        }
+
+        .collapse-button:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        /* 发言总结样式优化 */
+        .speaker-summary-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .speaker-summary-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .speaker-summary-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .speaker-summary-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .speaker-summary-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .speaker-summary-content {
+            line-height: 1.8;
+            color: #333;
+            font-size: 15px;
+        }
+
+        /* 问答回顾样式优化 */
+        .qa-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .qa-item {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .qa-question {
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #333;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            line-height: 1.6;
+        }
+
+        .qa-answer {
+            line-height: 1.6;
+            color: #333;
+            padding-left: 24px;
+            margin-bottom: 10px;
+        }
+
+        .qa-icon {
+            font-size: 16px;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .qa-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .qa-category {
+            margin-top: 10px;
+        }
+
+        .category-tag {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        /* 音频播放器样式 */
+        .audio-player {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+            margin-top: 25px;
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .player-title {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: none;
+            font-size: 18px;
+        }
+
+        .play-button:hover {
+            transform: scale(1.1);
+        }
+
+        .progress-container {
+            flex: 1;
+            position: relative;
+            height: 6px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 3px;
+            position: relative;
+            transition: width 0.3s ease;
+        }
+
+        .progress-time {
+            position: absolute;
+            top: -30px;
+            background-color: #343a40;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10;
+            display: none;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 8px;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .speed-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* 发言人详细分析样式 */
+        .speaker-analysis-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .speaker-analysis-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+        
+        .speaker-analysis-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .speaker-info {
+            flex: 1;
+        }
+        
+        .speaker-role {
+            font-size: 13px;
+            color: #666;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 4px 8px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        
+        .speaker-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .speaker-summary {
+            background: rgba(39, 174, 96, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .summary-title {
+            font-weight: 600;
+            color: #27ae60;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .speaker-topics {
+            margin-bottom: 15px;
+        }
+        
+        .topics-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .topics-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .topic-tag {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .speaker-emotion {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .emotion-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        /* 问答回顾样式 */
+        .qa-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .qa-item {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+        
+        .question-section, .answer-section {
+            margin-bottom: 20px;
+        }
+        
+        .answer-section {
+            margin-bottom: 15px;
+        }
+        
+        .qa-label {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .question-section .qa-label {
+            color: #e74c3c;
+        }
+        
+        .question-section .qa-label::before {
+            content: "❓";
+        }
+        
+        .answer-section .qa-label {
+            color: #27ae60;
+        }
+        
+        .answer-section .qa-label::before {
+            content: "💡";
+        }
+        
+        .question-content, .answer-content {
+            background: rgba(102, 126, 234, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            color: #333;
+            line-height: 1.6;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .answer-content {
+            background: rgba(39, 174, 96, 0.05);
+        }
+        
+        .question-meta, .answer-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .questioner, .answerer {
+            font-weight: 600;
+        }
+        
+        .questioner::before {
+            content: "👤 ";
+        }
+        
+        .answerer::before {
+            content: "👤 ";
+        }
+        
+        .qa-time::before {
+            content: "⏰ ";
+        }
+        
+        .confidence::before {
+            content: "📊 ";
+        }
+        
+        .qa-category {
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .category-tag {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
         /* 响应式设计 */
         @media (max-width: 768px) {
             .meeting-detail-container {
@@ -497,24 +1167,107 @@
             <!-- Tab容器 -->
             <div class="meeting-tabs-container">
                 <div class="tab-nav">
+                    <div class="tab-nav-item" :class="{ active: activeTab === 'overview' }" @click="activeTab = 'overview'">
+                        🎯 智能速览
+                    </div>
                     <div class="tab-nav-item" :class="{ active: activeTab === 'transcription' }" @click="activeTab = 'transcription'">
-                        📝 会议转录 & 总结
+                        📝 会议转录
+                    </div>
+                    <div class="tab-nav-item" :class="{ active: activeTab === 'chapters' }" @click="activeTab = 'chapters'">
+                        📚 章节速览
                     </div>
                     <div class="tab-nav-item" :class="{ active: activeTab === 'analysis' }" @click="activeTab = 'analysis'">
-                        🎭 人声分离 & 情感分析
+                        👥 发言人分析
+                    </div>
+                    <div class="tab-nav-item" :class="{ active: activeTab === 'qa' }" @click="activeTab = 'qa'">
+                        ❓ 问答回顾
                     </div>
                 </div>
 
                 <div class="tab-content">
-                    <!-- 转录和总结Tab -->
+                    <!-- 智能速览Tab -->
+                    <div class="tab-pane" :class="{ active: activeTab === 'overview' }">
+                        <!-- 智能速览标题 -->
+                        <div class="smart-overview-header">
+                            <h3 class="section-title">
+                                🤖 智能速览
+                            </h3>
+                        </div>
+
+                        <!-- 关键词云 -->
+                        <div v-if="meeting.results && meeting.results.keywords && meeting.results.keywords.length > 0">
+                            <div class="keywords-cloud">
+                                <span v-for="keyword in meeting.results.keywords" :key="keyword" class="keyword-chip">{{ keyword }}</span>
+                                <span class="expand-all">展开全部</span>
+                            </div>
+                        </div>
+
+                        <!-- 会议摘要 -->
+                        <div v-if="meeting.results && (meeting.results.meeting_overview || meeting.results.summary)">
+                            <div class="summary-card">
+                                <div class="summary-text">
+                                    {{ meeting.results.meeting_overview?.content || meeting.results.summary }}
+                                </div>
+                                <div v-if="meeting.results.meeting_overview?.generated_at" style="margin-top: 15px; font-size: 12px; color: #999;">
+                                    ✨ AI生成于：{{ formatDateTime(meeting.results.meeting_overview.generated_at) }}
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="empty-state">
+                            <i class="layui-icon layui-icon-survey"></i>
+                            <h3>AI正在生成智能速览...</h3>
+                            <p>系统正在分析会议内容，即将呈现关键信息摘要。</p>
+                        </div>
+
+                        <!-- 核心要点 -->
+                        <div v-if="meeting.results && meeting.results.key_points && meeting.results.key_points.length > 0">
+                            <h4 class="subsection-title">💡 核心要点</h4>
+                            <div class="key-points-list">
+                                <div v-for="(point, index) in meeting.results.key_points" :key="index" class="point-item">
+                                    <div class="point-number">{{ index + 1 }}</div>
+                                    <div class="point-content">{{ point }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 行动项和决议 -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 25px;">
+                            <!-- 行动项 -->
+                            <div v-if="meeting.results && meeting.results.action_items && meeting.results.action_items.length > 0">
+                                <h4 class="subsection-title">✅ 行动项</h4>
+                                <div class="actions-list">
+                                    <div v-for="(item, index) in meeting.results.action_items" :key="index" class="action-item">
+                                        <div class="action-content">{{ item.content }}</div>
+                                        <div class="action-meta">
+                                            <span v-if="item.assignee" class="action-assignee">👤 {{ item.assignee }}</span>
+                                            <span v-if="item.deadline" class="action-deadline">⏰ {{ item.deadline }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 决议 -->
+                            <div v-if="meeting.results && meeting.results.decisions && meeting.results.decisions.length > 0">
+                                <h4 class="subsection-title">📋 重要决议</h4>
+                                <div class="decisions-list">
+                                    <div v-for="(decision, index) in meeting.results.decisions" :key="index" class="decision-item">
+                                        <div class="decision-content">{{ decision.content }}</div>
+                                        <div v-if="decision.impact" class="decision-impact">📊 {{ decision.impact }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 转录内容Tab -->
                     <div class="tab-pane" :class="{ active: activeTab === 'transcription' }">
                         <!-- 转录内容 -->
                         <div class="transcription-section">
                             <h3 class="section-title">
                                 📝 会议转录内容
                             </h3>
-                            <div v-if="meeting.transcripts && meeting.transcripts.length > 0" class="transcription-content">
-                                <div v-for="(segment, index) in meeting.transcripts" :key="index" class="transcription-segment">
+                            <div v-if="meeting.results && meeting.results.segments && meeting.results.segments.length > 0" class="transcription-content">
+                                <div v-for="(segment, index) in meeting.results.segments" :key="index" class="transcription-segment">
                                     <div class="segment-meta">
                                         <span class="timestamp">{{ formatTimestamp(segment.timestamp) }}</span>
                                         <span v-if="segment.speaker" class="speaker-tag">{{ segment.speaker }}</span>
@@ -535,53 +1288,141 @@
                             </div>
                         </div>
 
-                        <!-- 会议总结 -->
+                        <!-- 音频播放器 -->
+                        <div v-if="meeting.audio_file" class="audio-player">
+                            <div class="player-header">
+                                <div class="player-title">{{ meeting.name || '会议录音' }}</div>
+                                <button class="layui-btn layui-btn-xs">⚙️</button>
+                            </div>
+
+                            <div class="player-controls">
+                                <button class="play-button" @click="togglePlayback">
+                                    {{ isPlaying ? '⏸️' : '▶️' }}
+                                </button>
+
+                                <div class="progress-container" @click="seekTo">
+                                    <div class="progress-bar" :style="{ width: playbackProgress + '%' }">
+                                        <div class="progress-time" :style="{ left: playbackProgress + '%' }">
+                                            {{ formatPlaybackTime(currentTime) }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="speed-control">
+                                    <span class="speed-label">倍速</span>
+                                    <span>🔊</span>
+                                </div>
+                            </div>
+
+                            <div class="time-display">
+                                <span>{{ formatPlaybackTime(currentTime) }}</span>
+                                <span>{{ formatPlaybackTime(totalDuration) }}</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- 章节速览Tab -->
+                    <div class="tab-pane" :class="{ active: activeTab === 'chapters' }">
                         <div class="transcription-section">
                             <h3 class="section-title">
-                                📋 会议总结
+                                📚 章节速览
                             </h3>
-                            <div v-if="meeting.summary && meeting.summary.content" class="summary-content">
-                                <div class="summary-text">{{ meeting.summary.content }}</div>
+                            <div v-if="meeting.results && meeting.results.chapters && meeting.results.chapters.length > 0" class="chapters-timeline">
+                                <div v-for="(chapter, index) in meeting.results.chapters" :key="index" class="chapter-timeline-item">
+                                    <div class="chapter-time-marker">{{ formatTime(chapter.start_time) }}</div>
+                                    <div class="chapter-content-area">
+                                        <div class="chapter-title-new">{{ chapter.title }}</div>
+                                        <div class="chapter-description-new">{{ chapter.summary }}</div>
+                                    </div>
+                                </div>
+                                <div class="collapse-button">收起</div>
                             </div>
                             <div v-else class="empty-state">
-                                <i class="layui-icon layui-icon-file"></i>
-                                <h3>暂无会议总结</h3>
-                                <p>会议总结将在转录完成后自动生成。<br>
-                                如果会议已完成但没有总结，可能是因为转录内容不足。</p>
+                                <i class="layui-icon layui-icon-read"></i>
+                                <h3>暂无章节分析</h3>
+                                <p>AI将根据会议进程自动划分章节并生成摘要。</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 人声分离和情感分析Tab -->
+                    <!-- 发言总结Tab -->
                     <div class="tab-pane" :class="{ active: activeTab === 'analysis' }">
-                        <!-- 说话人分析 -->
                         <div class="transcription-section">
                             <h3 class="section-title">
-                                👥 说话人分析
+                                👥 发言总结
                             </h3>
-                            <div v-if="speakers && speakers.length > 0" class="speakers-grid">
-                                <div v-for="speaker in speakers" :key="speaker.id" class="speaker-card">
-                                    <div class="speaker-header">
-                                        <div class="speaker-avatar">{{ speaker.id.slice(-1) }}</div>
-                                        <div class="speaker-name">{{ speaker.name }}</div>
+                            <!-- 发言人简洁总结 -->
+                            <div v-if="meeting.results && meeting.results.speaker_analysis && Object.keys(meeting.results.speaker_analysis).length > 0" class="speaker-summary-container">
+                                <div v-for="(analysis, speakerName) in meeting.results.speaker_analysis" :key="speakerName" class="speaker-summary-card">
+                                    <div class="speaker-summary-header">
+                                        <div class="speaker-summary-avatar">{{ getSpeakerIcon(speakerName) }}</div>
+                                        <div class="speaker-summary-name">{{ speakerName }}</div>
                                     </div>
-                                    <div class="speaker-stats">
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ formatDuration(speaker.total_duration) }}</div>
-                                            <div class="stat-label">发言时长</div>
-                                        </div>
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ speaker.segments_count }}</div>
-                                            <div class="stat-label">发言次数</div>
-                                        </div>
+                                    <div class="speaker-summary-content">
+                                        {{ analysis.summary || '该发言人发言内容较少，暂无详细总结' }}
+                                    </div>
+                                    <div v-if="analysis.summary && analysis.summary.length < 30" class="speaker-summary-short">
+                                        发言内容太少，无总结内容哦
                                     </div>
                                 </div>
+                                <div class="collapse-button">收起</div>
                             </div>
                             <div v-else class="empty-state">
                                 <i class="layui-icon layui-icon-group"></i>
-                                <h3>暂无说话人分析</h3>
-                                <p>说话人分离功能需要足够的音频内容才能进行分析。<br>
-                                请确保会议中有多人发言，且音频质量良好。</p>
+                                <h3>暂无发言人分析</h3>
+                                <p>发言人分析需要足够的音频内容和多人发言。</p>
+                            </div>
+                        </div>
+
+                        <!-- 发言人详细统计（可折叠） -->
+                        <div class="transcription-section" v-if="showDetailedStats">
+                            <h3 class="section-title">
+                                � 发言统计详情
+                            </h3>
+                            <div v-if="meeting.results && meeting.results.speaker_analysis && Object.keys(meeting.results.speaker_analysis).length > 0" class="speaker-analysis-container">
+                                <div v-for="(analysis, speakerName) in meeting.results.speaker_analysis" :key="speakerName" class="speaker-analysis-card">
+                                    <div class="speaker-analysis-header">
+                                        <div class="speaker-avatar">{{ speakerName.slice(-1) }}</div>
+                                        <div class="speaker-info">
+                                            <div class="speaker-name">{{ speakerName }}</div>
+                                            <div class="speaker-role" v-if="analysis.role">{{ analysis.role }}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="speaker-stats-grid">
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ formatDuration(analysis.total_duration || 0) }}</div>
+                                            <div class="stat-label">发言时长</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ analysis.segments_count || 0 }}</div>
+                                            <div class="stat-label">发言次数</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ analysis.word_count || 0 }}</div>
+                                            <div class="stat-label">发言词数</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ ((analysis.total_duration || 0) / (meeting.total_duration || 1) * 100).toFixed(1) }}%</div>
+                                            <div class="stat-label">发言占比</div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="analysis.key_topics && analysis.key_topics.length > 0" class="speaker-topics">
+                                        <div class="topics-title">主要话题：</div>
+                                        <div class="topics-tags">
+                                            <span v-for="topic in analysis.key_topics" :key="topic" class="topic-tag">{{ topic }}</span>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="analysis.dominant_emotion" class="speaker-emotion">
+                                        <div class="emotion-title">主要情感：</div>
+                                        <span class="emotion-tag" :class="'emotion-' + analysis.dominant_emotion">
+                                            {{ getEmotionText(analysis.dominant_emotion) }}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -612,6 +1453,45 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- 问答回顾Tab -->
+                    <div class="tab-pane" :class="{ active: activeTab === 'qa' }">
+                        <div class="transcription-section">
+                            <h3 class="section-title">
+                                ❓ 问答回顾
+                            </h3>
+                            <div v-if="meeting.results && meeting.results.qa_analysis && meeting.results.qa_analysis.length > 0" class="qa-container">
+                                <div v-for="(qa, index) in meeting.results.qa_analysis" :key="index" class="qa-item">
+                                    <div class="qa-question">
+                                        <span class="qa-icon">Q<sub>A</sub></span>
+                                        <span>问：{{ qa.question }}</span>
+                                    </div>
+                                    <div class="qa-answer">
+                                        答：{{ qa.answer }}
+                                    </div>
+                                    <div class="qa-meta">
+                                        <div>
+                                            <span v-if="qa.questioner">提问者：{{ qa.questioner }}</span>
+                                            <span v-if="qa.answerer">・回答者：{{ qa.answerer }}</span>
+                                        </div>
+                                        <div>
+                                            <span v-if="qa.timestamp">{{ formatTime(qa.timestamp) }}</span>
+                                            <span v-if="qa.confidence">・置信度：{{ (qa.confidence * 100).toFixed(1) }}%</span>
+                                        </div>
+                                    </div>
+                                    <div v-if="qa.category" class="qa-category">
+                                        <span class="category-tag">{{ qa.category }}</span>
+                                    </div>
+                                </div>
+                                <div class="collapse-button">收起</div>
+                            </div>
+                            <div v-else class="empty-state">
+                                <i class="layui-icon layui-icon-help"></i>
+                                <h3>暂无问答内容</h3>
+                                <p>AI将自动识别会议中的问答对话。</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -635,7 +1515,14 @@
                         meeting: null,
                         speakers: [],
                         emotionStats: {},
-                        activeTab: 'transcription'
+                        activeTab: 'overview',
+                        showDetailedStats: false,
+                        // 音频播放器状态
+                        isPlaying: false,
+                        currentTime: 0,
+                        totalDuration: 0,
+                        playbackProgress: 0,
+                        audioElement: null
                     }
                 },
 
@@ -656,7 +1543,7 @@
 
                             // 获取会议基本信息
                             this.meeting = await http.get(`/api/tasks/meeting/${meetingId}`);
-                            
+
                             this.processMeetingData();
                         } catch (error) {
                             console.error('加载会议详情失败:', error);
@@ -670,30 +1557,35 @@
                         if (!this.meeting) return;
 
                         // 处理说话人数据
-                        if (this.meeting.transcripts && this.meeting.transcripts.length > 0) {
+                        if (this.meeting.results && this.meeting.results.segments && this.meeting.results.segments.length > 0) {
                             this.processSpeakers();
                             this.processEmotions();
                         }
+
+                        // 初始化音频播放器
+                        this.initAudioPlayer();
                     },
 
                     processSpeakers() {
                         const speakerMap = {};
                         
-                        this.meeting.transcripts.forEach(transcript => {
-                            const speaker = transcript.speaker || 'Speaker_1';
-                            if (!speakerMap[speaker]) {
-                                speakerMap[speaker] = {
-                                    id: speaker,
-                                    name: speaker,
-                                    total_duration: 0,
-                                    segments_count: 0
-                                };
-                            }
-                            
-                            speakerMap[speaker].segments_count++;
-                            // 假设每个片段平均3秒（实际应该从数据中获取）
-                            speakerMap[speaker].total_duration += 3;
-                        });
+                        if (this.meeting.results && this.meeting.results.segments) {
+                            this.meeting.results.segments.forEach(transcript => {
+                                const speaker = transcript.speaker || 'Speaker_1';
+                                if (!speakerMap[speaker]) {
+                                    speakerMap[speaker] = {
+                                        id: speaker,
+                                        name: speaker,
+                                        total_duration: 0,
+                                        segments_count: 0
+                                    };
+                                }
+                                
+                                speakerMap[speaker].segments_count++;
+                                // 假设每个片段平均3秒（实际应该从数据中获取）
+                                speakerMap[speaker].total_duration += 3;
+                            });
+                        }
 
                         this.speakers = Object.values(speakerMap);
                     },
@@ -702,17 +1594,19 @@
                         const emotionCounts = {};
                         let totalSegments = 0;
 
-                        this.meeting.transcripts.forEach(transcript => {
-                            const emotion = transcript.emotion || 'neutral';
-                            emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
-                            totalSegments++;
-                        });
+                        if (this.meeting.results && this.meeting.results.segments) {
+                            this.meeting.results.segments.forEach(transcript => {
+                                const emotion = transcript.emotion || 'neutral';
+                                emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
+                                totalSegments++;
+                            });
 
-                        // 计算百分比
-                        this.emotionStats = {};
-                        Object.keys(emotionCounts).forEach(emotion => {
-                            this.emotionStats[emotion] = (emotionCounts[emotion] / totalSegments) * 100;
-                        });
+                            // 计算百分比
+                            this.emotionStats = {};
+                            Object.keys(emotionCounts).forEach(emotion => {
+                                this.emotionStats[emotion] = (emotionCounts[emotion] / totalSegments) * 100;
+                            });
+                        }
                     },
 
                     getStatusText(status) {
@@ -789,6 +1683,96 @@
                             'neutral': '#95a5a6'
                         };
                         return colorMap[emotion] || '#95a5a6';
+                    },
+
+                    getSpeakerIcon(speakerName) {
+                        // 根据说话人名称返回相应的图标
+                        const icons = ['👤', '👩', '👨', '🐦'];
+                        const speakerNumber = parseInt(speakerName.match(/\d+/) || '1');
+                        return icons[(speakerNumber - 1) % icons.length];
+                    },
+
+                    // 音频播放器控制方法
+                    togglePlayback() {
+                        if (this.isPlaying) {
+                            this.pauseAudio();
+                        } else {
+                            this.playAudio();
+                        }
+                    },
+
+                    playAudio() {
+                        if (this.audioElement) {
+                            this.audioElement.play();
+                            this.isPlaying = true;
+                        }
+                    },
+
+                    pauseAudio() {
+                        if (this.audioElement) {
+                            this.audioElement.pause();
+                            this.isPlaying = false;
+                        }
+                    },
+
+                    seekTo(event) {
+                        if (this.audioElement && this.totalDuration > 0) {
+                            const rect = event.currentTarget.getBoundingClientRect();
+                            const percent = (event.clientX - rect.left) / rect.width;
+                            const newTime = percent * this.totalDuration;
+                            this.audioElement.currentTime = newTime;
+                            this.currentTime = newTime;
+                            this.playbackProgress = percent * 100;
+                        }
+                    },
+
+                    updateProgress() {
+                        if (this.audioElement && this.totalDuration > 0) {
+                            this.currentTime = this.audioElement.currentTime;
+                            this.playbackProgress = (this.currentTime / this.totalDuration) * 100;
+                        }
+                    },
+
+                    formatPlaybackTime(seconds) {
+                        if (!seconds || seconds === 0) return '00:00';
+                        
+                        const minutes = Math.floor(seconds / 60);
+                        const secs = Math.floor(seconds % 60);
+                        return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    },
+
+                    initAudioPlayer() {
+                        if (this.meeting && this.meeting.audio_file) {
+                            this.audioElement = new Audio(this.meeting.audio_file);
+                            
+                            this.audioElement.addEventListener('loadedmetadata', () => {
+                                this.totalDuration = this.audioElement.duration;
+                            });
+
+                            this.audioElement.addEventListener('timeupdate', () => {
+                                this.updateProgress();
+                            });
+
+                            this.audioElement.addEventListener('ended', () => {
+                                this.isPlaying = false;
+                                this.currentTime = 0;
+                                this.playbackProgress = 0;
+                            });
+                        }
+                    },
+
+                    formatTime(seconds) {
+                        if (!seconds) return '--';
+                        
+                        const hours = Math.floor(seconds / 3600);
+                        const minutes = Math.floor((seconds % 3600) / 60);
+                        const secs = Math.floor(seconds % 60);
+                        
+                        if (hours > 0) {
+                            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                        } else {
+                            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+                        }
                     }
                 },
 

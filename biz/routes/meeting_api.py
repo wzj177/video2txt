@@ -4,9 +4,19 @@
 会议监控API路由
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Body
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    BackgroundTasks,
+    Query,
+    Body,
+    UploadFile,
+    File,
+    Form,
+    Depends,
+)
 from fastapi.responses import StreamingResponse
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import json
 import asyncio
 import uuid
@@ -16,6 +26,7 @@ import logging
 
 from ..services.task_service import task_service
 from ..services.realtime_meeting_service import realtime_meeting_service
+from ..services.meeting_service import meeting_service
 from core.audio import AudioPermissionChecker, SystemAudioCapture
 from ..middleware.exception_handler import (
     create_success_response,
@@ -67,6 +78,209 @@ class MeetingCreateRequest(BaseModel):
     language: str = "auto"
     enableSpeakerDiarization: bool = True
     enableRealTimeSummary: bool = False
+
+
+class MeetingUploadRequest(BaseModel):
+    title: str
+    engine: str = "sensevoice"
+    language: str = "auto"
+    content_role: str = "meeting"
+    enable_speaker_diarization: bool = True
+    enable_ai_analysis: bool = True
+
+
+from ..queue.task_manager import get_task_manager
+
+
+class MeetingTaskManager:
+    """会议任务管理器"""
+
+    @staticmethod
+    async def _try_queue_processing(
+        task_id: str, task_name: str, args: tuple
+    ) -> Optional[Dict[str, Any]]:
+        """尝试使用队列处理任务"""
+        # 尝试SQLite队列
+        sqlite_result = await MeetingTaskManager._try_sqlite_processing(
+            task_id, task_name, args
+        )
+        if sqlite_result:
+            return sqlite_result
+
+        # 都不可用
+        return None
+
+    @staticmethod
+    async def _try_sqlite_processing(
+        task_id: str, task_name: str, args: tuple
+    ) -> Optional[Dict[str, Any]]:
+        """尝试使用SQLite队列处理"""
+        try:
+            manager = get_task_manager()
+
+            # 确保Worker正在运行
+            if not manager.running:
+                manager.start_workers(worker_count=1)
+
+            # 提交任务到SQLite队列
+            queue_task_id = manager.submit_task(
+                task_name=task_name, args=args, queue_name="meeting_processing"
+            )
+
+            # 更新任务记录
+            await task_service.update_task(
+                "meeting",
+                task_id,
+                {
+                    "queue_task_id": queue_task_id,
+                    "status": "queued",
+                    "current_step": "任务已提交到SQLite队列...",
+                },
+            )
+
+            logger.info(f"✅ 任务已提交到SQLite队列: {task_id}")
+            return {
+                "task_id": task_id,
+                "status": "queued",
+                "queue_task_id": queue_task_id,
+            }
+
+        except Exception as e:
+            logger.debug(f"SQLite队列处理失败: {e}")
+            return None
+
+    @staticmethod
+    async def _process_uploaded_audio_with_error_handling(
+        task_id: str, audio_file_path: str
+    ):
+        """带错误处理的上传音频处理异步任务"""
+        try:
+            logger.info(f"🚀 开始异步处理上传音频任务: {task_id}")
+            result = await meeting_service.process_uploaded_audio(
+                task_id, audio_file_path
+            )
+
+            if result:
+                logger.info(f"✅ 上传音频任务处理完成: {task_id}")
+            else:
+                logger.error(f"❌ 上传音频任务处理失败: {task_id}")
+
+        except Exception as e:
+            logger.error(f"❌ 异步上传音频任务执行异常: {task_id}, 错误: {e}")
+            # 更新任务状态为失败
+            try:
+                await task_service.update_task(
+                    "meeting",
+                    task_id,
+                    {
+                        "status": "error",
+                        "current_step": f"异步处理失败: {str(e)}",
+                        "error": str(e),
+                        "failed_at": datetime.now().isoformat(),
+                    },
+                )
+            except Exception as update_error:
+                logger.error(f"更新任务状态失败: {update_error}")
+
+
+@meeting_router.post("/upload")
+async def upload_meeting_recording(
+    audio_file: UploadFile = File(...),
+    title: str = Form(...),
+    engine: str = Form("sensevoice"),
+    language: str = Form("auto"),
+    content_role: str = Form("meeting"),
+    enable_speaker_diarization: bool = Form(True),
+    enable_ai_analysis: bool = Form(True),
+):
+    """上传会议录音文件进行处理"""
+    try:
+        # 生成任务ID
+        task_id = str(uuid.uuid4())
+
+        # 保存上传的音频文件
+        from pathlib import Path
+        import os
+
+        # 确保目录存在
+        upload_dir = Path(__file__).parent.parent.parent / "data" / "uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        # 生成文件路径
+        file_extension = Path(audio_file.filename).suffix
+        saved_file_path = upload_dir / f"meeting_{task_id}{file_extension}"
+
+        # 保存文件
+        with open(saved_file_path, "wb") as buffer:
+            content = await audio_file.read()
+            buffer.write(content)
+
+        # 创建任务配置
+        config = {
+            "title": title,
+            "engine": engine,
+            "language": language,
+            "content_role": content_role,
+            "enable_speaker_diarization": enable_speaker_diarization,
+            "enable_ai_analysis": enable_ai_analysis,
+            "audio_file_path": str(saved_file_path),  # 保存音频文件路径
+            "created_at": datetime.now().isoformat(),
+        }
+
+        # 创建任务
+        task_data = {
+            "status": "uploaded",
+            "progress": 0,
+            "current_step": "文件上传完成，等待处理...",
+            "config": config,
+        }
+
+        await task_service.create_task("meeting", task_data, task_id=task_id)
+
+        # 创建文件记录以支持统一的删除和下载功能
+        from biz.database.connection import get_database_manager
+        from biz.database.repositories import TaskFileRepository
+
+        db_manager = get_database_manager()
+        async with db_manager.get_session() as session:
+            file_repo = TaskFileRepository(session)
+            await file_repo.create(
+                task_id=task_id,
+                task_type="meeting",
+                file_type="audio",
+                file_name=audio_file.filename,
+                file_path=str(saved_file_path),
+                file_size=len(content),
+                mime_type=audio_file.content_type or "audio/mpeg",
+            )
+            await session.commit()
+
+        # 尝试使用队列处理
+        queue_result = await MeetingTaskManager._try_queue_processing(
+            task_id, "process_uploaded_audio", (task_id, str(saved_file_path))
+        )
+
+        if queue_result:
+            return create_success_response(
+                {"task_id": task_id}, "会议录音上传成功，开始处理"
+            )
+
+        # 队列不可用，回退到异步处理
+        logger.warning("队列系统不可用，回退到异步处理")
+        # 创建带错误处理的异步任务
+        task = asyncio.create_task(
+            MeetingTaskManager._process_uploaded_audio_with_error_handling(
+                task_id, str(saved_file_path)
+            )
+        )
+
+        return create_success_response(
+            {"task_id": task_id}, "会议录音上传成功，开始处理"
+        )
+
+    except Exception as e:
+        logger.error(f"上传会议录音失败: {e}")
+        raise HTTPException(status_code=500, detail=f"上传会议录音失败: {str(e)}")
 
 
 @meeting_router.get("/stats")
@@ -425,6 +639,37 @@ async def download_meeting_audio(task_id: str):
     try:
         from fastapi.responses import FileResponse
         from pathlib import Path
+        from biz.database.connection import get_database_manager
+        from biz.database.repositories import TaskFileRepository
+
+        # 首先从 task_files 表中查找音频文件
+        db_manager = get_database_manager()
+        async with db_manager.get_session() as session:
+            file_repo = TaskFileRepository(session)
+            audio_file = await file_repo.get_by_type(task_id, "audio")
+
+            if audio_file and Path(audio_file.file_path).exists():
+                return FileResponse(
+                    audio_file.file_path,
+                    filename=audio_file.file_name,
+                    media_type=audio_file.mime_type or "audio/mpeg",
+                )
+
+        # 兼容性：如果 task_files 中没有记录，尝试从任务配置中获取
+        task = await task_service.get_task(task_id, "meeting")
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        config = task.get("config", {})
+        audio_file_path = config.get("audio_file_path")
+
+        if audio_file_path and Path(audio_file_path).exists():
+            filename = Path(audio_file_path).name
+            return FileResponse(
+                audio_file_path, filename=filename, media_type="audio/mpeg"
+            )
+
+        raise HTTPException(status_code=404, detail="音频文件不存在")
 
         task = await task_service.get_task_by_id("meeting", task_id)
         if not task:
@@ -508,18 +753,54 @@ async def get_meeting_list(
                 if keyword.lower() not in title.lower():
                     continue
 
-            # 转换任务格式
+            # 转换任务格式 - 支持完整的会议分析数据
+            results = task.get("results") or {}  # 确保 results 不为 None
+
+            # 提取会议统计信息
+            segments = results.get("segments", []) if isinstance(results, dict) else []
+            speakers = results.get("speakers", {}) if isinstance(results, dict) else {}
+            transcript = (
+                results.get("transcript", "") if isinstance(results, dict) else ""
+            )
+
+            # 计算情感分布
+            emotion_stats = {}
+            if segments:
+                for segment in segments:
+                    emotion = segment.get("emotion", "neutral")
+                    emotion_stats[emotion] = emotion_stats.get(emotion, 0) + 1
+
             meeting = {
                 "id": task["id"],
-                "title": task['name'],
+                "title": task["name"],
                 "startTime": task.get("created_at"),
                 "status": task.get("status", "unknown"),
                 "duration": task.get("duration"),
                 "stats": {
-                    "transcriptLength": len(
-                        task.get("results", {}).get("transcript", "")
+                    "transcriptLength": len(transcript),
+                    "speakers": len(speakers),
+                    "segments": len(segments),
+                    "emotions": emotion_stats,
+                    "hasAnalysis": bool(segments and len(segments) > 0),
+                    "keywords": (
+                        len(results.get("keywords", []))
+                        if isinstance(results, dict)
+                        else 0
                     ),
-                    "speakers": len(task.get("results", {}).get("speakers", {})),
+                },
+                # 添加预览数据
+                "preview": {
+                    "firstSegment": (
+                        segments[0].get("text", "")[:100] + "..." if segments else ""
+                    ),
+                    "dominantEmotion": (
+                        max(emotion_stats.items(), key=lambda x: x[1])[0]
+                        if emotion_stats
+                        else "neutral"
+                    ),
+                    "mainSpeakers": (
+                        list(speakers.keys())[:3] if speakers else ["Speaker_1"]
+                    ),
                 },
             }
             filtered_tasks.append(meeting)

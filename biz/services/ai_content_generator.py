@@ -27,6 +27,9 @@ from core.media.frame_extractor import create_frame_extractor
 # 导入新的内容分析器
 from .ai_content_analyzer import AIContentAnalyzer, analyze_and_generate_prompt
 
+# 导入设置API中的角色映射函数和提示词模板函数
+from biz.routes.settings_api import get_role_name, get_prompt_template
+
 logger = logging.getLogger(__name__)
 
 
@@ -409,7 +412,7 @@ class AIContentFactory:
 - 📊 **匹配统计**: {len(matches)} 个精确匹配，{len(unmatched_frames)} 个过渡帧
 - 🖼️ **可用图片**: {frames_list}
 - 🏠 **封面帧**: {cover_frame or "自动选择"}
-- 📁 **图片路径**: ![图片名](file://{keyframes_path}/图片名)
+- 📁 **图片路径**: ![图片名]({keyframes_path}/图片名)
 
 {mapping_info}
 
@@ -538,7 +541,7 @@ class AIContentFactory:
                 "success": True,
                 "type": "content_card",
                 "content": content,
-                "format": "markdown",
+                "format": "text",
             }
 
     async def _generate_mind_map(
@@ -605,7 +608,7 @@ class AIContentFactory:
                 "success": True,
                 "type": "mind_map",
                 "content": content,
-                "format": "markdown",
+                "format": "text",
                 "frame_info": frame_info,
             }
         except Exception as e:
@@ -707,7 +710,7 @@ class AIContentFactory:
                 "success": True,
                 "type": "flashcards",
                 "content": content,
-                "format": "markdown",
+                "format": "text",
                 "frame_info": frame_info,
             }
         except Exception as e:
@@ -851,7 +854,7 @@ class AIContentFactory:
                     "success": True,
                     "type": "content_card",
                     "content": content,
-                    "format": "markdown",
+                    "format": "text",
                     "analysis_result": analysis_result.__dict__,
                 }
         except Exception as e:
@@ -866,115 +869,389 @@ class AIContentFactory:
         stream_callback=None,
         **kwargs,
     ) -> Dict[str, Any]:
-        """智能生成思维导图 - 四段式结构优化版"""
+        """智能生成思维导图 - 基于优化版本的完整实现"""
         try:
             analysis_result = kwargs.get("analysis_result")
+            subtitles = kwargs.get("subtitles", [])
 
-            # 🎯 角色定义（根据领域动态调整）
-            role_mapping = {
-                "education": "教育内容结构化专家",
-                "exam_review": "试卷评讲分析专家",
-                "cooking": "美食知识整理专家",
-                "travel": "旅行攻略规划专家",
-                "meeting": "会议管理专家",
-                "technology": "科技内容架构师",
-                "business": "商业分析专家",
-                "general": "内容结构化专家",
-            }
-
-            role_name = role_mapping.get(
-                analysis_result.primary_domain.value, "内容结构化专家"
+            # 🎯 角色定义（从配置文件读取）
+            role_name = get_role_name(
+                analysis_result.primary_domain.value, 
+                "content_generator", 
+                "内容结构化专家"
             )
 
-            # 构建四段式提示词
-            system_prompt = f"""# 角色
-你是一位专业的{role_name}，擅长将{analysis_result.primary_domain.value}领域内容转化为清晰的思维导图结构。
+            # 检测是否为长视频
+            text_length = len(transcript)
+            is_long_video = text_length > 10000
 
-# 任务
-基于转录内容生成结构化思维导图，核心要求：
-- 提炼{analysis_result.primary_domain.value}领域的核心要素和关键概念
-- 体现{analysis_result.content_style}的内容特征
-- 适合{analysis_result.target_audience}的认知水平
-- 重点关注：{', '.join(analysis_result.key_topics[:5])}
+            # 构建带时间戳的文本
+            timed_text = ""
+            if subtitles:
+                for sub in subtitles:
+                    timed_text += f"[{sub.start}] {sub.content.strip()}\n"
+            else:
+                # 如果没有字幕，使用原始转录文本
+                timed_text = transcript
 
-# 约束条件
-1. **语言**：简体中文
-2. **结构层次**：
-   - 主干：4-6个核心模块
-   - 分支：每个模块下2-4个子点
-   - 总节点：控制在15个以内
-3. **节点要求**：
-   - 使用简洁短语，避免完整句子
-   - 体现{analysis_result.primary_domain.value}领域特色
-   - 突出核心观点和关键概念
-
-# 输出模板
-```
-# 思维导图：{{主题标题}}
-
-- {{主节点1}}
-  - {{子节点1.1}}
-  - {{子节点1.2}}
-- {{主节点2}}
-  - {{子节点2.1}}
-  - {{子节点2.2}}
-- {{主节点3}}
-  - {{子节点3.1}}
-  - {{子节点3.2}}
-```
-
-请严格按照模板输出，不要添加额外解释。"""
-
-            user_prompt = f"""请为以下{analysis_result.primary_domain.value}内容生成专业的思维导图：
-
-## 转录内容：
-{transcript[:3000]}
-
-## 分析要点：
+            # 内容主题上下文
+            theme_context = f"""
+## 🎯 内容主题上下文
 - 主要领域：{analysis_result.primary_domain.value}
 - 内容风格：{analysis_result.content_style}
 - 目标受众：{analysis_result.target_audience}
-- 核心话题：{', '.join(analysis_result.key_topics[:5])}
+- 关键话题：{', '.join(analysis_result.key_topics[:5])}
 
-请生成结构清晰、层次分明的思维导图。"""
+请基于以上内容特征优化思维导图结构，确保体现该类型内容的特点。
+"""
+
+            # STEP 1: 提取结构化大纲
+            step1_prompt = f"""# 角色
+你是一位专业的{role_name}，擅长将{analysis_result.primary_domain.value}领域内容转化为清晰的思维导图结构。
+
+{theme_context}
+
+# 任务
+请根据以下带时间戳的视频字幕，创建一个结构清晰、层次分明的思维导图大纲。
+
+# 特殊要求（针对长视频）
+{"- 这是一个较长的教学视频，包含丰富的知识点" if is_long_video else ""}
+{"- 需要构建完整的知识体系结构，不能省略重要章节" if is_long_video else ""}
+{"- 按照教学逻辑组织内容，体现知识的递进关系" if is_long_video else ""}
+
+# 输入格式说明
+- 每行格式为：[HH:MM:SS] 文本内容
+- 时间戳表示该内容在视频中出现的时间点
+
+# 输出要求
+1. 使用Markdown无序列表格式（- 和空格缩进表示层级）
+2. 每个节点应是简洁的关键词或短语（不超过10个字）
+3. 在重要节点末尾添加时间戳，格式为 `MM:SS`（例如 `01:23`）
+4. 保持逻辑层次：主题 → 章节 → 要点 → 细节（最多4级）
+5. 合并相似内容，但保留重要的知识点
+6. 优先保留教学重点和关键转折
+
+# 输出格式示例
+# 视频主题
+- 基础概念
+  - 定义解释 `01:23`
+  - 重要特征 `02:45`
+    - 特征一 `03:10`
+    - 特征二 `03:30`
+- 实践应用
+  - 方法一 `05:20`
+    - 步骤详解 `06:15`
+  - 方法二 `08:30`
+
+# 重要提示
+- 保持输出为纯文本列表
+- 时间戳必须准确对应原文内容
+- 重点突出教学价值高的内容
+- 体现完整的知识结构
+
+# 视频字幕内容
+{timed_text[:25000]}"""
 
             # 流式生成通知
             if stream_callback:
                 await stream_callback(
                     "ai_generating",
-                    {
-                        "type": "mind_map",
-                        "message": f"🧠 正在生成{analysis_result.primary_domain.value}领域思维导图...",
-                    },
+                    {"type": "mind_map", "message": f"🧠 正在生成{analysis_result.primary_domain.value}领域思维导图..."},
                 )
 
-            content = await self.ai_client.generate_content(
-                prompt=user_prompt,
-                system_prompt=system_prompt,
-                max_tokens=config.max_tokens,
+            outline = await self.ai_client.generate_content(
+                prompt=step1_prompt,
+                system_prompt="你是一位专业的知识架构师，严格按照要求生成结构化思维导图。",
+                max_tokens=4096,
                 temperature=config.temperature,
             )
 
+            if not outline.strip():
+                raise Exception("第一步大纲生成失败")
+
+            # STEP 2: 格式优化（确保Markmap兼容）
+            step2_prompt = f"""# 任务
+你是一位Markdown格式专家，负责将以下思维导图大纲优化为标准Markmap兼容格式。
+
+# 输入
+一个初步的思维导图结构，可能包含不规范的格式。
+
+# 输出要求
+1. 严格使用Markdown无序列表
+2. 每级缩进使用2个空格
+3. 时间戳统一为 `MM:SS` 格式（例如 `01:23`）
+4. 每行一个节点，不跨行
+5. 节点文本简洁，不超过15个字
+6. 保留完整的知识结构层次
+7. 确保语法正确，便于Markmap渲染
+
+# 错误格式修正
+- 将 "00:01:23" 转换为 "01:23"
+- 将 "章节一 [00:01:23]" 转换为 "章节一 `01:23`"
+- 修复不正确的缩进层级
+- 移除多余的标点符号
+
+# 输出示例
+# 教学内容主题
+- 理论基础
+  - 核心概念 `01:20`
+  - 基本原理 `02:45`
+    - 原理解释 `03:10`
+    - 应用场景 `04:30`
+- 实战操作
+  - 方法介绍 `06:30`
+    - 步骤一 `07:15`
+    - 步骤二 `08:45`
+  - 注意事项 `10:20`
+
+# 待优化内容
+{outline}"""
+
+            final_mind_map = await self.ai_client.generate_content(
+                prompt=step2_prompt,
+                system_prompt="你是一位Markdown格式专家，严格按照格式要求输出。",
+                max_tokens=4096,
+                temperature=0.3,  # 降低温度确保格式准确
+            )
+
+            # 流式内容推送
             if stream_callback:
                 await stream_callback(
-                    "ai_content_chunk", {"type": "mind_map", "content": content}
+                    "ai_content_chunk", {"type": "mind_map", "content": final_mind_map}
                 )
                 await stream_callback(
                     "ai_content_complete",
-                    {"type": "mind_map", "message": "✅ 智能思维导图生成完成"},
+                    {"type": "mind_map", "message": "✅ 思维导图生成完成"},
                 )
 
             return {
                 "success": True,
                 "type": "mind_map",
-                "content": content,
-                "format": "markdown",
-                "analysis_result": analysis_result.__dict__,
+                "content": final_mind_map,
+                "format": "text",
                 "frame_info": frame_info,
+                "analysis_result": analysis_result.__dict__,
             }
         except Exception as e:
             logger.error(f"智能思维导图生成失败: {e}")
             return {"error": str(e), "success": False}
+
+    def export_xmind_format(self, markdown_content: str, output_path: str) -> bool:
+        """将Markdown思维导图转换为XMind兼容的FreeMind格式"""
+        try:
+            import xml.etree.ElementTree as ET
+            import re
+
+            # 解析Markdown格式的思维导图
+            lines = markdown_content.strip().split("\n")
+
+            # 创建根节点
+            root = ET.Element("map")
+            root.set("version", "1.0.1")
+
+            # 找到主题行
+            main_title = "思维导图"
+            for line in lines:
+                if line.startswith("# "):
+                    main_title = line[2:].strip()
+                    break
+
+            # 创建中心节点
+            node_map = ET.SubElement(root, "node")
+            node_map.set("ID", "root")
+            node_map.set("TEXT", main_title)
+
+            # 解析层级结构
+            current_parents = [node_map]  # 当前父节点栈
+            node_id = 1
+
+            for line in lines:
+                line = line.rstrip()
+                if not line or line.startswith("#"):
+                    continue
+
+                # 计算缩进级别
+                indent_level = 0
+                stripped_line = line.lstrip()
+                if stripped_line.startswith("-"):
+                    # 计算前导空格数量
+                    for char in line:
+                        if char == " ":
+                            indent_level += 1
+                        else:
+                            break
+                    indent_level = indent_level // 2  # 每2个空格为一级
+
+                    # 提取文本内容
+                    text = stripped_line[1:].strip()
+
+                    # 提取时间戳（如果有）
+                    timestamp_match = re.search(r"`(\d{2}:\d{2})`", text)
+                    if timestamp_match:
+                        text = text.replace(timestamp_match.group(), "").strip()
+                        timestamp = timestamp_match.group(1)
+                    else:
+                        timestamp = None
+
+                    if text:  # 只处理非空文本
+                        # 调整父节点栈
+                        target_level = indent_level + 1  # 相对于根节点的级别
+                        if target_level > len(current_parents):
+                            # 需要保持当前最后一个节点作为父节点
+                            pass
+                        else:
+                            # 回退到合适的父节点
+                            current_parents = current_parents[:target_level]
+
+                        # 创建新节点
+                        if current_parents:
+                            parent_node = current_parents[-1]
+                            new_node = ET.SubElement(parent_node, "node")
+                            new_node.set("ID", f"node_{node_id}")
+                            new_node.set("TEXT", text)
+
+                            # 添加时间戳注释
+                            if timestamp:
+                                note = ET.SubElement(new_node, "richcontent")
+                                note.set("TYPE", "NOTE")
+                                html = ET.SubElement(note, "html")
+                                body = ET.SubElement(html, "body")
+                                p = ET.SubElement(body, "p")
+                                p.text = f"时间: {timestamp}"
+
+                            # 将新节点加入父节点栈
+                            current_parents.append(new_node)
+                            node_id += 1
+
+            # 生成XML字符串
+            xml_str = ET.tostring(root, encoding="unicode", method="xml")
+
+            # 格式化XML
+            formatted_xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+            formatted_xml += xml_str
+
+            # 写入文件
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(formatted_xml)
+
+            logger.info(f"成功导出思维导图到 FreeMind 格式：{output_path}")
+            return True
+        except Exception as e:
+            logger.error(f"XMind格式导出失败: {e}")
+            return False
+
+    def export_anki_format(self, flashcards_content: str, output_path: str) -> bool:
+        """将闪卡导出为Anki格式 - 借鉴3.0版本的优秀实现"""
+        try:
+            import re
+            
+            # 解析闪卡内容 - 支持多种格式
+            cards = []
+            
+            # 尝试当前版本的Q&A格式
+            qa_pattern = r"\*\*Q\*\*:\s*(.+?)\n\*\*A\*\*:\s*(.+?)(?=\n---|\n\*\*Q\*\*|\Z)"
+            matches = re.findall(qa_pattern, flashcards_content, re.DOTALL)
+            
+            if matches:
+                cards = [("问答卡", q.strip(), a.strip(), "基础") for q, a in matches]
+            else:
+                # 尝试3.0版本的标准格式
+                pattern1 = r"## 闪卡 \d+ - (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
+                matches = re.findall(pattern1, flashcards_content, re.DOTALL)
+                
+                if matches:
+                    cards = matches
+                else:
+                    # 尝试更宽松的格式匹配
+                    pattern2 = r"##.*?闪卡.*?\n.*?正面.*?[:：]\s*(.+?)\n.*?背面.*?[:：]\s*(.+?)(?:\n.*?标签.*?[:：]\s*(.+?))?(?=\n\n|\n##|\Z)"
+                    matches = re.findall(pattern2, flashcards_content, re.DOTALL)
+                    cards = [
+                        ("通用卡", match[0], match[1], match[2] if len(match) > 2 and match[2] else "基础")
+                        for match in matches
+                    ]
+            
+            if not cards:
+                logger.warning("无法解析闪卡格式，尝试简单问答格式...")
+                # 最后尝试简单的问答格式
+                simple_qa_pattern = r"(?:Q|问题|Question)[:：]\s*(.+?)\n(?:A|答案|Answer)[:：]\s*(.+?)(?=\n(?:Q|问题|Question)|\Z)"
+                qa_matches = re.findall(simple_qa_pattern, flashcards_content, re.DOTALL | re.IGNORECASE)
+                if qa_matches:
+                    cards = [("问答卡", q.strip(), a.strip(), "基础") for q, a in qa_matches]
+                else:
+                    logger.error(f"无法解析任何闪卡格式，内容预览：{flashcards_content[:300]}")
+                    return False
+            
+            # 生成Anki导入格式（CSV）
+            anki_content = []
+            for card_type, front, back, tags in cards:
+                # 清理内容
+                front = front.strip().replace("\n", "<br>").replace("\t", " ")
+                back = back.strip().replace("\n", "<br>").replace("\t", " ")
+                tags = tags.replace("#", "").replace(" ", "_")
+                
+                # Anki格式：正面\t背面\t标签
+                anki_content.append(f"{front}\t{back}\t{tags}")
+            
+            # 写入文件
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write("Front\tBack\tTags\n")  # 头部
+                f.write("\n".join(anki_content))
+            
+            logger.info(f"成功导出 {len(cards)} 张闪卡到 Anki 格式：{output_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Anki格式导出失败: {e}")
+            return False
+
+    def parse_flashcards_multiple_formats(self, content: str) -> list:
+        """解析多种闪卡格式 - 借鉴3.0版本的容错机制"""
+        import re
+        
+        cards = []
+        
+        # 格式1：当前版本的Q&A格式
+        qa_pattern = r"\*\*Q\*\*:\s*(.+?)\n\*\*A\*\*:\s*(.+?)(?=\n---|\n\*\*Q\*\*|\Z)"
+        matches = re.findall(qa_pattern, content, re.DOTALL)
+        if matches:
+            return [{"question": q.strip(), "answer": a.strip(), "type": "qa"} for q, a in matches]
+        
+        # 格式2：标准闪卡格式
+        pattern1 = r"## 闪卡 \d+ - (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
+        matches = re.findall(pattern1, content, re.DOTALL)
+        if matches:
+            return [
+                {
+                    "question": front.strip(),
+                    "answer": back.strip(),
+                    "type": card_type.strip(),
+                    "tags": tags.strip()
+                }
+                for card_type, front, back, tags in matches
+            ]
+        
+        # 格式3：宽松格式
+        pattern2 = r"##.*?闪卡.*?\n.*?正面.*?[:：]\s*(.+?)\n.*?背面.*?[:：]\s*(.+?)(?:\n.*?标签.*?[:：]\s*(.+?))?(?=\n\n|\n##|\Z)"
+        matches = re.findall(pattern2, content, re.DOTALL)
+        if matches:
+            return [
+                {
+                    "question": match[0].strip(),
+                    "answer": match[1].strip(),
+                    "type": "通用卡",
+                    "tags": match[2].strip() if len(match) > 2 and match[2] else "基础"
+                }
+                for match in matches
+            ]
+        
+        # 格式4：简单问答
+        simple_qa_pattern = r"(?:Q|问题|Question)[:：]\s*(.+?)\n(?:A|答案|Answer)[:：]\s*(.+?)(?=\n(?:Q|问题|Question)|\Z)"
+        matches = re.findall(simple_qa_pattern, content, re.DOTALL | re.IGNORECASE)
+        if matches:
+            return [{"question": q.strip(), "answer": a.strip(), "type": "简单问答"} for q, a in matches]
+        
+        logger.warning(f"无法解析闪卡格式，内容预览：{content[:200]}")
+        return []
 
     async def _generate_flashcards_smart(
         self,
@@ -988,20 +1265,11 @@ class AIContentFactory:
         try:
             analysis_result = kwargs.get("analysis_result")
 
-            # 🎯 角色定义（根据领域动态调整）
-            role_mapping = {
-                "education": "教育学习卡片专家",
-                "exam_review": "考试复习专家",
-                "cooking": "美食教学专家",
-                "travel": "旅行知识专家",
-                "meeting": "会议管理专家",
-                "technology": "科技学习专家",
-                "business": "商业培训专家",
-                "general": "学习闪卡专家",
-            }
-
-            role_name = role_mapping.get(
-                analysis_result.primary_domain.value, "学习闪卡专家"
+            # 🎯 角色定义（从配置文件读取）
+            role_name = get_role_name(
+                analysis_result.primary_domain.value, 
+                "flashcard_generator", 
+                "学习闪卡专家"
             )
 
             # 构建四段式提示词
@@ -1089,7 +1357,7 @@ class AIContentFactory:
                 "success": True,
                 "type": "flashcards",
                 "content": content,
-                "format": "markdown",
+                "format": "text",
                 "analysis_result": analysis_result.__dict__,
                 "frame_info": frame_info,
             }
@@ -1109,20 +1377,11 @@ class AIContentFactory:
         try:
             analysis_result = kwargs.get("analysis_result")
 
-            # 🎯 角色定义（根据领域动态调整）
-            role_mapping = {
-                "education": "教育内容分析专家",
-                "exam_review": "考试评估专家",
-                "cooking": "美食内容评估师",
-                "travel": "旅行内容分析师",
-                "meeting": "会议效果评估专家",
-                "technology": "科技内容分析师",
-                "business": "商业内容评估专家",
-                "general": "内容分析专家",
-            }
-
-            role_name = role_mapping.get(
-                analysis_result.primary_domain.value, "内容分析专家"
+            # 🎯 角色定义（从配置文件读取）
+            role_name = get_role_name(
+                analysis_result.primary_domain.value, 
+                "ai_analysis", 
+                "内容分析专家"
             )
 
             # 构建四段式提示词

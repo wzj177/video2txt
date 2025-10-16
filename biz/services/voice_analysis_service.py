@@ -238,23 +238,151 @@ class VoiceAnalysisService:
             return await self._simple_time_segmentation(audio_path)
 
     async def _simple_time_segmentation(self, audio_path: str) -> Dict[str, Any]:
-        """简单的时间分割（当PyAnnote不可用时的备用方案）"""
+        """改进的时间分割 - 基于音频能量检测多说话人"""
         try:
-            # 获取音频时长
             import librosa
+            import numpy as np
+            
+            # 加载音频
+            y, sr = librosa.load(audio_path, sr=16000)
+            duration = len(y) / sr
 
-            duration = librosa.get_duration(filename=audio_path)
+            # 计算音频能量和静音检测
+            frame_length = int(0.025 * sr)  # 25ms帧
+            hop_length = int(0.01 * sr)     # 10ms跳跃
+            
+            # 计算短时能量
+            energy = []
+            for i in range(0, len(y) - frame_length, hop_length):
+                frame = y[i:i + frame_length]
+                energy.append(np.sum(frame ** 2))
+            
+            energy = np.array(energy)
+            
+            # 动态阈值检测活跃语音段
+            energy_threshold = np.percentile(energy, 30)  # 30%分位数作为阈值
+            
+            # 检测语音活动段
+            active_segments = []
+            in_speech = False
+            start_time = 0
+            
+            for i, e in enumerate(energy):
+                time_pos = i * hop_length / sr
+                
+                if e > energy_threshold and not in_speech:
+                    # 开始语音段
+                    start_time = time_pos
+                    in_speech = True
+                elif e <= energy_threshold and in_speech:
+                    # 结束语音段
+                    if time_pos - start_time > 0.5:  # 至少0.5秒
+                        active_segments.append((start_time, time_pos))
+                    in_speech = False
+            
+            # 如果最后还在语音段中
+            if in_speech and duration - start_time > 0.5:
+                active_segments.append((start_time, duration))
+            
+            # 基于语音段长度和间隔推测说话人数量
+            if len(active_segments) == 0:
+                # 没有检测到明显的语音段，假设一个说话人
+                num_speakers = 1
+                segments = [{
+                    "start": 0.0,
+                    "end": duration,
+                    "duration": duration,
+                    "speaker": "Speaker_1"
+                }]
+            elif len(active_segments) <= 3:
+                # 少量语音段，可能是一个说话人
+                num_speakers = 1
+                segments = [{
+                    "start": seg[0],
+                    "end": seg[1], 
+                    "duration": seg[1] - seg[0],
+                    "speaker": "Speaker_1"
+                } for seg in active_segments]
+            else:
+                # 多个语音段，尝试基于时间间隔推测多说话人
+                gaps = []
+                for i in range(1, len(active_segments)):
+                    gap = active_segments[i][0] - active_segments[i-1][1]
+                    gaps.append(gap)
+                
+                # 如果有较长的间隔，可能是多个说话人轮流说话
+                long_gaps = [g for g in gaps if g > 2.0]  # 超过2秒的间隔
+                
+                if len(long_gaps) >= 2:
+                    num_speakers = min(3, len(long_gaps) + 1)  # 最多假设3个说话人
+                else:
+                    num_speakers = 2  # 默认假设2个说话人
+                
+                # 交替分配说话人
+                segments = []
+                for i, (start, end) in enumerate(active_segments):
+                    speaker_id = f"Speaker_{(i % num_speakers) + 1}"
+                    segments.append({
+                        "start": start,
+                        "end": end,
+                        "duration": end - start,
+                        "speaker": speaker_id
+                    })
 
-            # 简单分割为30秒段落
-            segment_duration = 30.0
-            segments = []
+            # 构建说话人信息
+            speakers = {}
+            for seg in segments:
+                speaker_id = seg["speaker"]
+                if speaker_id not in speakers:
+                    speakers[speaker_id] = {
+                        "id": speaker_id,
+                        "name": speaker_id,
+                        "total_duration": 0.0,
+                        "segments_count": 0,
+                    }
+                speakers[speaker_id]["total_duration"] += seg["duration"]
+                speakers[speaker_id]["segments_count"] += 1
+
+            logger.info(f"📊 智能分割检测到 {len(speakers)} 个说话人，{len(segments)} 个语音段")
+
+            return {
+                "method": "intelligent_segmentation",
+                "speakers": speakers,
+                "segments": segments,
+                "total_speakers": len(speakers),
+            }
+
+        except Exception as e:
+            logger.error(f"智能分割失败: {e}")
+            # 最后的备用方案
+            duration = 30.0  # 默认时长
+            try:
+                import librosa
+                duration = librosa.get_duration(path=audio_path)
+            except:
+                pass
+                
+            segments = [{
+                "start": 0.0,
+                "end": duration,
+                "duration": duration,
+                "speaker": "Speaker_1"
+            }]
+            
             speakers = {
                 "Speaker_1": {
                     "id": "Speaker_1",
-                    "name": "Speaker_1",
+                    "name": "Speaker_1", 
                     "total_duration": duration,
-                    "segments_count": 0,
+                    "segments_count": 1,
                 }
+            }
+            
+            return {
+                "method": "fallback_single",
+                "speakers": speakers,
+                "segments": segments,
+                "total_speakers": 1,
             }
 
             current_time = 0.0

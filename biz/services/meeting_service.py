@@ -24,6 +24,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from core.audio.audio_capture import AudioCapture, AudioBuffer
 from core.asr import initialize_voice_recognition, transcribe_audio
 from .task_service import task_service
+from core.asr.voice_recognition_core import get_voice_core
 
 logger = logging.getLogger(__name__)
 
@@ -580,6 +581,287 @@ class MeetingService:
 
         except Exception as e:
             logger.error(f"创建会议处理器失败: {e}")
+            return False
+
+    async def process_uploaded_audio(self, task_id: str, audio_file_path: str):
+        """处理上传的音频文件"""
+        try:
+            # 获取任务信息
+            task = await task_service.get_task_by_id("meeting", task_id)
+            if not task:
+                logger.error(f"任务 {task_id} 不存在")
+                return False
+
+            config = task.get("config", {})
+
+            # 更新任务状态
+            await task_service.update_task(
+                "meeting",
+                task_id,
+                {
+                    "status": "processing",
+                    "progress": 10,
+                    "current_step": "开始处理上传的音频文件...",
+                },
+            )
+
+            # 初始化语音识别引擎
+            engine = config.get("engine", "sensevoice")
+            voice_core = get_voice_core()
+            voice_core.initialize(engine)  # 修复：将 initialize_engine 改为 initialize
+
+            # 更新任务状态
+            await task_service.update_task(
+                "meeting",
+                task_id,
+                {
+                    "status": "processing",
+                    "progress": 30,
+                    "current_step": "正在进行语音识别...",
+                },
+            )
+
+            # 执行语音识别
+            result = voice_core.recognize_file(
+                audio_file_path, language=config.get("language", "auto")
+            )
+
+            if not result or not result.get("text", "").strip():
+                # 没有识别到内容
+                await task_service.update_task(
+                    "meeting",
+                    task_id,
+                    {
+                        "status": "error",
+                        "progress": 100,
+                        "current_step": "未识别到有效音频内容",
+                        "error": "音频文件中未检测到有效的语音内容",
+                    },
+                )
+                return False
+
+            # 处理识别结果
+            transcript_text = result.get("text", "").strip()
+            segments = []
+            speakers_info = {}
+
+            # 如果启用了说话人分离和情感分析，则进行高级处理
+            if config.get("enable_speaker_diarization", False) or config.get(
+                "enable_ai_analysis", False
+            ):
+                await task_service.update_task(
+                    "meeting",
+                    task_id,
+                    {
+                        "status": "processing",
+                        "progress": 50,
+                        "current_step": "正在进行说话人分离和情感分析...",
+                    },
+                )
+
+                try:
+                    # 使用语音分析服务进行说话人分离和情感分析
+                    from biz.services.voice_analysis_service import (
+                        voice_analysis_service,
+                    )
+                    from biz.services.ai_meeting_analyzer import ai_meeting_analyzer
+
+                    # 执行完整的语音分析
+                    analysis_result = await voice_analysis_service.analyze_audio_file(
+                        audio_file_path,
+                        enable_diarization=config.get(
+                            "enable_speaker_diarization", True
+                        ),
+                        enable_emotion=config.get("enable_ai_analysis", True),
+                    )
+
+                    if not analysis_result.get("error") and analysis_result.get(
+                        "segments"
+                    ):
+                        # 使用分析结果
+                        segments = analysis_result["segments"]
+                        speakers_info = analysis_result.get("diarization", {}).get(
+                            "speakers", {}
+                        )
+                        transcript_text = analysis_result.get(
+                            "full_transcript", transcript_text
+                        )
+
+                        # 确保segments格式正确
+                        formatted_segments = []
+                        for seg in segments:
+                            # 处理emotion字段 - 确保格式一致
+                            emotion_value = seg.get("emotion", "neutral")
+                            if isinstance(emotion_value, dict):
+                                # 如果emotion是dict，提取主要情感
+                                emotion_value = emotion_value.get("primary", "neutral")
+                            elif not isinstance(emotion_value, str):
+                                emotion_value = "neutral"
+
+                            formatted_seg = {
+                                "text": seg.get("text", ""),
+                                "confidence": seg.get("confidence", 0.8),
+                                "language": seg.get("language", "zh"),
+                                "speaker": seg.get("speaker", "Speaker_1"),
+                                "emotion": emotion_value,  # 统一为字符串格式
+                                "start": seg.get("start", 0),
+                                "end": seg.get("end", 0),
+                                "duration": seg.get("duration", 0),
+                                "timestamp": seg.get(
+                                    "timestamp", datetime.now().isoformat()
+                                ),
+                            }
+                            formatted_segments.append(formatted_seg)
+
+                        segments = formatted_segments
+                        logger.info(
+                            f"✅ 语音分析完成: {len(segments)} 个分段, {len(speakers_info)} 个说话人"
+                        )
+                    else:
+                        logger.warning(
+                            f"语音分析失败: {analysis_result.get('error', '未知错误')}，使用基础识别结果"
+                        )
+                        raise Exception("语音分析失败")
+
+                except Exception as e:
+                    logger.warning(f"高级语音分析失败: {e}，使用基础处理")
+                    # 回退到基础处理
+                    segment = {
+                        "text": transcript_text,
+                        "confidence": result.get("confidence", 0.8),
+                        "language": result.get("language", "zh"),
+                        "speaker": "Speaker_1",
+                        "emotion": "neutral",
+                        "start": 0,
+                        "end": len(transcript_text) / 20.0,
+                        "duration": len(transcript_text) / 20.0,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                    segments.append(segment)
+                    speakers_info = {"Speaker_1": {"name": "Speaker_1", "segments": 1}}
+            else:
+                # 基础处理 - 不进行说话人分离
+                segment = {
+                    "text": transcript_text,
+                    "confidence": result.get("confidence", 0.8),
+                    "language": result.get("language", "zh"),
+                    "speaker": "Speaker_1",
+                    "emotion": "neutral",
+                    "start": 0,
+                    "end": len(transcript_text) / 20.0,
+                    "duration": len(transcript_text) / 20.0,
+                    "timestamp": datetime.now().isoformat(),
+                }
+                segments.append(segment)
+                speakers_info = {"Speaker_1": {"name": "Speaker_1", "segments": 1}}
+
+            # 准备结果数据结构
+            results = {
+                "transcript": transcript_text,  # 完整转录文本
+                "segments": segments,  # 分段转录数据
+                "speakers": speakers_info,  # 说话人信息
+            }
+
+            # 统计信息
+            total_words = len(transcript_text.split())
+            speaker_count = len(speakers_info)
+            total_duration = (
+                max(seg.get("end", 0) for seg in segments)
+                if segments
+                else len(transcript_text) / 20.0
+            )
+
+            # 如果启用了AI分析，则进行处理
+            if config.get("enable_ai_analysis", False):
+                await task_service.update_task(
+                    "meeting",
+                    task_id,
+                    {
+                        "status": "processing",
+                        "progress": 70,
+                        "current_step": "正在进行AI分析...",
+                    },
+                )
+
+                # 使用AI会议分析器进行全面分析
+                try:
+                    ai_analysis = await ai_meeting_analyzer.analyze_meeting(
+                        transcript_text=transcript_text,
+                        segments=segments,
+                        speakers=speakers_info,
+                        config=config,
+                    )
+
+                    if ai_analysis and ai_analysis.get("success"):
+                        # 合并AI分析结果
+                        results.update(
+                            {
+                                "summary": ai_analysis.get("summary"),
+                                "key_points": ai_analysis.get("key_points", []),
+                                "keywords": ai_analysis.get("keywords", []),
+                                "chapters": ai_analysis.get("chapters", []),
+                                "qa_analysis": ai_analysis.get("qa_analysis", []),
+                                "speaker_analysis": ai_analysis.get(
+                                    "speaker_analysis", {}
+                                ),
+                                "meeting_overview": ai_analysis.get("meeting_overview"),
+                                "action_items": ai_analysis.get("action_items", []),
+                                "decisions": ai_analysis.get("decisions", []),
+                            }
+                        )
+                        logger.info(f"✅ AI会议分析完成")
+                    else:
+                        raise Exception(
+                            f"AI分析失败: {ai_analysis.get('error', '未知错误')}"
+                        )
+
+                except Exception as e:
+                    logger.warning(f"AI分析处理失败: {e}")
+                    # 回退到基础分析
+                    results["summary"] = {
+                        "content": f"会议内容摘要：{transcript_text[:200]}...",
+                        "generated_at": datetime.now().isoformat(),
+                    }
+                    results["key_points"] = ["完成了语音识别转录", "建议进一步人工审核"]
+                    results["keywords"] = []
+
+            # 完成处理 - 同时保存到新旧两种数据结构中以确保兼容性
+            update_data = {
+                "status": "finished",  # 修复：将 completed 改为 finished 以匹配前端期望
+                "progress": 100,
+                "current_step": "处理完成",
+                "results": results,  # 新的结构化数据
+                "transcript": transcript_text,  # 纯文本转录
+                "total_words": total_words,
+                "speaker_count": speaker_count,
+                "total_duration": total_duration,
+                "engine": engine,
+            }
+
+            # 同时保存到旧的字段结构中以保持兼容性
+            update_data["transcripts"] = segments  # 分段转录数据
+            if results.get("summary"):
+                update_data["summary"] = results["summary"]  # 摘要数据
+            if results.get("keywords"):
+                update_data["keywords"] = results["keywords"]  # 关键词数据
+
+            await task_service.update_task("meeting", task_id, update_data)
+
+            logger.info(f"✅ 音频文件处理完成: {task_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"处理上传音频文件失败: {e}")
+            await task_service.update_task(
+                "meeting",
+                task_id,
+                {
+                    "status": "error",
+                    "progress": 100,
+                    "current_step": "处理失败",
+                    "error": str(e),
+                },
+            )
             return False
 
     async def stop_meeting_processor(self, task_id: str) -> bool:

@@ -131,7 +131,7 @@ async def start_queue_system():
     logger.info("✅ 使用SQLite队列系统（零依赖，适合个人PC）")
     try:
         # 导入任务以注册到队列
-        from biz.tasks import video_tasks
+        from biz.tasks import video_tasks, meeting_tasks
         from biz.queue.task_manager import get_task_manager
 
         manager = get_task_manager()

@@ -105,6 +105,16 @@ async def meeting_detail():
         return HTMLResponse("<h1>听语AI - 会议详情页面未找到</h1>", status_code=404)
 
 
+@pages_router.get("/meeting_upload", response_class=HTMLResponse)
+async def meeting_upload():
+    """上传会议录音页面"""
+    meeting_upload_file = PUBLIC_DIR / "pages" / "meeting_upload.html"
+    if meeting_upload_file.exists():
+        return FileResponse(meeting_upload_file)
+    else:
+        return HTMLResponse("<h1>听语AI - 上传会议录音页面未找到</h1>", status_code=404)
+
+
 @pages_router.get("/settings", response_class=HTMLResponse)
 async def settings():
     """设置页面"""
