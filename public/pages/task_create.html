@@ -77,17 +77,9 @@
                             💡 根据音视频内容类型选择合适的内容角色，提升识别和生成效果
                         </div>
                         <select v-model="formData.contentRole" class="form-select" @change="onContentRoleChange">
-                            <option value="auto">🤖 智能识别（推荐）</option>
-                            <option value="education">📚 教育学习</option>
-                            <option value="exam_review">📝 试卷评讲</option>
-                            <option value="meeting">💼 会议纪要</option>
-                            <option value="cooking">🍳 烹饪美食</option>
-                            <option value="travel">✈️ 旅游探索</option>
-                            <option value="technology">💻 科技数码</option>
-                            <option value="business">💰 商业财经</option>
-                            <option value="health">🏥 健康养生</option>
-                            <option value="lifestyle">🏠 生活方式</option>
-                            <option value="entertainment">🎬 娱乐休闲</option>
+                            <option v-for="role in contentRoles" :key="role.value" :value="role.value">
+                                {{ role.label }}
+                            </option>
                         </select>
 
                     </div>
@@ -131,7 +123,7 @@
                 <label class="checkbox-item">
                     <input type="checkbox" v-model="formData.aiOutputTypes" value="flashcards"
                            @change="onAIOutputTypeChange('flashcards')">
-                    <span>学习闪卡</span>
+                    <span>学习学习闪卡</span>
                 </label>
                 <!--                    <label class="checkbox-item">-->
                 <!--                        <input type="checkbox" v-model="formData.aiOutputTypes" value="ai_analysis"-->
@@ -289,8 +281,8 @@
                     formData: {
                         language: 'zh',
                         name: '', // 任务名称
-                        model: 'whisper',
-                        modelSize: 'medium',
+                        model: 'sensevoice',
+                        modelSize: 'small',
                         contentRole: 'auto', // 内容角色，默认智能识别
                         basicOutputTypes: ['transcript', 'summary', 'subtitle'],
                         aiOutputTypes: ['content_card'], // 默认只选择内容卡片
@@ -307,6 +299,7 @@
 
                     // 模型和语言选项
                     models: [],
+                    contentRoles: [], // 内容角色选项 - 从接口动态加载
                     languageOptions: [
                         {label: '自动检测', value: 'auto'},
                         {label: '中文', value: 'zh'},
@@ -393,6 +386,7 @@
 
             async mounted() {
                 await this.loadModels();
+                await this.loadContentRoles(); // 加载内容角色选项
             },
 
             methods: {
@@ -420,6 +414,52 @@
                     } catch (error) {
                         console.error('加载模型列表失败:', error);
                     }
+                },
+
+                // 加载内容角色选项
+                async loadContentRoles() {
+                    try {
+                        const data = await http.get('/api/settings/content_roles');
+                        if (data) {
+                            this.contentRoles = data.roles || [];
+                            console.log('加载内容角色成功:', this.contentRoles);
+                        } else {
+                            console.error('加载内容角色失败:', response.error);
+                            // 使用默认角色选项作为后备
+                            this.contentRoles = this.getDefaultContentRoles();
+                        }
+                    } catch (error) {
+                        console.error('加载内容角色选项失败:', error);
+                        // 使用默认角色选项作为后备
+                        this.contentRoles = this.getDefaultContentRoles();
+                    }
+                },
+
+                // 获取默认角色选项（后备方案）
+                getDefaultContentRoles() {
+                    return [
+                        {
+                            value: "auto",
+                            label: "🤖 智能识别（推荐）",
+                            icon: "🤖",
+                            text: "智能识别模式",
+                            description: "系统将自动分析内容类型，选择最适合的生成策略"
+                        },
+                        {
+                            value: "education",
+                            label: "📚 教育学习",
+                            icon: "📚",
+                            text: "教育学习模式",
+                            description: "专注于知识传授和学习要点，适合教学视频和课程内容"
+                        },
+                        {
+                            value: "technology",
+                            label: "💻 科技数码",
+                            icon: "💻",
+                            text: "科技数码模式",
+                            description: "注重技术原理和操作指南，适合科技评测和教程内容"
+                        }
+                    ];
                 },
 
                 getEngineDisplayName(engineType) {
@@ -523,61 +563,22 @@
                 },
 
                 showRoleRecommendation() {
-                    const roleMap = {
-                        'auto': {text: '🤖 智能识别模式', description: '系统将自动分析内容类型，选择最适合的生成策略'},
-                        'education': {
-                            text: '📚 教育学习模式',
-                            description: '专注于知识传授和学习要点，适合教学视频和课程内容'
-                        },
-                        'exam_review': {
-                            text: '📝 试卷评讲模式',
-                            description: '重点分析题目解答和考点，适合试卷讲解和习题分析'
-                        },
-                        'meeting': {
-                            text: '💼 会议纪要模式',
-                            description: '提取决议要点和行动计划，适合会议录音和讨论内容'
-                        },
-                        'cooking': {
-                            text: '🍳 烹饪美食模式',
-                            description: '突出制作步骤和技巧要点，适合美食教学和菜谱分享'
-                        },
-                        'travel': {
-                            text: '✈️ 旅游探索模式',
-                            description: '强调体验分享和实用攻略，适合旅行记录和景点介绍'
-                        },
-                        'technology': {
-                            text: '💻 科技数码模式',
-                            description: '注重技术原理和操作指南，适合科技评测和教程内容'
-                        },
-                        'business': {
-                            text: '💰 商业财经模式',
-                            description: '分析商业逻辑和市场趋势，适合商业分析和财经讨论'
-                        },
-                        'health': {
-                            text: '🏥 健康养生模式',
-                            description: '关注健康知识和养生方法，适合医疗科普和健康指导'
-                        },
-                        'lifestyle': {
-                            text: '🏠 生活方式模式',
-                            description: '展现生活品质和实用建议，适合生活分享和经验交流'
-                        },
-                        'entertainment': {
-                            text: '🎬 娱乐休闲模式',
-                            description: '突出娱乐价值和观点评论，适合影视评论和娱乐内容'
-                        }
-                    };
-
-                    const recommendation = roleMap[this.formData.contentRole];
-                    if (recommendation) {
+                    // 使用动态加载的角色数据
+                    const selectedRole = this.contentRoles.find(role => role.value === this.formData.contentRole);
+                    
+                    if (selectedRole) {
                         this.roleRecommendation = {
-                            text: recommendation.text,
-                            description: recommendation.description,
+                            text: selectedRole.text || selectedRole.label,
+                            description: selectedRole.description || '',
                             show: true
                         };
 
                         setTimeout(() => {
                             this.roleRecommendation.show = false;
                         }, 4000);
+                    } else {
+                        // 如果没有找到对应角色，隐藏推荐
+                        this.roleRecommendation.show = false;
                     }
                 },
 
@@ -956,7 +957,7 @@
                     const typeNames = {
                         'content_card': '内容卡片',
                         'mind_map': '思维导图',
-                        'flashcards': '学习闪卡',
+                        'flashcards': '学习学习闪卡',
                         'ai_analysis': 'AI分析'
                     };
 
@@ -969,7 +970,7 @@
                     const typeNames = {
                         'content_card': '📝 内容卡片',
                         'mind_map': '🧠 思维导图',
-                        'flashcards': '📚 学习闪卡',
+                        'flashcards': '📚 学习学习闪卡',
                         'ai_analysis': '🤖 AI分析'
                     };
 

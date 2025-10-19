@@ -68,29 +68,40 @@ def save_settings(settings: Dict[str, Any]) -> bool:
 
 def get_role_mapping(category: str = "content_generator") -> Dict[str, str]:
     """获取角色映射配置
-    
+
     Args:
         category: 角色类别 (content_generator, flashcard_generator, ai_analysis, content_card)
-    
+
     Returns:
         角色映射字典
     """
     try:
         settings = load_settings()
+
+        # 新的配置结构：从roles中提取指定类别的映射
+        roles = settings.get("roles", {})
+        if roles:
+            category_mapping = {}
+            for role_key, role_config in roles.items():
+                if isinstance(role_config, dict) and category in role_config:
+                    category_mapping[role_key] = role_config[category]
+
+            if category_mapping:
+                return category_mapping
+
+        # 兼容旧的role_mapping结构
         role_mapping = settings.get("role_mapping", {})
-        
-        # 获取指定类别的角色映射
         category_mapping = role_mapping.get(category, {})
-        
+
         # 如果指定类别不存在，返回默认的content_generator映射
         if not category_mapping:
             category_mapping = role_mapping.get("content_generator", {})
-        
+
         # 如果还是没有，返回默认映射
         if not category_mapping:
             category_mapping = {
                 "education": "教育内容专家",
-                "exam_review": "试卷评讲专家", 
+                "exam_review": "试卷评讲专家",
                 "cooking": "美食知识专家",
                 "travel": "旅行攻略专家",
                 "meeting": "会议管理专家",
@@ -98,7 +109,7 @@ def get_role_mapping(category: str = "content_generator") -> Dict[str, str]:
                 "business": "商业分析专家",
                 "general": "内容专家",
             }
-            
+
         return category_mapping
     except Exception as e:
         logger.error(f"获取角色映射失败: {e}")
@@ -106,7 +117,7 @@ def get_role_mapping(category: str = "content_generator") -> Dict[str, str]:
         return {
             "education": "教育内容专家",
             "exam_review": "试卷评讲专家",
-            "cooking": "美食知识专家", 
+            "cooking": "美食知识专家",
             "travel": "旅行攻略专家",
             "meeting": "会议管理专家",
             "technology": "科技内容专家",
@@ -115,14 +126,16 @@ def get_role_mapping(category: str = "content_generator") -> Dict[str, str]:
         }
 
 
-def get_role_name(domain: str, category: str = "content_generator", default: str = "内容专家") -> str:
+def get_role_name(
+    domain: str, category: str = "content_generator", default: str = "内容专家"
+) -> str:
     """获取指定领域的角色名称
-    
+
     Args:
         domain: 领域名称
         category: 角色类别
         default: 默认角色名称
-    
+
     Returns:
         角色名称
     """
@@ -136,11 +149,11 @@ def get_role_name(domain: str, category: str = "content_generator", default: str
 
 def get_prompt_template(template_type: str, prompt_part: str = "system_prompt") -> str:
     """从配置文件获取提示词模板
-    
+
     Args:
-        template_type: 模板类型 (mind_map, flashcards, ai_analysis)
-        prompt_part: 提示词部分 (system_prompt, user_prompt)
-    
+        template_type: 模板类型 (mind_map, flashcards, ai_analysis, content_card)
+        prompt_part: 提示词部分 (system_prompt, user_prompt, audio_system_prompt)
+
     Returns:
         提示词模板字符串
     """
@@ -148,9 +161,13 @@ def get_prompt_template(template_type: str, prompt_part: str = "system_prompt") 
         settings = load_settings()
         prompt_templates = settings.get("prompt_templates", {})
         template = prompt_templates.get(template_type, {})
-        
+
+        # 特殊处理 content_card 类型的 audio_system_prompt
+        if template_type == "content_card" and prompt_part == "audio_system_prompt":
+            return template.get("audio_system_prompt", "")
+
         return template.get(prompt_part, "")
-        
+
     except Exception as e:
         logger.error(f"读取提示词模板失败: {e}")
         return ""
@@ -366,11 +383,192 @@ async def get_role_mapping_api() -> Dict[str, Any]:
     """获取角色映射配置API"""
     try:
         settings = load_settings()
+
+        # 优先返回新的roles结构
+        roles = settings.get("roles", {})
+        if roles:
+            return {"success": True, "data": {"roles": roles}}
+
+        # 兼容旧的role_mapping结构
         role_mapping = settings.get("role_mapping", {})
-        
-        return {"success": True, "data": role_mapping}
+        return {"success": True, "data": {"role_mapping": role_mapping}}
     except Exception as e:
         return {"success": False, "error": str(e), "data": {}}
+
+
+@settings_router.get("/content_roles")
+async def get_content_roles() -> Dict[str, Any]:
+    """获取内容角色选项 - 用于前端动态加载"""
+    try:
+        settings = load_settings()
+
+        # 新的配置结构：从roles中提取content_card映射
+        roles = settings.get("roles", {})
+        content_card_roles = {}
+
+        if roles:
+            for role_key, role_config in roles.items():
+                if isinstance(role_config, dict) and "content_card" in role_config:
+                    content_card_roles[role_key] = role_config["content_card"]
+
+        # 兼容旧的role_mapping结构
+        if not content_card_roles:
+            role_mapping = settings.get("role_mapping", {})
+            content_card_roles = role_mapping.get("content_card", {})
+
+        # 如果还是没有配置，返回默认的角色选项
+        if not content_card_roles:
+            content_card_roles = {
+                "education": "教育学习专家",
+                "exam_review": "试卷评讲专家",
+                "meeting": "会议纪要专家",
+                "cooking": "烹饪美食专家",
+                "travel": "旅游探索专家",
+                "technology": "科技数码专家",
+                "business": "商业财经专家",
+                "health": "健康养生专家",
+                "lifestyle": "生活方式专家",
+                "entertainment": "娱乐休闲专家",
+                "emotion": "情感心理专家",
+                "finance": "金融投资专家",
+                "beauty": "美容护肤专家",
+                "male": "男性内容专家",
+                "female": "女性内容专家",
+                "fitness": "运动健身专家",
+                "parenting": "育儿教育专家",
+            }  # 构建前端需要的格式 - 包含显示文本、图标和描述
+        role_options = []
+
+        # 默认选项：智能识别
+        role_options.append(
+            {
+                "value": "auto",
+                "label": "🤖 智能识别（推荐）",
+                "icon": "🤖",
+                "text": "智能识别模式",
+                "description": "系统将自动分析内容类型，选择最适合的生成策略",
+            }
+        )
+
+        # 角色选项映射 - 定义图标和描述
+        role_display_config = {
+            "education": {
+                "icon": "📚",
+                "label": "教育学习",
+                "description": "专注于知识传授和学习要点，适合教学视频和课程内容",
+            },
+            "exam_review": {
+                "icon": "📝",
+                "label": "试卷评讲",
+                "description": "重点分析题目解答和考点，适合试卷讲解和习题分析",
+            },
+            "meeting": {
+                "icon": "💼",
+                "label": "会议纪要",
+                "description": "提取决议要点和行动计划，适合会议录音和讨论内容",
+            },
+            "cooking": {
+                "icon": "🍳",
+                "label": "烹饪美食",
+                "description": "突出制作步骤和技巧要点，适合美食教学和菜谱分享",
+            },
+            "travel": {
+                "icon": "✈️",
+                "label": "旅游探索",
+                "description": "强调体验分享和实用攻略，适合旅行记录和景点介绍",
+            },
+            "technology": {
+                "icon": "💻",
+                "label": "科技数码",
+                "description": "注重技术原理和操作指南，适合科技评测和教程内容",
+            },
+            "business": {
+                "icon": "💰",
+                "label": "商业财经",
+                "description": "分析商业逻辑和市场趋势，适合商业分析和财经讨论",
+            },
+            "health": {
+                "icon": "🏥",
+                "label": "健康养生",
+                "description": "关注健康知识和养生方法，适合医疗科普和健康指导",
+            },
+            "lifestyle": {
+                "icon": "🏠",
+                "label": "生活方式",
+                "description": "展现生活品质和实用建议，适合生活分享和经验交流",
+            },
+            "entertainment": {
+                "icon": "🎬",
+                "label": "娱乐休闲",
+                "description": "突出娱乐价值和观点评论，适合影视评论和娱乐内容",
+            },
+            "emotion": {
+                "icon": "💝",
+                "label": "情感心理",
+                "description": "深度解析情感表达和心理状态，适合情感类和心理分析内容",
+            },
+            "finance": {
+                "icon": "📈",
+                "label": "金融投资",
+                "description": "专业解读投资策略和金融产品，适合理财教学和投资分析",
+            },
+            "beauty": {
+                "icon": "💄",
+                "label": "美容护肤",
+                "description": "专注美容技巧和护肤知识，适合化妆教程和护肤分享",
+            },
+            "male": {
+                "icon": "👨",
+                "label": "男性内容",
+                "description": "面向男性用户的内容优化，适合男性兴趣和生活内容",
+            },
+            "female": {
+                "icon": "👩",
+                "label": "女性内容",
+                "description": "面向女性用户的内容优化，适合女性兴趣和生活内容",
+            },
+            "fitness": {
+                "icon": "💪",
+                "label": "运动健身",
+                "description": "强调训练方法和健身技巧，适合运动教学和健身指导",
+            },
+            "parenting": {
+                "icon": "👶",
+                "label": "育儿教育",
+                "description": "专注育儿经验和教育方法，适合亲子内容和教育分享",
+            },
+        }
+
+        # 根据配置生成角色选项
+        for role_key, role_name in content_card_roles.items():
+            display_config = role_display_config.get(
+                role_key,
+                {
+                    "icon": "👤",
+                    "label": role_name,
+                    "description": f"专业的{role_name}，提供该领域的专业内容分析",
+                },
+            )
+
+            role_options.append(
+                {
+                    "value": role_key,
+                    "label": f"{display_config['icon']} {display_config['label']}",
+                    "icon": display_config["icon"],
+                    "text": f"{display_config['label']}模式",
+                    "description": display_config["description"],
+                    "expert_name": role_name,
+                }
+            )
+
+        return {
+            "success": True,
+            "data": {"roles": role_options, "total": len(role_options)},
+        }
+
+    except Exception as e:
+        logger.error(f"获取内容角色失败: {e}")
+        return {"success": False, "error": str(e), "data": {"roles": [], "total": 0}}
 
 
 @settings_router.post("/role_mapping")
@@ -379,7 +577,7 @@ async def update_role_mapping(role_mapping: Dict[str, Any]) -> Dict[str, Any]:
     try:
         settings = load_settings()
         settings["role_mapping"] = role_mapping
-        
+
         if save_settings(settings):
             return {"success": True, "message": "角色映射配置已更新"}
         else:

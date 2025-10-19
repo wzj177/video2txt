@@ -3,6 +3,7 @@
 """
 听语AI - 视频处理API路由
 """
+import logging
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Body
 from fastapi.responses import StreamingResponse, FileResponse
@@ -24,6 +25,9 @@ from ..middleware.exception_handler import (
     create_error_response,
 )
 
+
+# 配置日志
+logger = logging.getLogger(__name__)
 # 创建视频API路由器
 video_router = APIRouter(prefix="/api/tasks/video", tags=["video"])
 
@@ -404,6 +408,7 @@ async def create_video_task(
     ai_output_types: str = Form(""),
     force_sync: bool = Form(False),
     ai_correction: bool = Form(False),
+    content_role: str = Form("auto"),
 ) -> Dict[str, Any]:
     """创建视频处理任务"""
     # 验证输入参数
@@ -449,6 +454,7 @@ async def create_video_task(
         "ai_output_types": ai_output_type_list,
         "force_sync": force_sync,
         "ai_correction": ai_correction,
+        "content_role": content_role,
     }
 
     # 处理文件或URL
@@ -520,10 +526,10 @@ async def create_video_task(
             if not file_path.is_file():
                 raise HTTPException(status_code=400, detail=f"路径不是文件: {url}")
 
-            # 步骤1: 基本验证（快速）
+            # 步骤1: 基本验证：文件大小和类型
             await validate_media_file_basic(str(file_path), file_path.name)
 
-            # 步骤2: 完整验证（必要，确保文件可用）
+            # 步骤2: 完整验证（必要，确保文件可用）：音视频ffprobe
             validation_result = await validate_media_file_full(
                 str(file_path), file_path.name
             )

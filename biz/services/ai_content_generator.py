@@ -416,11 +416,17 @@ class AIContentFactory:
 
 {mapping_info}
 
-### 📋 使用规则：
-1. **优先使用精确匹配帧**：描述特定内容时，使用对应的匹配帧
-2. **语义对应原则**：图片与文字内容必须在时间和语义上对应
-3. **过渡帧补充**：章节过渡、总结等使用未匹配帧
-4. **强制图文混排**：图片必须插入到相关段落中，不能集中在文末
+### 📋 关键帧使用规则：
+1. **封面图片**：开头摘要部分必须包含一张封面图片
+2. **章节关键图**：每个主要章节（## 标题）都应该有对应的关键帧
+3. **语义精确匹配**：图片与文字内容必须在时间和语义上高度对应
+4. **关键位置强制配图**：
+   - 📖 开头部分（摘要后）：1张封面图
+   - 🔧 核心章节开头：每个重要章节1张图
+   - 📊 关键概念处：概念解释配图
+5. **图片分布要求**：确保至少50%的主要章节都有配图
+6. **强制图文混排**：图片必须插入到相关段落中，不能集中在文末
+7. **🚫禁用区域**：「总结」和「思考」段落严禁插入任何图片
 
 **⚠️ 严禁使用未列出的图片文件名！**
 """
@@ -448,8 +454,10 @@ class AIContentFactory:
 
 ### 📋 使用规则：
 1. **时间对应**：根据内容时间点选择最接近的帧
-2. **均匀分布**：合理分配图片，确保视觉连贯
-3. **图文混排**：图片插入到相关段落中
+2. **关键帧策略**：在关键位置（如封面、主要章节开头）插入图片，避免过度使用
+3. **适度图片使用**：使用30%左右的可用图片，重点突出核心内容
+4. **章节分布原则**：每个主要章节最多1-2张图片，保持内容简洁
+5. **图文混排**：图片插入到相关段落中
 
 **⚠️ 严禁使用未列出的图片文件名！**
 """
@@ -507,15 +515,27 @@ class AIContentFactory:
 **🚨 严格要求**：
 1. **只能使用列出的图片文件**：{frames_list}
 2. **强制图文混排**：图片必须插入到相关内容段落中
-3. **图片格式**：![图片名](file://{keyframes_path}/图片名)
+3. **图片格式**：![图片名](keyframes/图片名)
 4. **精确匹配**：严格按照SRT-帧匹配关系使用图片
 5. **绝对禁止**：将所有图片集中在文章最后"""
 
     async def _generate_text_only_content(
-        self, config: GenerationConfig, transcript: str, stream_callback
+        self, config: GenerationConfig, transcript: str, stream_callback, **kwargs
     ) -> Dict[str, Any]:
         """生成纯文本内容（无帧时的回退方案）"""
-        system_prompt = """你是一位资深的教育内容专家。请基于转录内容生成结构化的知识卡片，包含标题、摘要、章节、总结、思考等完整结构。使用简体中文输出。"""
+        # 获取分析结果（如果有的话）
+        analysis_result = kwargs.get("analysis_result")
+
+        # 根据内容领域获取角色名称
+        if analysis_result:
+            role_name = get_role_name(
+                analysis_result.primary_domain.value,
+                "content_generator",
+                "视频知识萃取专家",
+            )
+            system_prompt = f"""你是一位专业的{role_name}，擅长将{analysis_result.primary_domain.value}领域的教学视频转化为结构化、高价值的知识卡片，包含标题、摘要、章节、总结、思考等完整结构。使用简体中文输出。"""
+        else:
+            system_prompt = """你是一位专业视频知识萃取专家，擅长将教学视频转化为结构化、高价值的知识卡片，包含标题、摘要、章节、总结、思考等完整结构。使用简体中文输出。"""
 
         user_prompt = f"请为以下转录内容生成结构化知识卡片：\n\n{transcript[:3000] if transcript else '暂无转录内容'}"
 
@@ -525,24 +545,25 @@ class AIContentFactory:
                 {"type": "content_card", "message": "📝 正在生成纯文本内容..."},
             )
 
-            content = await self.ai_client.generate_content(
-                prompt=user_prompt,
-                system_prompt=system_prompt,
-                max_tokens=config.max_tokens,
-                temperature=config.temperature,
-            )
+        content = await self.ai_client.generate_content(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            max_tokens=config.max_tokens,
+            temperature=config.temperature,
+        )
 
+        if stream_callback:
             await stream_callback(
                 "ai_content_complete",
                 {"type": "content_card", "message": "✅ 内容生成完成"},
             )
 
-            return {
-                "success": True,
-                "type": "content_card",
-                "content": content,
-                "format": "text",
-            }
+        return {
+            "success": True,
+            "type": "content_card",
+            "content": content,
+            "format": "text",
+        }
 
     async def _generate_mind_map(
         self,
@@ -554,7 +575,45 @@ class AIContentFactory:
     ) -> Dict[str, Any]:
         """生成思维导图"""
         try:
-            system_prompt = """你是一个擅长信息结构化和知识整理的专家。
+            # 获取分析结果（如果有的话）
+            analysis_result = kwargs.get("analysis_result")
+
+            # 根据内容领域获取角色名称
+            if analysis_result:
+                from biz.routes.settings_api import get_role_name
+
+                role_name = get_role_name(
+                    analysis_result.primary_domain.value,
+                    "content_generator",
+                    "信息结构化专家",
+                )
+                system_prompt = f"""你是一位专业的{role_name}，擅长将{analysis_result.primary_domain.value}领域的内容转化为清晰的思维导图结构。
+
+我将提供一个视频或音频的转录文本内容，请你：
+
+1. 深入分析{analysis_result.primary_domain.value}领域的知识体系和逻辑脉络
+2. 提炼出一个清晰的思维导图大纲，格式为层级结构（可用 Markdown 的标题或列表表示）
+3. 主干不超过 4~6 个核心模块，每个模块下分 2~4 个子点，总节点控制在 15 个以内
+4. 每个节点用简洁短语概括，避免完整句子
+5. 优先提取：核心观点、关键概念、步骤流程、案例证据、结论建议
+6. 忽略口语化表达、重复语句、寒暄和无信息量内容
+7. 体现{analysis_result.primary_domain.value}领域特色，突出该领域的重要概念
+
+**重要要求：无论输入语言是什么（中文、方言、英文等），你必须严格使用简体中文输出，绝对不能使用繁体字。即使是专有名词、术语也要转换为简体中文。**
+
+# 思维导图：[视频主题]
+
+- [主节点1]
+  - [子节点1.1]
+  - [子节点1.2]
+- [主节点2]
+  - [子节点2.1]
+  - [子节点2.2]
+  ...
+
+请直接输出思维导图，不要解释说明。"""
+            else:
+                system_prompt = """你是一个擅长信息结构化和知识整理的专家。
 我将提供一个视频或音频的转录文本内容，请你：
 
 分析整体内容的主题和逻辑结构（如：讲解类、叙事类、论证类等）
@@ -624,6 +683,9 @@ class AIContentFactory:
     ) -> Dict[str, Any]:
         """生成闪卡"""
         try:
+            # 获取分析结果（如果有的话）
+            analysis_result = kwargs.get("analysis_result")
+
             # 构建上下文信息
             context_info = ""
             frames = frame_info.get("frames", [])
@@ -642,12 +704,38 @@ class AIContentFactory:
 4. **层次分明**：从基础概念到高级应用，循序渐进
 """
 
-            system_prompt = f"""你是一位资深的教育内容专家和学习闪卡制作大师，擅长将教学视频转化为高质量的学习闪卡。
+            # 根据内容领域获取角色名称和专业提示词
+            if analysis_result:
+                from biz.routes.settings_api import get_role_name
+
+                role_name = get_role_name(
+                    analysis_result.primary_domain.value,
+                    "flashcard_generator",
+                    "学习闪卡专家",
+                )
+                domain_specific = f"""
+## 🎯 {analysis_result.primary_domain.value}领域专业要求
+- 深入理解{analysis_result.primary_domain.value}领域的核心概念和实践要点
+- 熟悉该领域的常见问题和学习难点
+- 关注{analysis_result.primary_domain.value}领域的实际应用和操作要点
+- 体现该领域的专业特色和重要概念
+"""
+                system_prompt = f"""你是一位专业的{role_name}，专门为{analysis_result.primary_domain.value}领域创建高质量的学习闪卡。
 
 # 核心任务
 基于转录内容生成结构化、高价值的学习闪卡，确保学习效果最佳。
 
 {context_info}
+{domain_specific}"""
+            else:
+                system_prompt = f"""你是一位资深的教育内容专家和学习闪卡制作大师，擅长将教学视频转化为高质量的学习闪卡。
+
+# 核心任务
+基于转录内容生成结构化、高价值的学习闪卡，确保学习效果最佳。
+
+{context_info}"""
+
+            system_prompt += """
 
 ## 内容质量要求
 1. **问题精准性**：每个问题都要精准指向核心知识点
@@ -726,7 +814,65 @@ class AIContentFactory:
     ) -> Dict[str, Any]:
         """生成AI分析"""
         try:
-            system_prompt = """你是一个专业的AI分析专家。请对提供的转录文本进行深度分析。
+            # 获取分析结果（如果有的话）
+            analysis_result = kwargs.get("analysis_result")
+
+            # 根据内容领域获取角色名称和专业提示词
+            if analysis_result:
+                from biz.routes.settings_api import get_role_name
+
+                role_name = get_role_name(
+                    analysis_result.primary_domain.value, "ai_analysis", "内容分析专家"
+                )
+                system_prompt = f"""你是一位专业的{role_name}，专门对{analysis_result.primary_domain.value}领域内容进行深度分析和价值评估。
+
+# 核心任务
+基于已有的内容分析结果进行深度分析，核心要求：
+- 从{analysis_result.primary_domain.value}领域角度评价内容价值
+- 分析内容与目标受众的匹配程度
+- 提供专业的改进建议和扩展方向
+- 识别具体应用场景和实用价值
+
+## 专业分析要点
+1. **{analysis_result.primary_domain.value}领域相关性**：评估内容在该领域的专业价值
+2. **知识体系完整性**：分析内容是否涵盖该领域核心要点
+3. **实践应用价值**：评估内容的实际应用潜力
+4. **学习效果预期**：预测学习者的掌握程度和学习效果
+5. **领域发展趋势**：结合该领域发展趋势提供建议
+
+**重要要求：无论输入语言是什么（中文、方言、英文等），你必须严格使用简体中文输出，绝对不能使用繁体字。即使是专有名词、术语也要转换为简体中文。**
+
+请用JSON格式输出，包含以下字段：
+{{
+    "content_value_assessment": {{
+        "overall_score": 8.5,
+        "strengths": ["优势1", "优势2", "优势3"],
+        "weaknesses": ["不足1", "不足2"],
+        "domain_relevance": "在{analysis_result.primary_domain.value}领域的相关性评价"
+    }},
+    "audience_matching": {{
+        "match_score": 7.8,
+        "target_audience": "目标受众",
+        "suitability_analysis": "受众适配性分析",
+        "recommendations": ["建议1", "建议2"]
+    }},
+    "improvement_suggestions": [
+        "针对{analysis_result.primary_domain.value}领域的改进建议1",
+        "改进建议2",
+        "改进建议3"
+    ],
+    "application_scenarios": [
+        "应用场景1",
+        "应用场景2",
+        "应用场景3"
+    ],
+    "extension_directions": [
+        "扩展方向1",
+        "扩展方向2"
+    ]
+}}"""
+            else:
+                system_prompt = """你是一个专业的AI分析专家。请对提供的转录文本进行深度分析。
 分析内容应该包括：
 1. 内容主题识别
 2. 关键信息提取
@@ -876,9 +1022,9 @@ class AIContentFactory:
 
             # 🎯 角色定义（从配置文件读取）
             role_name = get_role_name(
-                analysis_result.primary_domain.value, 
-                "content_generator", 
-                "内容结构化专家"
+                analysis_result.primary_domain.value,
+                "content_generator",
+                "内容结构化专家",
             )
 
             # 检测是否为长视频
@@ -956,7 +1102,10 @@ class AIContentFactory:
             if stream_callback:
                 await stream_callback(
                     "ai_generating",
-                    {"type": "mind_map", "message": f"🧠 正在生成{analysis_result.primary_domain.value}领域思维导图..."},
+                    {
+                        "type": "mind_map",
+                        "message": f"🧠 正在生成{analysis_result.primary_domain.value}领域思维导图...",
+                    },
                 )
 
             outline = await self.ai_client.generate_content(
@@ -1144,21 +1293,23 @@ class AIContentFactory:
         """将闪卡导出为Anki格式 - 借鉴3.0版本的优秀实现"""
         try:
             import re
-            
+
             # 解析闪卡内容 - 支持多种格式
             cards = []
-            
+
             # 尝试当前版本的Q&A格式
-            qa_pattern = r"\*\*Q\*\*:\s*(.+?)\n\*\*A\*\*:\s*(.+?)(?=\n---|\n\*\*Q\*\*|\Z)"
+            qa_pattern = (
+                r"\*\*Q\*\*:\s*(.+?)\n\*\*A\*\*:\s*(.+?)(?=\n---|\n\*\*Q\*\*|\Z)"
+            )
             matches = re.findall(qa_pattern, flashcards_content, re.DOTALL)
-            
+
             if matches:
                 cards = [("问答卡", q.strip(), a.strip(), "基础") for q, a in matches]
             else:
                 # 尝试3.0版本的标准格式
                 pattern1 = r"## 闪卡 \d+ - (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
                 matches = re.findall(pattern1, flashcards_content, re.DOTALL)
-                
+
                 if matches:
                     cards = matches
                 else:
@@ -1166,21 +1317,32 @@ class AIContentFactory:
                     pattern2 = r"##.*?闪卡.*?\n.*?正面.*?[:：]\s*(.+?)\n.*?背面.*?[:：]\s*(.+?)(?:\n.*?标签.*?[:：]\s*(.+?))?(?=\n\n|\n##|\Z)"
                     matches = re.findall(pattern2, flashcards_content, re.DOTALL)
                     cards = [
-                        ("通用卡", match[0], match[1], match[2] if len(match) > 2 and match[2] else "基础")
+                        (
+                            "通用卡",
+                            match[0],
+                            match[1],
+                            match[2] if len(match) > 2 and match[2] else "基础",
+                        )
                         for match in matches
                     ]
-            
+
             if not cards:
                 logger.warning("无法解析闪卡格式，尝试简单问答格式...")
                 # 最后尝试简单的问答格式
                 simple_qa_pattern = r"(?:Q|问题|Question)[:：]\s*(.+?)\n(?:A|答案|Answer)[:：]\s*(.+?)(?=\n(?:Q|问题|Question)|\Z)"
-                qa_matches = re.findall(simple_qa_pattern, flashcards_content, re.DOTALL | re.IGNORECASE)
+                qa_matches = re.findall(
+                    simple_qa_pattern, flashcards_content, re.DOTALL | re.IGNORECASE
+                )
                 if qa_matches:
-                    cards = [("问答卡", q.strip(), a.strip(), "基础") for q, a in qa_matches]
+                    cards = [
+                        ("问答卡", q.strip(), a.strip(), "基础") for q, a in qa_matches
+                    ]
                 else:
-                    logger.error(f"无法解析任何闪卡格式，内容预览：{flashcards_content[:300]}")
+                    logger.error(
+                        f"无法解析任何闪卡格式，内容预览：{flashcards_content[:300]}"
+                    )
                     return False
-            
+
             # 生成Anki导入格式（CSV）
             anki_content = []
             for card_type, front, back, tags in cards:
@@ -1188,18 +1350,18 @@ class AIContentFactory:
                 front = front.strip().replace("\n", "<br>").replace("\t", " ")
                 back = back.strip().replace("\n", "<br>").replace("\t", " ")
                 tags = tags.replace("#", "").replace(" ", "_")
-                
+
                 # Anki格式：正面\t背面\t标签
                 anki_content.append(f"{front}\t{back}\t{tags}")
-            
+
             # 写入文件
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write("Front\tBack\tTags\n")  # 头部
                 f.write("\n".join(anki_content))
-            
+
             logger.info(f"成功导出 {len(cards)} 张闪卡到 Anki 格式：{output_path}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Anki格式导出失败: {e}")
             return False
@@ -1207,15 +1369,18 @@ class AIContentFactory:
     def parse_flashcards_multiple_formats(self, content: str) -> list:
         """解析多种闪卡格式 - 借鉴3.0版本的容错机制"""
         import re
-        
+
         cards = []
-        
+
         # 格式1：当前版本的Q&A格式
         qa_pattern = r"\*\*Q\*\*:\s*(.+?)\n\*\*A\*\*:\s*(.+?)(?=\n---|\n\*\*Q\*\*|\Z)"
         matches = re.findall(qa_pattern, content, re.DOTALL)
         if matches:
-            return [{"question": q.strip(), "answer": a.strip(), "type": "qa"} for q, a in matches]
-        
+            return [
+                {"question": q.strip(), "answer": a.strip(), "type": "qa"}
+                for q, a in matches
+            ]
+
         # 格式2：标准闪卡格式
         pattern1 = r"## 闪卡 \d+ - (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
         matches = re.findall(pattern1, content, re.DOTALL)
@@ -1225,11 +1390,11 @@ class AIContentFactory:
                     "question": front.strip(),
                     "answer": back.strip(),
                     "type": card_type.strip(),
-                    "tags": tags.strip()
+                    "tags": tags.strip(),
                 }
                 for card_type, front, back, tags in matches
             ]
-        
+
         # 格式3：宽松格式
         pattern2 = r"##.*?闪卡.*?\n.*?正面.*?[:：]\s*(.+?)\n.*?背面.*?[:：]\s*(.+?)(?:\n.*?标签.*?[:：]\s*(.+?))?(?=\n\n|\n##|\Z)"
         matches = re.findall(pattern2, content, re.DOTALL)
@@ -1239,17 +1404,20 @@ class AIContentFactory:
                     "question": match[0].strip(),
                     "answer": match[1].strip(),
                     "type": "通用卡",
-                    "tags": match[2].strip() if len(match) > 2 and match[2] else "基础"
+                    "tags": match[2].strip() if len(match) > 2 and match[2] else "基础",
                 }
                 for match in matches
             ]
-        
+
         # 格式4：简单问答
         simple_qa_pattern = r"(?:Q|问题|Question)[:：]\s*(.+?)\n(?:A|答案|Answer)[:：]\s*(.+?)(?=\n(?:Q|问题|Question)|\Z)"
         matches = re.findall(simple_qa_pattern, content, re.DOTALL | re.IGNORECASE)
         if matches:
-            return [{"question": q.strip(), "answer": a.strip(), "type": "简单问答"} for q, a in matches]
-        
+            return [
+                {"question": q.strip(), "answer": a.strip(), "type": "简单问答"}
+                for q, a in matches
+            ]
+
         logger.warning(f"无法解析闪卡格式，内容预览：{content[:200]}")
         return []
 
@@ -1267,9 +1435,9 @@ class AIContentFactory:
 
             # 🎯 角色定义（从配置文件读取）
             role_name = get_role_name(
-                analysis_result.primary_domain.value, 
-                "flashcard_generator", 
-                "学习闪卡专家"
+                analysis_result.primary_domain.value,
+                "flashcard_generator",
+                "学习闪卡专家",
             )
 
             # 构建四段式提示词
@@ -1379,9 +1547,7 @@ class AIContentFactory:
 
             # 🎯 角色定义（从配置文件读取）
             role_name = get_role_name(
-                analysis_result.primary_domain.value, 
-                "ai_analysis", 
-                "内容分析专家"
+                analysis_result.primary_domain.value, "ai_analysis", "内容分析专家"
             )
 
             # 构建四段式提示词

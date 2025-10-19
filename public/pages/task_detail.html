@@ -293,10 +293,10 @@
                     </div>
                 </div>
 
-                <!-- 学习闪卡 -->
+                <!-- 学习学习闪卡 -->
                 <div v-if="task.results.flashcards" class="result-card">
                     <div class="result-header">
-                        <div class="result-title">📚 学习闪卡</div>
+                        <div class="result-title">📚 学习学习闪卡</div>
                         <div class="result-actions">
                             <button class="action-btn" @click="showFullscreenFlashcards" title="全屏查看">
                                 <i class="layui-icon layui-icon-screen-full"></i>
@@ -326,14 +326,14 @@
                             </div>
                         </div>
 
-                        <!-- 闪卡文件组合按钮 -->
+                        <!-- 学习闪卡文件组合按钮 -->
                         <div v-if="displayFiles.flashcards.length > 0" class="file-item special-item">
                             <div class="file-main" @click="downloadFlashcardFiles">
                                 <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
                                     <path
                                         d="M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3M19,19H5V5H19V19M17,12H7V10H17V12M15,16H7V14H15V16M17,8H7V6H17V8Z" />
                                 </svg>
-                                <span class="file-name">📚 学习闪卡 ({{ displayFiles.flashcards.length }}个格式)</span>
+                                <span class="file-name">📚 学习学习闪卡 ({{ displayFiles.flashcards.length }}个格式)</span>
                             </div>
                             <button class="anki-help-btn" @click.stop="showAnkiHelp" title="Anki导入帮助">
                                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -616,8 +616,8 @@
                         };
 
                         filteredFiles.forEach(file => {
-                            if (file.name.includes('学习闪卡') || file.name.includes('flashcards') || file.name.includes('Anki')) {
-                                console.log('  ➡️ 归类为闪卡文件');
+                            if (file.name.includes('学习学习闪卡') || file.name.includes('flashcards') || file.name.includes('Anki')) {
+                                console.log('  ➡️ 归类为学习闪卡文件');
                                 result.flashcards.push(file);
                             } else if (file.name.includes('思维导图') || file.name.endsWith('.mm')) {
                                 console.log('  ➡️ 归类为思维导图文件');
@@ -824,7 +824,7 @@
                         }
                     },
 
-                    // 下载闪卡
+                    // 下载学习闪卡
                     downloadFlashcards() {
                         if (this.task?.results?.flashcards) {
                             const blob = new Blob([this.task.results.flashcards], { type: 'text/plain' });
@@ -876,7 +876,7 @@
 
 
 
-                    // 下载闪卡文件（多格式）
+                    // 下载学习闪卡文件（多格式）
                     async downloadFlashcardFiles() {
                         const flashcardFiles = this.displayFiles.flashcards;
 
@@ -899,7 +899,7 @@
                             });
 
                             let menuContent = '<div style="padding: 10px;">';
-                            menuContent += '<p style="margin-bottom: 15px; color: #666;">选择要下载的闪卡格式：</p>';
+                            menuContent += '<p style="margin-bottom: 15px; color: #666;">选择要下载的学习闪卡格式：</p>';
                             options.forEach((option, index) => {
                                 menuContent += `<div style="margin-bottom: 8px;">
                                     <button onclick="downloadFlashcard('${option.file.name}')" 
@@ -927,7 +927,7 @@
 
                             layer.open({
                                 type: 1,
-                                title: '📚 下载学习闪卡',
+                                title: '📚 下载学习学习闪卡',
                                 area: ['300px', 'auto'],
                                 content: menuContent,
                                 btn: false,
@@ -962,9 +962,9 @@
                                     <h3>🎯 什么是Anki？</h3>
                                     <p>Anki是一款基于间隔重复算法的记忆软件，能够帮助您高效记忆学习内容。</p>
                                     
-                                    <h3>📥 如何导入我们的闪卡？</h3>
+                                    <h3>📥 如何导入我们的学习闪卡？</h3>
                                     <ol style="margin-left: 20px;">
-                                        <li><strong>下载闪卡文件</strong>：点击"学习闪卡-Anki格式.csv"文件下载</li>
+                                        <li><strong>下载学习闪卡文件</strong>：点击"学习学习闪卡-Anki格式.csv"文件下载</li>
                                         <li><strong>打开Anki软件</strong>：在电脑上启动Anki应用</li>
                                         <li><strong>创建牌组</strong>：点击"创建牌组"，命名为您的学习主题</li>
                                         <li><strong>导入文件</strong>：
@@ -1413,14 +1413,14 @@
                         this.openFullscreen('思维导图 - 全屏查看', this.task.results.mindmap, 'mindmap');
                     },
 
-                    // 显示全屏学习闪卡
+                    // 显示全屏学习学习闪卡
                     showFullscreenFlashcards() {
                         if (!this.task?.results?.flashcards) {
-                            layer.msg('没有学习闪卡可查看', { icon: 0 });
+                            layer.msg('没有学习学习闪卡可查看', { icon: 0 });
                             return;
                         }
 
-                        this.openFullscreen('学习闪卡 - 全屏查看', this.task.results.flashcards, 'flashcards');
+                        this.openFullscreen('学习学习闪卡 - 全屏查看', this.task.results.flashcards, 'flashcards');
                     },
 
                     // Vue 3方式打开全屏

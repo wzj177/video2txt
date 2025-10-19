@@ -270,8 +270,19 @@ class VideoProcessor:
             await task_service.update_task(
                 "av", task_id, {"current_step": "生成输出文件...", "progress": 70}
             )
+
+            # 🕐 将媒体时长信息添加到配置中
+            enhanced_config = config.copy()
+            enhanced_config["media_duration"] = media_duration
+
             output_files = await self._generate_output_files(
-                task_id, transcript, summary, config, file_path, audio_path, file_type
+                task_id,
+                transcript,
+                summary,
+                enhanced_config,
+                file_path,
+                audio_path,
+                file_type,
             )
 
             # 构建结果对象
@@ -661,7 +672,7 @@ class VideoProcessor:
         # 通用纠错词典
         universal_corrections = {
             # 常见同音字错误
-            "的话": "的话",
+            "的話": "的话",
             "德话": "的话",
             "地话": "的话",
             "这样": "这样",
@@ -670,9 +681,9 @@ class VideoProcessor:
             "怎养": "怎样",
             "可以": "可以",
             "克以": "可以",
-            "能够": "能够",
+            "能夠": "能够",
             "能狗": "能够",
-            "应该": "应该",
+            "應該": "应该",
             "英该": "应该",
             "因为": "因为",
             "音为": "因为",
@@ -874,8 +885,42 @@ class VideoProcessor:
             output_dir.mkdir(parents=True, exist_ok=True)
 
             files = []
-            output_types = config.get("output_types", ["transcript"])
             ai_output_types = config.get("ai_output_types", [])
+            content_role = config.get("content_role", "auto")
+
+            # 🎯 BUG修复: 当用户选择了content_role但没有选择ai_output_types时，智能添加合适的类型
+            if content_role != "auto" and not ai_output_types:
+                # 根据不同角色推荐合适的AI输出类型
+                role_recommendations = {
+                    "education": [
+                        "content_card",
+                        "mind_map",
+                    ],  # 教育：内容卡片+思维导图
+                    "meeting": ["content_card"],  # 会议：内容卡片
+                    "exam_review": [
+                        "content_card",
+                        "flashcards",
+                    ],  # 考试复习：内容卡片+闪卡
+                    "cooking": ["content_card"],  # 烹饪：内容卡片
+                    "technology": [
+                        "content_card",
+                        "mind_map",
+                    ],  # 科技：内容卡片+思维导图
+                    "business": ["content_card"],  # 商业：内容卡片
+                    "travel": ["content_card"],  # 旅行：内容卡片
+                    "health": ["content_card"],  # 健康：内容卡片
+                    "lifestyle": ["content_card"],  # 生活：内容卡片
+                    "entertainment": ["content_card"],  # 娱乐：内容卡片
+                }
+
+                ai_output_types = role_recommendations.get(
+                    content_role, ["content_card"]
+                )
+                logger.info(
+                    f"🎯 用户选择了角色'{content_role}'但未选择AI输出类型，智能推荐: {ai_output_types}"
+                )
+                # 更新config中的ai_output_types，确保后续逻辑能使用
+                config["ai_output_types"] = ai_output_types
 
             # 提取文本内容
             transcript_text = (
@@ -924,6 +969,7 @@ class VideoProcessor:
             )
 
             # 第3步：生成AI内容文件 (85-95%)
+            ai_prompts = {}  # 收集AI提示词信息
             if ai_output_types:
                 await task_service.update_task(
                     "av",
@@ -948,7 +994,7 @@ class VideoProcessor:
                         "type": "unknown",
                     }
 
-                ai_files = await self._generate_ai_content_files(
+                ai_files, ai_prompts = await self._generate_ai_content_files(
                     output_dir,
                     transcript_text,
                     safe_frame_info,
@@ -959,9 +1005,50 @@ class VideoProcessor:
                 )
                 files.extend(ai_files)
 
+            # 第4步：生成处理报告 (95-98%)
+            await task_service.update_task(
+                "av", task_id, {"current_step": "正在生成处理报告...", "progress": 96}
+            )
+
+            # 生成包含AI信息的处理报告
+            report_file = output_dir / "处理报告.md"
+
+            # 尝试从AI分析结果文件中读取分析信息
+            analysis_result = None
+            content_role = config.get("content_role")
+
+            try:
+                analysis_file = output_dir / "AI分析结果.json"
+                if analysis_file.exists():
+                    analysis_content = analysis_file.read_text(encoding="utf-8")
+
+                    # 清理可能的代码块标记
+                    cleaned_content = re.sub(r"^```json\s*\n?", "", analysis_content)
+                    cleaned_content = re.sub(r"\n?```\s*$", "", cleaned_content)
+
+                    # 直接使用AI分析的结果
+                    analysis_result = json.loads(cleaned_content)
+
+            except Exception as e:
+                logger.warning(f"读取AI分析结果失败: {e}")
+                analysis_result = None
+
+            report_content = self._generate_processing_report(
+                transcript_text,
+                subtitles,
+                content_role,
+                analysis_result,
+                ai_output_types,
+                ai_prompts,  # 🆕 传递AI提示词信息
+            )
+            report_file.write_text(report_content, encoding="utf-8")
+            files.append(
+                {"name": "处理报告.md", "path": str(report_file), "type": "report"}
+            )
+
             # 完成文件生成
             await task_service.update_task(
-                "av", task_id, {"current_step": "文件生成完成", "progress": 95}
+                "av", task_id, {"current_step": "文件生成完成", "progress": 100}
             )
 
             return files
@@ -1142,13 +1229,8 @@ class VideoProcessor:
             {"name": "字幕文件.srt", "path": str(subtitle_file), "type": "subtitle"}
         )
 
-        # 生成处理报告.md
-        report_file = output_dir / "处理报告.md"
-        report_content = self._generate_processing_report(transcript_text, subtitles)
-        report_file.write_text(report_content, encoding="utf-8")
-        files.append(
-            {"name": "处理报告.md", "path": str(report_file), "type": "report"}
-        )
+        # 生成处理报告.md (移到AI内容生成后)
+        # 这里先不生成处理报告，等AI内容生成完后再生成以包含完整信息
 
         return files
 
@@ -1161,9 +1243,10 @@ class VideoProcessor:
         config: Dict[str, Any],
         task_id: str,
         subtitles: List[Dict[str, Any]] = None,
-    ) -> List[Dict[str, str]]:
-        """生成AI内容文件"""
+    ) -> tuple[List[Dict[str, str]], Dict[str, Dict[str, str]]]:
+        """生成AI内容文件 - 返回文件列表和提示词信息"""
         files = []
+        ai_prompts = {}  # 🆕 收集提示词信息
 
         try:
             ai_factory = await self._get_ai_factory()
@@ -1197,7 +1280,7 @@ class VideoProcessor:
                         },
                     )
 
-                    # 🎯 传递content_role参数
+                    # 🎯 传递content_role参数和媒体时长信息
                     generate_kwargs = {
                         "video_path": video_path,
                         "audio_path": audio_path,
@@ -1205,6 +1288,9 @@ class VideoProcessor:
                         "frame_info": frame_info,
                         "language": config.get("language", "zh"),
                         "task_id": task_id,
+                        "media_duration": config.get(
+                            "media_duration", 0
+                        ),  # 🕐 传递媒体时长
                     }
 
                     # 如果配置中有content_role，传递给AI生成器
@@ -1216,10 +1302,15 @@ class VideoProcessor:
                         output_type, transcript_text, **generate_kwargs
                     )
 
+                    # 🆕 收集提示词信息
+                    if "prompts" in result:
+                        ai_prompts[output_type] = result["prompts"]
+                        logger.info(f"📝 收集了{output_type}的提示词信息")
+
                     if result.get("success"):
                         # 根据输出类型生成文件
                         file_info = await self._save_ai_content(
-                            output_dir, output_type, result, frame_info
+                            output_dir, output_type, result, frame_info, ai_factory
                         )
                         if file_info:
                             files.append(file_info)
@@ -1231,7 +1322,7 @@ class VideoProcessor:
         except Exception as e:
             logger.error(f"AI内容生成失败: {e}")
 
-        return files
+        return files, ai_prompts
 
     async def _save_ai_content(
         self,
@@ -1239,6 +1330,7 @@ class VideoProcessor:
         output_type: str,
         result: Dict[str, Any],
         frame_info: Dict[str, Any],
+        ai_factory,
     ) -> Optional[Dict[str, str]]:
         """保存AI生成的内容到文件"""
         try:
@@ -1260,12 +1352,10 @@ class VideoProcessor:
                 # 同时生成FreeMind格式
                 mm_filename = "思维导图.mm"
                 mm_file_path = output_dir / mm_filename
-                
-                # 使用 AI 内容生成器的完整 export_xmind_format 方法
-                from .ai_content_generator import AIContentGenerator
-                ai_generator = AIContentGenerator()
-                success = ai_generator.export_xmind_format(content, str(mm_file_path))
-                
+
+                # 使用已有的 ai_factory 的 export_xmind_format 方法
+                success = ai_factory.export_xmind_format(content, str(mm_file_path))
+
                 if not success:
                     # 如果导出失败，使用简化的备用方法
                     mm_content = self._convert_to_freemind(content)
@@ -1293,12 +1383,12 @@ class VideoProcessor:
                 # 使用新的Anki导出功能
                 anki_filename = "学习闪卡-Anki格式.csv"
                 anki_file_path = output_dir / anki_filename
-                
+
                 # 调用AI生成器的Anki导出功能
                 try:
-                    from .ai_content_generator import AIContentGenerator
-                    ai_generator = AIContentGenerator()
-                    anki_success = ai_generator.export_anki_format(content, str(anki_file_path))
+                    anki_success = ai_factory.export_anki_format(
+                        content, str(anki_file_path)
+                    )
                     if not anki_success:
                         logger.warning("Anki格式导出失败，使用备用方法")
                         # 备用：使用原有的转换方法
@@ -1337,7 +1427,7 @@ class VideoProcessor:
             elif output_type == "ai_analysis":
                 filename = "AI分析结果.json"
                 file_path = output_dir / filename
-                # 清理JSON内容中的markdown标记
+                # 清理JSON内容中的代码块标记
                 cleaned_content = self._clean_json_content(content)
                 file_path.write_text(cleaned_content, encoding="utf-8")
                 return {"name": filename, "path": str(file_path), "type": output_type}
@@ -1350,17 +1440,17 @@ class VideoProcessor:
             return None
 
     def _clean_json_content(self, content: str) -> str:
-        """清理JSON内容中的markdown标记"""
+        """清理JSON内容中的代码标记"""
         if not content:
             return content
 
         import re
 
-        # 去除markdown代码块标记
-        content = re.sub(r"^```json\s*\n?", "", content, flags=re.MULTILINE)
+        # 去除代码块标记
+        content = re.sub(r"^``json\s*\n?", "", content, flags=re.MULTILINE)
         content = re.sub(r"\n?```\s*$", "", content, flags=re.MULTILINE)
 
-        # 去除其他可能的markdown标记
+        # 去除其他可能的代码标记
         content = re.sub(r"^```\s*\n?", "", content, flags=re.MULTILINE)
 
         # 清理多余的空白字符
@@ -1537,12 +1627,19 @@ class VideoProcessor:
         return f"{hours:02d}:{minutes:02d}:{secs:02d},{millisecs:03d}"
 
     def _generate_processing_report(
-        self, transcript_text: str, segments: List[Dict[str, Any]]
+        self,
+        transcript_text: str,
+        segments: List[Dict[str, Any]],
+        content_role: str = None,
+        analysis_result: Dict[str, Any] = None,
+        ai_output_types: List[str] = None,
+        ai_prompts: Dict[str, Dict[str, str]] = None,  # 新增：AI提示词信息
     ) -> str:
         """生成处理报告"""
         word_count = len(transcript_text) if transcript_text else 0
         segment_count = len(segments) if segments else 0
 
+        # 构建基础报告
         report = f"""# 视频处理报告
 
 ## 基本信息
@@ -1563,13 +1660,143 @@ class VideoProcessor:
 - AI分析结果.json - 智能分析报告
 - 内容卡片.md - 结构化内容总结
 - 学习闪卡.md - 学习卡片
-- 思维导图.md - 思维导图
+- 思维导图.md - 思维导图"""
+
+        # 添加AI角色和分析信息
+        if analysis_result or content_role or ai_output_types:
+            report += "\n\n## AI处理信息"
+
+            # 内容领域信息
+            if analysis_result:
+                primary_domain = analysis_result.get("primary_domain", "未知")
+                confidence = analysis_result.get("confidence", 0)
+                target_audience = analysis_result.get("target_audience", "未知")
+                content_style = analysis_result.get("content_style", "未知")
+
+                report += f"""
+- **内容领域**: {primary_domain}
+- **识别置信度**: {confidence:.2f}
+- **目标受众**: {target_audience}
+- **内容风格**: {content_style}"""
+
+                # 如果有关键话题信息
+                if "key_topics" in analysis_result:
+                    key_topics = analysis_result.get("key_topics", [])
+                    if key_topics:
+                        topics_str = "、".join(key_topics[:3])  # 显示前3个主要话题
+                        report += f"\n- **关键话题**: {topics_str}"
+
+            # 角色信息
+            if content_role:
+                report += f"\n- **指定角色**: {content_role}"
+
+                # 获取对应的专业角色名称
+                try:
+                    from biz.routes.settings_api import get_role_name
+
+                    role_name = get_role_name(
+                        content_role, "content_card", "视频知识萃取专家"
+                    )
+                    if role_name != "视频知识萃取专家":
+                        report += f"\n- **专业角色**: {role_name}"
+                except:
+                    pass
+
+            # AI生成类型
+            if ai_output_types:
+                type_names = {
+                    "content_card": "内容卡片",
+                    "mind_map": "思维导图",
+                    "flashcards": "学习闪卡",
+                    "ai_analysis": "AI分析",
+                }
+                generated_types = [type_names.get(t, t) for t in ai_output_types]
+                report += f"\n- **生成内容**: {', '.join(generated_types)}"
+
+        # 🆕 添加AI提示词详细信息
+        if ai_prompts:
+            report += "\n\n## AI提示词信息"
+            for output_type, prompts in ai_prompts.items():
+                type_name = {
+                    "content_card": "内容卡片",
+                    "mind_map": "思维导图",
+                    "flashcards": "学习闪卡",
+                    "ai_analysis": "AI分析",
+                }.get(output_type, output_type)
+
+                report += f"\n\n### {type_name}生成提示词"
+
+                if "system_prompt" in prompts:
+                    system_preview = (
+                        prompts["system_prompt"][:500] + "..."
+                        if len(prompts["system_prompt"]) > 500
+                        else prompts["system_prompt"]
+                    )
+                    report += (
+                        f"\n**系统提示词** (前500字符):\n```\n{system_preview}\n```"
+                    )
+
+                if "user_prompt" in prompts:
+                    user_preview = (
+                        prompts["user_prompt"][:500] + "..."
+                        if len(prompts["user_prompt"]) > 500
+                        else prompts["user_prompt"]
+                    )
+                    report += f"\n**用户提示词** (前500字符):\n```\n{user_preview}\n```"
+
+                if "image_strategy" in prompts:
+                    strategy_preview = (
+                        prompts["image_strategy"][:300] + "..."
+                        if len(prompts["image_strategy"]) > 300
+                        else prompts["image_strategy"]
+                    )
+                    report += (
+                        f"\n**图片策略** (前300字符):\n```\n{strategy_preview}\n```"
+                    )
+
+        # 技术参数部分
+        report += f"""
 
 ## 技术参数
 - 语音识别引擎: SenseVoice
 - 处理设备: CPU
-- 语言: 中文 (zh)
-"""
+- 语言: 中文 (zh)"""
+
+        # 如果有分析结果，添加提示词信息
+        if analysis_result:
+            report += "\n\n## 使用的提示词策略"
+
+            primary_domain = analysis_result.get("primary_domain", "general")
+
+            # 内容卡片提示词策略
+            report += f"""
+### 内容卡片生成
+- **角色定位**: {primary_domain}领域专家
+- **生成策略**: 图文并茂的知识卡片
+- **关键帧使用**: 封面图 + 重要章节配图
+- **配图要求**: 至少50%的主要章节有配图
+- **禁用区域**: 总结和思考段落不插图"""
+
+            # 思维导图提示词策略
+            if "mind_map" in (ai_output_types or []):
+                report += f"""
+
+### 思维导图生成
+- **角色定位**: {primary_domain}领域信息结构化专家
+- **结构要求**: 3-5个主节点，每节点2-4个子点
+- **节点总数**: 控制在9-15个以内
+- **表达方式**: 简洁短语，体现领域特色"""
+
+            # 学习闪卡提示词策略
+            if "flashcards" in (ai_output_types or []):
+                report += f"""
+
+### 学习闪卡生成
+- **角色定位**: {primary_domain}领域学习专家
+- **卡片数量**: 8-12张
+- **类型分布**: 概念30% + 应用40% + 问题20% + 经验10%
+- **质量标准**: 结合{primary_domain}领域实践要点"""
+
         return report
 
     async def _download_file(self, url: str, task_id: str) -> Optional[str]:

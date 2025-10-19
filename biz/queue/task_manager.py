@@ -141,7 +141,22 @@ def get_task_manager() -> TaskManager:
 
 # 任务处理器装饰器
 def task(task_name: str = None, queue_name: str = "default"):
-    """任务装饰器"""
+    """
+    任务装饰器
+
+    这个装饰器的工作原理是：
+        task 是一个高阶函数，接受 task_name 和 queue_name 参数
+        它返回一个内部函数 decorator，这是真正的装饰器函数
+        当您使用 @task(...) 装饰一个函数时，实际上是调用了这个 decorator 函数
+        decorator 函数会：
+            获取任务名称（如果未指定则使用函数名）
+            获取全局任务管理器实例
+        调用 register_task 方法将任务处理函数注册到管理器中
+        为被装饰的函数添加一个 delay 方法，用于延迟提交任务
+        返回被装饰的函数
+所以当您看到这样的代码时
+@task("process_video_file", queue_name="video_proc
+    """
 
     def decorator(func: Callable):
         name = task_name or func.__name__

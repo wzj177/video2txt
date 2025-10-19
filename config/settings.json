@@ -2,8 +2,8 @@
   "openai": {
     "api_key": "sk-b4a1cde0146044baab660bc789c83790",
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "model": "qwen-plus",
-    "max_tokens": 2000
+    "model": "qwen-max-2025-01-25",
+    "max_tokens": 4096
   },
   "ollama": {
     "installed": true,
@@ -19,46 +19,174 @@
     "storage_path": "/Users/jiechengyang/src/py-app/ai-video2text/data/outputs",
     "max_concurrent": 3
   },
-  "role_mapping": {
-    "content_generator": {
-      "education": "教育内容结构化专家",
-      "exam_review": "试卷评讲分析专家",
-      "cooking": "美食知识整理专家",
-      "travel": "旅行攻略规划专家",
-      "meeting": "会议管理专家",
-      "technology": "科技内容架构师",
-      "business": "商业分析专家",
-      "general": "内容结构化专家"
+  "roles": {
+    "education": {
+      "name": "教育专家",
+      "description": "专注于教育内容的专业分析和知识整理",
+      "content_generator": "教育内容结构化专家",
+      "flashcard_generator": "教育学习卡片专家",
+      "ai_analysis": "教育内容分析专家",
+      "content_card": "教育内容专家"
     },
-    "flashcard_generator": {
-      "education": "教育学习卡片专家",
-      "exam_review": "试卷评讲分析专家",
-      "cooking": "美食知识整理专家",
-      "travel": "旅行攻略规划专家",
-      "meeting": "会议管理专家",
-      "technology": "科技内容架构师",
-      "business": "商业分析专家",
-      "general": "学习闪卡专家"
+    "exam_review": {
+      "name": "试卷评讲专家",
+      "description": "专业的考试分析和题目讲解专家",
+      "content_generator": "试卷评讲分析专家",
+      "flashcard_generator": "试卷评讲分析专家",
+      "ai_analysis": "考试评估专家",
+      "content_card": "试卷评讲专家"
     },
-    "ai_analysis": {
-      "education": "教育内容分析专家",
-      "exam_review": "考试评估专家",
-      "cooking": "美食内容评估师",
-      "travel": "旅行内容分析师",
-      "meeting": "会议效果评估专家",
-      "technology": "科技内容分析师",
-      "business": "商业内容评估专家",
-      "general": "内容分析专家"
+    "cooking": {
+      "name": "美食专家",
+      "description": "烹饪技巧和美食知识的专业整理者",
+      "content_generator": "美食知识整理专家",
+      "flashcard_generator": "美食知识整理专家",
+      "ai_analysis": "美食内容评估师",
+      "content_card": "美食教学专家"
     },
-    "content_card": {
-      "education": "教育内容专家",
-      "exam_review": "试卷评讲专家",
-      "cooking": "美食教学专家",
-      "travel": "旅行攻略专家",
-      "meeting": "会议纪要专家",
-      "technology": "科技解说专家",
-      "business": "商业分析专家",
-      "general": "视频知识萃取专家"
+    "travel": {
+      "name": "旅行专家",
+      "description": "旅行攻略和旅游体验的专业规划师",
+      "content_generator": "旅行攻略规划专家",
+      "flashcard_generator": "旅行攻略规划专家",
+      "ai_analysis": "旅行内容分析师",
+      "content_card": "旅行攻略专家"
+    },
+    "meeting": {
+      "name": "会议专家",
+      "description": "会议管理和纪要整理的专业顾问",
+      "content_generator": "会议管理专家",
+      "flashcard_generator": "会议管理专家",
+      "ai_analysis": "会议效果评估专家",
+      "content_card": "会议纪要专家"
+    },
+    "technology": {
+      "name": "科技专家",
+      "description": "科技内容和技术知识的专业架构师",
+      "content_generator": "科技内容架构师",
+      "flashcard_generator": "科技内容架构师",
+      "ai_analysis": "科技内容分析师",
+      "content_card": "科技解说专家"
+    },
+    "business": {
+      "name": "商业专家",
+      "description": "商业分析和市场洞察的专业顾问",
+      "content_generator": "商业分析专家",
+      "flashcard_generator": "商业分析专家",
+      "ai_analysis": "商业内容评估专家",
+      "content_card": "商业分析专家"
+    },
+    "it": {
+      "name": "IT专家",
+      "description": "IT技术和系统架构的专业工程师",
+      "content_generator": "IT技术专家",
+      "flashcard_generator": "IT技术专家",
+      "ai_analysis": "IT内容评估专家",
+      "content_card": "IT技术专家"
+    },
+    "emotion": {
+      "name": "情感专家",
+      "description": "情感咨询和心理分析的专业顾问",
+      "content_generator": "情感咨询专家",
+      "flashcard_generator": "情感咨询专家",
+      "ai_analysis": "情感内容评估专家",
+      "content_card": "情感咨询专家"
+    },
+    "finance": {
+      "name": "金融专家",
+      "description": "金融分析和投资理财的专业顾问",
+      "content_generator": "金融分析专家",
+      "flashcard_generator": "金融分析专家",
+      "ai_analysis": "金融内容评估专家",
+      "content_card": "金融分析专家"
+    },
+    "beauty": {
+      "name": "美妆专家",
+      "description": "美容护肤和化妆技巧的专业顾问",
+      "content_generator": "美妆护肤专家",
+      "flashcard_generator": "美妆护肤专家",
+      "ai_analysis": "美妆内容评估师",
+      "content_card": "美妆护肤专家"
+    },
+    "male": {
+      "name": "男性兴趣专家",
+      "description": "男性兴趣和生活方式的专业顾问",
+      "content_generator": "男性兴趣专家",
+      "flashcard_generator": "男性兴趣专家",
+      "ai_analysis": "男性兴趣评估专家",
+      "content_card": "男性兴趣专家"
+    },
+    "female": {
+      "name": "女性兴趣专家",
+      "description": "女性兴趣和生活方式的专业顾问",
+      "content_generator": "女性兴趣专家",
+      "flashcard_generator": "女性兴趣专家",
+      "ai_analysis": "女性兴趣评估专家",
+      "content_card": "女性兴趣专家"
+    },
+    "health": {
+      "name": "健康专家",
+      "description": "健康养生和医疗保健的专业顾问",
+      "content_generator": "健康养生专家",
+      "flashcard_generator": "健康养生专家",
+      "ai_analysis": "健康内容评估专家",
+      "content_card": "健康养生专家"
+    },
+    "fitness": {
+      "name": "健身专家",
+      "description": "健身运动和体能训练的专业教练",
+      "content_generator": "健身运动专家",
+      "flashcard_generator": "健身运动专家",
+      "ai_analysis": "健身内容评估专家",
+      "content_card": "健身运动专家"
+    },
+    "parenting": {
+      "name": "育儿专家",
+      "description": "育儿教育和亲子关系的专业顾问",
+      "content_generator": "育儿教育专家",
+      "flashcard_generator": "育儿教育专家",
+      "ai_analysis": "育儿内容评估专家",
+      "content_card": "育儿教育专家"
+    },
+    "biography": {
+      "name": "人物志讲解专家",
+      "description": "人物传记和历史人物解读的专业讲解者",
+      "content_generator": "人物传记解读专家",
+      "flashcard_generator": "人物历史学习专家",
+      "ai_analysis": "人物传记内容评估专家",
+      "content_card": "人物志讲解专家"
+    },
+    "movie": {
+      "name": "电影讲解专家",
+      "description": "电影分析和影视作品解读的专业评论家",
+      "content_generator": "电影解读专家",
+      "flashcard_generator": "影视文化学习专家",
+      "ai_analysis": "电影内容评估专家",
+      "content_card": "电影讲解专家"
+    },
+    "chinese_anime": {
+      "name": "中国动漫讲解专家",
+      "description": "中国动画和国漫文化的专业解说员",
+      "content_generator": "国漫文化专家",
+      "flashcard_generator": "中国动漫学习专家",
+      "ai_analysis": "国漫内容评估专家",
+      "content_card": "中国动漫讲解专家"
+    },
+    "japanese_anime": {
+      "name": "日本动漫讲解专家",
+      "description": "日本动画和二次元文化的专业解说员",
+      "content_generator": "日漫文化专家",
+      "flashcard_generator": "日本动漫学习专家",
+      "ai_analysis": "日漫内容评估专家",
+      "content_card": "日本动漫讲解专家"
+    },
+    "general": {
+      "name": "通用专家",
+      "description": "通用内容分析和知识整理的万能专家",
+      "content_generator": "内容结构化专家",
+      "flashcard_generator": "学习闪卡专家",
+      "ai_analysis": "内容分析专家",
+      "content_card": "视频知识萃取专家"
     }
   },
   "prompt_templates": {

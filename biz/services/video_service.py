@@ -217,66 +217,13 @@ class VideoService:
         self, task_id: str, task_name: str, args: tuple
     ) -> Optional[Dict[str, Any]]:
         """尝试使用队列处理任务"""
-        # 1. 尝试Celery队列
-        # celery_result = await self._try_celery_processing(task_id, task_name, args)
-        # if celery_result:
-        #     return celery_result
-
-        # 2. 尝试SQLite队列
+        # 尝试SQLite队列
         sqlite_result = await self._try_sqlite_processing(task_id, task_name, args)
         if sqlite_result:
             return sqlite_result
 
         # 都不可用
         return None
-
-    async def _try_celery_processing(
-        self, task_id: str, task_name: str, args: tuple
-    ) -> Optional[Dict[str, Any]]:
-        """尝试使用Celery处理"""
-        try:
-            # 检查Redis连接
-            import socket
-
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1)
-            result = sock.connect_ex(("localhost", 6379))
-            sock.close()
-
-            if result != 0:
-                return None  # Redis不可用
-
-            # 导入Celery任务
-            if task_name == "process_video_file":
-                from ..tasks.video_tasks import process_video_file_task
-
-                celery_task = process_video_file_task.delay(*args)
-            else:
-                from ..tasks.video_tasks import process_video_url_task
-
-                celery_task = process_video_url_task.delay(*args)
-
-            # 更新任务记录，保存Celery任务ID
-            await task_service.update_task(
-                "av",
-                task_id,
-                {
-                    "celery_task_id": celery_task.id,
-                    "status": "queued",
-                    "current_step": "任务已提交到Celery队列...",
-                },
-            )
-
-            logger.info(f"✅ 任务已提交到Celery队列: {task_id}")
-            return {
-                "task_id": task_id,
-                "status": "queued",
-                "celery_task_id": celery_task.id,
-            }
-
-        except Exception as e:
-            logger.debug(f"Celery处理失败: {e}")
-            return None
 
     async def _try_sqlite_processing(
         self, task_id: str, task_name: str, args: tuple
