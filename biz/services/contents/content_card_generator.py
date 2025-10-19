@@ -144,6 +144,9 @@ class ContentCardGenerator:
             # 获取存储路径
             keyframes_path = self.storage_path / task_id / "keyframes"
 
+            # 🎯 检测是否有增强版映射
+            enhanced_mapping = frame_info.get("enhanced_mapping", False)
+
             # 2. 帧数据处理
             if not frames:
                 return await self._generate_text_only_content(
@@ -154,8 +157,17 @@ class ContentCardGenerator:
             frame_list = self._convert_frame_data(frames)
             logger.info(f"🎨 处理 {len(frame_list)} 个提取的帧")
 
-            # 3. 智能帧匹配：优先使用语义匹配，回退到时间匹配
-            analysis_result = kwargs.get("analysis_result")
+            # 3. 智能帧匹配：优先使用增强版映射，其次语义匹配，最后时间匹配
+            if enhanced_mapping and subtitles:
+                # 🎯 使用增强版转录中的精确映射
+                matches = self._extract_enhanced_matches(subtitles)
+                logger.info(f"🎯 使用增强版映射: {len(matches)} 个精确匹配")
+                image_strategy = self._build_enhanced_mapping_strategy(
+                    matches, frame_list, cover_frame, keyframes_path
+                )
+            else:
+                # 🧠 回退到原有的语义匹配逻辑
+                analysis_result = kwargs.get("analysis_result")
 
             # 🎯 优先使用用户指定的角色，其次才是智能分析结果
             force_domain = kwargs.get("force_domain")
@@ -288,6 +300,85 @@ class ContentCardGenerator:
 
             frame_list.append({"filename": filename, "timestamp": timestamp_seconds})
         return frame_list
+
+    def _extract_enhanced_matches(
+        self, subtitles: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """从增强版转录中提取已映射的matches"""
+        matches = []
+
+        for subtitle in subtitles:
+            if "frame" in subtitle:
+                match = {
+                    "subtitle": {
+                        "start": subtitle.get("start", 0),
+                        "end": subtitle.get("end", 0),
+                        "content": subtitle.get("text", ""),
+                    },
+                    "frame": {
+                        "filename": Path(subtitle["frame"]).name,  # 只取文件名部分
+                        "path": subtitle["frame"],
+                    },
+                }
+                matches.append(match)
+
+        logger.info(f"🎯 从增强版转录提取了 {len(matches)} 个精确映射")
+        return matches
+
+    def _build_enhanced_mapping_strategy(
+        self,
+        matches: List[Dict[str, Any]],
+        frame_list: List[Dict[str, Any]],
+        cover_frame: str,
+        keyframes_path,
+    ) -> str:
+        """构建基于增强版映射的策略提示词"""
+        frame_names = [f["filename"] for f in frame_list]
+        frames_list = ", ".join(frame_names)
+
+        # 生成精确映射信息
+        mapping_info = "\n### 🎯 时间段-帧图精确映射（预处理完成）：\n"
+        for match in matches[:15]:  # 显示前15个
+            start = match["subtitle"]["start"]
+            end = match["subtitle"]["end"]
+            content = (
+                match["subtitle"]["content"][:30] + "..."
+                if len(match["subtitle"]["content"]) > 30
+                else match["subtitle"]["content"]
+            )
+            frame = match["frame"]["filename"]
+
+            mapping_info += f"- **{start:.1f}s-{end:.1f}s**: {content} → `{frame}`\n"
+
+        if len(matches) > 15:
+            mapping_info += f"- ... 还有 {len(matches) - 15} 个时间段精确映射\n"
+
+        return f"""
+## 📌 精确时间段-帧图映射策略（已预处理）
+- 🎯 **预处理完成**: 每个时间段已精确匹配到对应帧图
+- 📊 **映射统计**: {len(matches)} 个精确匹配
+- 🖼️ **可用图片**: {frames_list}
+- 🏠 **封面帧**: {cover_frame or "自动选择"}
+- 📁 **图片路径**: ![图片名](keyframes/图片名)
+
+{mapping_info}
+
+### 📋 关键帧使用规则：
+1. **直接使用映射**: 每个时间段已预先映射到精确的帧图，直接使用即可
+2. **封面图片**: 开头摘要部分必须包含一张封面图片
+3. **章节关键图**: 每个主要章节（## 标题）都应该有对应的关键帧
+4. **语义对齐**: 图片与文字内容在时间和语义上已精确对应
+5. **关键位置强制配图**：
+   - 📖 开头部分（摘要后）：1张封面图
+   - 🔧 核心章节开头：每个重要章节1张图
+   - 📊 关键概念处：概念解释配图
+6. **图片分布要求**：确保至少50%的主要章节都有配图
+7. **强制图文混排**：图片必须插入到相关段落中，不能集中在文末
+8. **🚫禁用区域**：「总结」和「思考」段落严禁插入任何图片
+
+**✅ 优势**: 使用预处理映射避免了AI对帧文件名的误解，确保图文精确对应
+**⚠️ 严禁使用未列出的图片文件名！**
+"""
 
     def _match_srt_to_frames(
         self, subtitles: List[Dict[str, Any]], frame_list: List[Dict[str, Any]]
@@ -575,6 +666,21 @@ class ContentCardGenerator:
                                 "reason": getattr(match, "match_reason", "语义匹配"),
                                 "start_time": getattr(match, "start_time", 0),
                                 "end_time": getattr(match, "end_time", 0),
+                            }
+                        )
+                        used_segments.add(seg_key)
+                elif "subtitle" in match:
+                    # 🎯 增强版映射格式
+                    seg_key = match["subtitle"]["content"][:60]
+                    if seg_key not in used_segments:
+                        semantic_segments.append(
+                            {
+                                "text": match["subtitle"]["content"],
+                                "frame": match["frame"]["filename"],
+                                "score": 1.0,  # 预处理映射具有最高准确度
+                                "reason": "预处理精确映射",
+                                "start_time": match["subtitle"]["start"],
+                                "end_time": match["subtitle"]["end"],
                             }
                         )
                         used_segments.add(seg_key)

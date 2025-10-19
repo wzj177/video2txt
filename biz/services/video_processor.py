@@ -964,7 +964,7 @@ class VideoProcessor:
             )
             files.extend(
                 await self._generate_basic_files(
-                    output_dir, transcript_text, summary, subtitles
+                    output_dir, transcript_text, summary, subtitles, frame_info
                 )
             )
 
@@ -1182,6 +1182,7 @@ class VideoProcessor:
         transcript_text: str,
         summary: str,
         subtitles: List[Dict[str, Any]],
+        frame_info: Dict[str, Any] = None,
     ) -> List[Dict[str, str]]:
         """生成基础文件"""
         files = []
@@ -1219,6 +1220,24 @@ class VideoProcessor:
             }
         )
 
+        # 🎯 生成transcription_format.json文件（包含帧图映射）
+        if frame_info and frame_info.get("has_frames", False):
+            from .frame_segment_mapper import create_frame_segment_mapper
+
+            mapper = create_frame_segment_mapper()
+            enhanced_transcript = mapper.generate_enhanced_transcript(
+                transcript_json_data, frame_info, str(output_dir / "transcription_format.json")
+            )
+
+            files.append(
+                {
+                    "name": "transcription_format.json",
+                    "path": str(output_dir / "transcription_format.json"),
+                    "type": "enhanced_transcript_json",
+                }
+            )
+            logger.info("🎯 增强版转录生成完成，包含精确的时间段-帧图映射")
+
         # 生成字幕文件.srt
         subtitle_file = output_dir / "字幕文件.srt"
         subtitle_content = self._generate_subtitle_from_segments(
@@ -1228,9 +1247,6 @@ class VideoProcessor:
         files.append(
             {"name": "字幕文件.srt", "path": str(subtitle_file), "type": "subtitle"}
         )
-
-        # 生成处理报告.md (移到AI内容生成后)
-        # 这里先不生成处理报告，等AI内容生成完后再生成以包含完整信息
 
         return files
 
@@ -1250,6 +1266,18 @@ class VideoProcessor:
 
         try:
             ai_factory = await self._get_ai_factory()
+
+            # 🎯 优先使用增强版转录（包含精确帧映射）
+            enhanced_transcript_file = output_dir / "transcription_format.json"
+            if enhanced_transcript_file.exists():
+                try:
+                    with open(enhanced_transcript_file, "r", encoding="utf-8") as f:
+                        enhanced_data = json.load(f)
+                    subtitles = enhanced_data.get("segments", subtitles)
+                    frame_info = {**frame_info, "enhanced_mapping": True}
+                    logger.info("🎯 使用增强版转录进行AI内容生成")
+                except Exception as e:
+                    logger.warning(f"读取增强版转录失败，使用原始数据: {e}")
 
             # 处理视频/音频路径
             video_path = ""
