@@ -584,17 +584,17 @@ class FrameExtractor:
                 if cover_frame is None:
                     cover_frame = frame_name
 
-                if verbose:
-                    logger.info(
-                        f"   ✅ 提取帧 {frame_index + 1}: {frame_name} (时间: {current_time:.1f}s)"
-                    )
+                # if verbose:
+                #     logger.info(
+                #         f"   ✅ 提取帧 {frame_index + 1}: {frame_name} (时间: {current_time:.1f}s)"
+                #     )
 
                 frame_index += 1
-            else:
-                if verbose:
-                    logger.warning(
-                        f"   ❌ 提取帧失败: {frame_name} (时间: {current_time:.1f}s)"
-                    )
+            # else:
+                # if verbose:
+                #     logger.warning(
+                #         f"   ❌ 提取帧失败: {frame_name} (时间: {current_time:.1f}s)"
+                #     )
 
             # 下一个时间点
             current_time += interval

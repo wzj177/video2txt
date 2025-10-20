@@ -457,6 +457,9 @@ async def create_video_task(
         "content_role": content_role,
     }
 
+    # debug config to log
+    logger.debug(f"视频处理配置: {config}")
+
     # 处理文件或URL
     if file:
         # 验证文件类型

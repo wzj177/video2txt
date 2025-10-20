@@ -600,7 +600,7 @@
                         // console.log('📁 原始输出文件列表:', files);
 
                         // 过滤掉在其他区域显示的文件
-                        const excludeFiles = ['处理报告.md', 'AI分析结果.json', 'audio_visuals/waveform.jpg'];
+                        const excludeFiles = ['处理报告.md', 'AI分析结果.json', 'audio_visuals/waveform.jpg', 'transcription_format.json', '原始转录.txt'];
                         const filteredFiles = files.filter(file =>
                             !excludeFiles.includes(file.name)
                         );

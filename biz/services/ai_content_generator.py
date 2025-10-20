@@ -115,6 +115,12 @@ class AIContentFactory:
             生成结果
         """
         try:
+            logger.info(f"🚀 AI工厂generate方法被调用，output_type={output_type}")
+            logger.info(
+                f"🔍 参数检查: subtitles数量={len(subtitles) if subtitles else 0}"
+            )
+            logger.info(f"🔍 kwargs键: {list(kwargs.keys())}")
+
             # 验证输出类型
             if output_type not in [t.value for t in OutputType]:
                 raise ValueError(f"不支持的输出类型: {output_type}")
@@ -127,18 +133,39 @@ class AIContentFactory:
                 )
 
             # 进行内容分析和动态提示词生成
-            analysis_result, dynamic_prompts = await analyze_and_generate_prompt(
-                self.ai_client,
-                transcript,
-                output_type,
-                frame_info=frame_info,
-                subtitles=subtitles,
-                **kwargs,
-            )
+            try:
+                analysis_result, dynamic_prompts = await analyze_and_generate_prompt(
+                    self.ai_client,
+                    transcript,
+                    output_type,
+                    frame_info=frame_info,
+                    subtitles=subtitles,
+                    **kwargs,
+                )
 
-            logger.info(
-                f" 内容分析完成: {analysis_result.primary_domain.value}领域, 置信度: {analysis_result.confidence:.2f}"
-            )
+                logger.info(
+                    f" 内容分析完成: {analysis_result.primary_domain.value}领域, 置信度: {analysis_result.confidence:.2f}"
+                )
+            except Exception as e:
+                logger.warning(f"内容分析失败，使用默认提示词: {e}")
+                # 使用默认的分析结果和提示词
+                from .ai_content_analyzer import ContentDomain
+                from dataclasses import dataclass
+
+                @dataclass
+                class DefaultAnalysisResult:
+                    primary_domain: ContentDomain = ContentDomain.GENERAL
+                    confidence: float = 0.5
+                    target_audience: str = "通用用户"
+                    content_style: str = "清晰简洁"
+
+                analysis_result = DefaultAnalysisResult()
+
+                # 使用默认提示词
+                dynamic_prompts = {
+                    "system_prompt": "你是一个专业的内容分析师，擅长将音视频内容转换为结构化的内容卡片。",
+                    "user_prompt_template": "请为以下{content_type}生成内容：\n\n{transcript}",
+                }
 
             # 获取配置
             config = GenerationConfig(
@@ -149,6 +176,36 @@ class AIContentFactory:
                 temperature=kwargs.get("temperature", 0.7),
             )
 
+            # 🎯 验证增强版转录文件是否存在（必需）
+            enhanced_transcript_file = kwargs.get("enhanced_transcript_file")
+
+            # 🎯 特殊处理：如果明确传递None，说明是摘要生成等不需要增强版转录的场景
+            if enhanced_transcript_file is None:
+                logger.info("🎯 摘要生成模式：跳过增强版转录文件验证")
+            elif (
+                not enhanced_transcript_file
+                or not Path(enhanced_transcript_file).exists()
+            ):
+                error_msg = "❌ AI内容生成必须使用增强版转录文件(transcription_format.json)，当前文件不存在或未传递"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+            else:
+                logger.info(f"🎯 AI内容生成使用增强版转录: {enhanced_transcript_file}")
+
+            # 🎯 验证增强版映射的有效性（仅当使用增强版转录时）
+            if enhanced_transcript_file is not None:
+                if not subtitles or not any(
+                    "frame" in segment for segment in subtitles
+                ):
+                    error_msg = "❌ 传递的subtitles缺少帧映射信息，无法进行AI内容生成"
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
+
+                frame_mapping_count = sum(1 for s in subtitles if s.get("frame"))
+                logger.info(
+                    f"🎯 验证通过：{frame_mapping_count} 个时间段包含帧映射信息"
+                )
+
             #  关键修复：使用传入的帧信息，而不是重新处理
             if frame_info is None:
                 # 如果没有传入帧信息，则进行处理（向后兼容）
@@ -158,11 +215,18 @@ class AIContentFactory:
 
             #  第二步：使用动态提示词生成内容
             kwargs.update(
-                {"analysis_result": analysis_result, "dynamic_prompts": dynamic_prompts}
+                {
+                    "analysis_result": analysis_result,
+                    "dynamic_prompts": dynamic_prompts,
+                    "subtitles": subtitles,  # 🎯 关键修复：确保subtitles参数被传递
+                }
             )
 
             # 根据类型生成内容
             if output_type == OutputType.CONTENT_CARD.value:
+                logger.info("🔍 即将调用 _generate_content_card_smart")
+                logger.info(f"🔍 调用前kwargs: {list(kwargs.keys())}")
+                logger.info(f"🔍 调用前frame_info: {frame_info}")
                 return await self._generate_content_card_smart(
                     config, transcript, frame_info, stream_callback, **kwargs
                 )
@@ -370,200 +434,6 @@ class AIContentFactory:
             return time_value.total_seconds()
         else:
             return 0.0
-
-    def _build_srt_matching_strategy(
-        self,
-        matches: List[Dict[str, Any]],
-        frame_list: List[Dict[str, Any]],
-        cover_frame: str,
-        keyframes_path,
-    ) -> str:
-        """构建SRT匹配策略的提示词"""
-        frame_names = [f["filename"] for f in frame_list]
-        frames_list = ", ".join(frame_names)
-
-        # 生成匹配映射信息
-        mapping_info = "\n### 🎯 SRT内容与关键帧精确匹配：\n"
-        for match in matches:
-            start_min, start_sec = divmod(int(match["start_time"]), 60)
-            end_min, end_sec = divmod(int(match["end_time"]), 60)
-            content_preview = (
-                match["content"][:40] + "..."
-                if len(match["content"]) > 40
-                else match["content"]
-            )
-            mapping_info += f'• {start_min:02d}:{start_sec:02d}-{end_min:02d}:{end_sec:02d} "{content_preview}" → **{match["frame"]["filename"]}** ({match["match_quality"]})\n'
-
-        # 找出未匹配的帧
-        matched_filenames = {match["frame"]["filename"] for match in matches}
-        unmatched_frames = [
-            f for f in frame_list if f["filename"] not in matched_filenames
-        ]
-
-        if unmatched_frames:
-            mapping_info += "\n**未匹配帧（可用于过渡内容）**：\n"
-            for frame in unmatched_frames:
-                minutes, seconds = divmod(int(frame["timestamp"]), 60)
-                mapping_info += f'• {minutes:02d}:{seconds:02d} → **{frame["filename"]}** (过渡帧)\n'
-
-        return f"""
-## 📌 SRT时间段精确匹配策略
-- 🎯 **智能匹配**: 每个SRT时间段都已匹配到最佳帧
-- 📊 **匹配统计**: {len(matches)} 个精确匹配，{len(unmatched_frames)} 个过渡帧
-- 🖼️ **可用图片**: {frames_list}
-- 🏠 **封面帧**: {cover_frame or "自动选择"}
-- 📁 **图片路径**: ![图片名]({keyframes_path}/图片名)
-
-{mapping_info}
-
-### 📋 关键帧使用规则：
-1. **封面图片**：开头摘要部分必须包含一张封面图片
-2. **章节关键图**：每个主要章节（## 标题）都应该有对应的关键帧
-3. **语义精确匹配**：图片与文字内容必须在时间和语义上高度对应
-4. **关键位置强制配图**：
-   - 📖 开头部分（摘要后）：1张封面图
-   - 🔧 核心章节开头：每个重要章节1张图
-   - 📊 关键概念处：概念解释配图
-5. **图片分布要求**：确保至少50%的主要章节都有配图
-6. **强制图文混排**：图片必须插入到相关段落中，不能集中在文末
-7. **🚫禁用区域**：「总结」和「思考」段落严禁插入任何图片
-
-**⚠️ 严禁使用未列出的图片文件名！**
-"""
-
-    def _build_simple_frame_strategy(
-        self, frame_list: List[Dict[str, Any]], cover_frame: str, keyframes_path
-    ) -> str:
-        """构建简单帧策略（无SRT时）"""
-        frame_names = [f["filename"] for f in frame_list]
-        frames_list = ", ".join(frame_names)
-
-        time_mapping = "\n### 🎯 时间轴帧映射：\n"
-        for frame in frame_list:
-            minutes, seconds = divmod(int(frame["timestamp"]), 60)
-            time_mapping += f'• {minutes:02d}:{seconds:02d} → **{frame["filename"]}**\n'
-
-        return f"""
-## 📌 固定间隔帧提取策略
-- 🎯 **2秒间隔**: 每2秒提取一帧，从第2秒开始
-- 📊 **帧数量**: 共 {len(frame_list)} 帧
-- 🖼️ **可用图片**: {frames_list}
-- 🏠 **封面帧**: {cover_frame or "自动选择"}
-
-{time_mapping}
-
-### 📋 使用规则：
-1. **时间对应**：根据内容时间点选择最接近的帧
-2. **关键帧策略**：在关键位置（如封面、主要章节开头）插入图片，避免过度使用
-3. **适度图片使用**：使用30%左右的可用图片，重点突出核心内容
-4. **章节分布原则**：每个主要章节最多1-2张图片，保持内容简洁
-5. **图文混排**：图片插入到相关段落中
-
-**⚠️ 严禁使用未列出的图片文件名！**
-"""
-
-    def _build_system_prompt(self, image_strategy: str, keyframes_path) -> str:
-        """构建系统提示词"""
-        return f"""# 角色设定
-你是一位资深的教育内容专家，擅长将教学视频转化为结构化、高价值的知识卡片。
-
-# 核心任务
-基于转录内容和精确的SRT-帧匹配关系，生成图文并茂的内容卡片。
-
-{image_strategy}
-
-## 内容质量要求
-1. **结构完整性**：包含标题、摘要、分章节、总结、思考等完整结构
-2. **内容深度挖掘**：将转录内容展开为详细段落，不仅仅是简单整理
-3. **图文精确匹配**：严格按照SRT-帧匹配关系使用图片
-4. **知识完整性**：覆盖转录中的所有知识点，不遗漏
-5. **视觉丰富性**：充分利用帧资源增强表达效果
-
-## 文体规范
-- **开篇**：用「标题」概括视频核心价值
-- **摘要**：用「摘要」概括视频核心内容
-- **章节**：用「章节名」组织主要内容
-- **总结**：用「总结」总结中心思想
-- **思考**：用「思考」提出思考问题
-
-**重要要求：必须使用简体中文输出，图片使用绝对路径格式。**
-
-请直接输出完整内容，不要解释说明。"""
-
-    def _build_user_prompt(
-        self, transcript: str, matches, frame_list: List[Dict[str, Any]], keyframes_path
-    ) -> str:
-        """构建用户提示词"""
-        frame_names = [f["filename"] for f in frame_list]
-        frames_list = ", ".join(frame_names)
-
-        matching_guide = ""
-        if matches:
-            matching_guide = "\n\n## 🎯 精确匹配指南：\n"
-            matching_guide += (
-                "**重要**：每段内容都已精确匹配到最佳帧，请严格按照匹配关系使用！\n"
-            )
-            matching_guide += f"**可用图片**: {frames_list}\n"
-        else:
-            matching_guide = f"\n\n## 🎯 图片使用指南：\n**可用图片**: {frames_list}\n"
-
-        return f"""请为以下转录内容生成图文并茂的内容卡片：
-
-## 📝 转录内容：
-{transcript[:3000] if transcript else '暂无转录内容'}{matching_guide}
-
-**🚨 严格要求**：
-1. **只能使用列出的图片文件**：{frames_list}
-2. **强制图文混排**：图片必须插入到相关内容段落中
-3. **图片格式**：![图片名](keyframes/图片名)
-4. **精确匹配**：严格按照SRT-帧匹配关系使用图片
-5. **绝对禁止**：将所有图片集中在文章最后"""
-
-    async def _generate_text_only_content(
-        self, config: GenerationConfig, transcript: str, stream_callback, **kwargs
-    ) -> Dict[str, Any]:
-        """生成纯文本内容（无帧时的回退方案）"""
-        # 获取分析结果（如果有的话）
-        analysis_result = kwargs.get("analysis_result")
-
-        # 根据内容领域获取角色名称
-        if analysis_result:
-            role_name = get_role_name(
-                analysis_result.primary_domain.value,
-                "content_generator",
-                "视频知识萃取专家",
-            )
-            system_prompt = f"""你是一位专业的{role_name}，擅长将{analysis_result.primary_domain.value}领域的教学视频转化为结构化、高价值的知识卡片，包含标题、摘要、章节、总结、思考等完整结构。使用简体中文输出。"""
-        else:
-            system_prompt = """你是一位专业视频知识萃取专家，擅长将教学视频转化为结构化、高价值的知识卡片，包含标题、摘要、章节、总结、思考等完整结构。使用简体中文输出。"""
-
-        user_prompt = f"请为以下转录内容生成结构化知识卡片：\n\n{transcript[:3000] if transcript else '暂无转录内容'}"
-
-        if stream_callback:
-            await stream_callback(
-                "ai_generating",
-                {"type": "content_card", "message": "📝 正在生成纯文本内容..."},
-            )
-
-        content = await self.ai_client.generate_content(
-            prompt=user_prompt,
-            system_prompt=system_prompt,
-            max_tokens=config.max_tokens,
-            temperature=config.temperature,
-        )
-
-        if stream_callback:
-            await stream_callback(
-                "ai_content_complete",
-                {"type": "content_card", "message": "✅ 内容生成完成"},
-            )
-
-        return {
-            "success": True,
-            "type": "content_card",
-            "content": content,
-            "format": "text",
-        }
 
     async def _generate_mind_map(
         self,
@@ -938,10 +808,15 @@ class AIContentFactory:
     ) -> Dict[str, Any]:
         """智能生成内容卡片 - 使用动态提示词"""
         try:
-            analysis_result = kwargs.get("analysis_result")
-            dynamic_prompts = kwargs.get("dynamic_prompts")
+            logger.info("🚀 进入 _generate_content_card_smart 方法")
+            logger.info(f"🔍 kwargs键: {list(kwargs.keys())}")
+            logger.info(f"🔍 frame_info: {frame_info}")
+            logger.info(f"🔍 kwargs中subtitles数量: {len(kwargs.get('subtitles', []))}")
+            if kwargs.get("subtitles"):
+                logger.info(f"🔍 kwargs中第一个subtitle: {kwargs.get('subtitles')[0]}")
 
-            # 使用动态提示词
+            analysis_result = kwargs.get("analysis_result")
+            dynamic_prompts = kwargs.get("dynamic_prompts")  # 使用动态提示词
             system_prompt = dynamic_prompts["system_prompt"]
             user_prompt_template = dynamic_prompts["user_prompt_template"]
 
@@ -959,6 +834,20 @@ class AIContentFactory:
                 frames = frame_info.get("frames", [])
                 subtitles = kwargs.get("subtitles", [])
                 task_id = kwargs.get("task_id", "")
+
+                # 🔍 调试日志
+                logger.info(
+                    f"🔍 AI生成器调试: subtitles数量={len(subtitles)}, kwargs键={list(kwargs.keys())}"
+                )
+                logger.info(
+                    f"🔍 kwargs中的subtitles数量: {len(kwargs.get('subtitles', []))}"
+                )
+                if subtitles and len(subtitles) > 0:
+                    logger.info(f"🔍 第一个subtitle: {subtitles[0]}")
+                if kwargs.get("subtitles") and len(kwargs.get("subtitles", [])) > 0:
+                    logger.info(
+                        f"🔍 kwargs中第一个subtitle: {kwargs.get('subtitles')[0]}"
+                    )
 
                 # 使用内容卡片生成器的智能匹配功能
                 return await self.content_card_generator.generate_content_card(
@@ -1002,6 +891,21 @@ class AIContentFactory:
                     "content": content,
                     "format": "text",
                     "analysis_result": analysis_result.__dict__,
+                    # 🆕 添加提示词信息
+                    "prompts": {
+                        "system_prompt": system_prompt,
+                        "user_prompt": user_prompt,
+                        "domain": (
+                            analysis_result.primary_domain.value
+                            if analysis_result
+                            else "通用"
+                        ),
+                        "role_name": (
+                            config.content_role
+                            if hasattr(config, "content_role")
+                            else "内容专家"
+                        ),
+                    },
                 }
         except Exception as e:
             logger.error(f"智能内容卡片生成失败: {e}")

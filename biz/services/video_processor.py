@@ -851,12 +851,51 @@ class VideoProcessor:
                     else str(transcript)
                 )
 
-                # 生成内容卡片作为摘要
-                result = await ai_factory.generate(
-                    "content_card",
-                    transcript_text,
-                    language=config.get("language", "zh"),
-                )
+                # 🎯 生成纯文本摘要（不使用ai_factory.generate，避免参数冲突）
+                # 直接使用AI客户端生成摘要，避免与后续内容卡片生成的参数混淆
+
+                # 构建摘要专用的提示词
+                summary_prompt = f"""请为以下内容生成一个简洁的摘要：
+
+{transcript_text}
+
+要求：
+1. 保持核心要点，约200-300字
+2. 结构清晰，逻辑连贯
+3. 突出重点信息
+4. 使用简洁明了的语言
+
+摘要："""
+
+                # 直接调用AI客户端，避免使用ai_factory.generate
+                try:
+                    # 获取AI客户端（不使用工厂实例）
+                    settings_path = Path("config/settings.json")
+                    if settings_path.exists():
+                        with open(settings_path, "r", encoding="utf-8") as f:
+                            settings = json.load(f)
+                    else:
+                        settings = {}
+
+                    from core.ai.ai_chat_client import create_ai_client
+
+                    ai_client = create_ai_client("openai", settings)
+
+                    logger.info("🎯 使用独立AI客户端生成内容摘要（避免参数冲突）")
+                    summary_response = await ai_client.chat_completion(
+                        messages=[{"role": "user", "content": summary_prompt}],
+                        temperature=0.7,
+                        max_tokens=500,
+                    )
+
+                    if summary_response:
+                        result = {"success": True, "content": summary_response}
+                    else:
+                        result = {"success": False, "error": "AI摘要生成失败"}
+
+                except Exception as e:
+                    logger.error(f"独立AI客户端摘要生成失败: {e}")
+                    result = {"success": False, "error": str(e)}
 
                 if result.get("success"):
                     return result["content"]
@@ -932,6 +971,20 @@ class VideoProcessor:
             # 获取字幕信息（用于帧提取）
             subtitles = transcript.get("segments", [])
 
+            # 🔍 调试：检查 transcript 和 subtitles 信息
+            logger.info(
+                f"🔍 transcript键: {list(transcript.keys()) if isinstance(transcript, dict) else 'not dict'}"
+            )
+            logger.info(f"🔍 subtitles数量: {len(subtitles)}")
+            if transcript and isinstance(transcript, dict):
+                logger.info(
+                    f"🔍 transcript样例: text长度={len(transcript.get('text', ''))}, segments存在={bool(transcript.get('segments'))}"
+                )
+            if subtitles:
+                logger.info(
+                    f"🔍 第一个segment: {subtitles[0] if len(subtitles) > 0 else 'None'}"
+                )
+
             # 第1步：处理帧提取 (70-75%) - 仅对视频文件
             frame_info = {
                 "frames": [],
@@ -985,14 +1038,22 @@ class VideoProcessor:
                     "type": "unknown",
                 }
 
-                # 确保frame_info包含所有必要字段
-                if not isinstance(safe_frame_info, dict):
+                # 确保frame_info包含所有必要字段，但保留原有数据
+                if isinstance(frame_info, dict) and frame_info.get("frames"):
+                    # 如果原始frame_info是有效的字典且包含帧，使用它而不是空的safe_frame_info
+                    safe_frame_info = frame_info
+                elif not isinstance(safe_frame_info, dict):
                     safe_frame_info = {
                         "frames": [],
                         "cover_frame": None,
                         "has_frames": False,
                         "type": "unknown",
                     }
+
+                # 🔍 调试日志
+                logger.info(
+                    f"🎯 传递给AI内容生成的frame_info: frames数量={len(safe_frame_info.get('frames', []))}, has_frames={safe_frame_info.get('has_frames')}"
+                )
 
                 ai_files, ai_prompts = await self._generate_ai_content_files(
                     output_dir,
@@ -1017,21 +1078,21 @@ class VideoProcessor:
             analysis_result = None
             content_role = config.get("content_role")
 
-            try:
-                analysis_file = output_dir / "AI分析结果.json"
-                if analysis_file.exists():
-                    analysis_content = analysis_file.read_text(encoding="utf-8")
-
-                    # 清理可能的代码块标记
-                    cleaned_content = re.sub(r"^```json\s*\n?", "", analysis_content)
-                    cleaned_content = re.sub(r"\n?```\s*$", "", cleaned_content)
-
-                    # 直接使用AI分析的结果
-                    analysis_result = json.loads(cleaned_content)
-
-            except Exception as e:
-                logger.warning(f"读取AI分析结果失败: {e}")
-                analysis_result = None
+            # try:
+            #     analysis_file = output_dir / "AI分析结果.json"
+            #     if analysis_file.exists():
+            #         analysis_content = analysis_file.read_text(encoding="utf-8")
+            #
+            #         # 清理可能的代码块标记
+            #         cleaned_content = re.sub(r"^```json\s*\n?", "", analysis_content)
+            #         cleaned_content = re.sub(r"\n?```\s*$", "", cleaned_content)
+            #
+            #         # 直接使用AI分析的结果
+            #         analysis_result = json.loads(cleaned_content)
+            #
+            # except Exception as e:
+            #     logger.warning(f"读取AI分析结果失败: {e}")
+            #     analysis_result = None
 
             report_content = self._generate_processing_report(
                 transcript_text,
@@ -1075,38 +1136,46 @@ class VideoProcessor:
         try:
             frame_extractor = self._get_frame_extractor()
 
-            if video_path and subtitles:
+            # 🔍 调试：检查帧提取条件
+            logger.info(
+                f"🔍 帧提取条件检查: video_path={bool(video_path)}, subtitles数量={len(subtitles) if subtitles else 0}"
+            )
+
+            if video_path:  # 修复：只要有视频文件就提取帧，不需要 subtitles
                 # 视频帧提取 - 需要转换subtitles格式
                 frame_dir = output_dir / "keyframes"
                 frame_dir.mkdir(parents=True, exist_ok=True)
 
                 # 转换subtitles格式为帧提取器需要的格式
-                formatted_subtitles = self._format_subtitles_for_frames(subtitles)
+                formatted_subtitles = self._format_subtitles_for_frames(subtitles or [])
 
-                if formatted_subtitles:
-                    # 🎯 使用新的固定间隔提取方法（2秒一帧）
-                    frames, cover_frame = frame_extractor.extract_frames_by_interval(
-                        video_path,
-                        formatted_subtitles,
-                        str(frame_dir),
-                        interval=2.0,
-                        verbose=True,
-                    )
+                # 🔍 调试：检查格式化结果
+                logger.info(f"🔍 格式化后subtitles数量: {len(formatted_subtitles)}")
 
-                    frame_info.update(
-                        {
-                            "frames": frames,
-                            "cover_frame": cover_frame,
-                            "frame_dir": str(frame_dir),
-                            "has_frames": len(frames) > 0,
-                            "type": "video",
-                        }
-                    )
+                # 修复：不依赖 formatted_subtitles，直接提取帧
+                # 🎯 使用新的固定间隔提取方法（2秒一帧）
+                frames, cover_frame = frame_extractor.extract_frames_by_interval(
+                    video_path,
+                    formatted_subtitles,
+                    str(frame_dir),
+                    interval=2.0,
+                    verbose=True,
+                )
 
-                    # 记录帧信息到任务
-                    await task_service.update_task(
-                        "av", task_id, {"frame_info": frame_info}
-                    )
+                frame_info.update(
+                    {
+                        "frames": frames,
+                        "cover_frame": cover_frame,
+                        "frame_dir": str(frame_dir),
+                        "has_frames": len(frames) > 0,
+                        "type": "video",
+                    }
+                )
+
+                # 记录帧信息到任务
+                await task_service.update_task(
+                    "av", task_id, {"frame_info": frame_info}
+                )
 
             elif audio_path:
                 # 音频可视化生成
@@ -1222,11 +1291,19 @@ class VideoProcessor:
 
         # 🎯 生成transcription_format.json文件（包含帧图映射）
         if frame_info and frame_info.get("has_frames", False):
+            # 🔍 调试：在传递给mapper之前检查frame_info
+            logger.info(
+                f"🔍 传递给mapper的frame_info: has_frames={frame_info.get('has_frames')}, frames数量={len(frame_info.get('frames', []))}"
+            )
+            logger.info(f"🔍 frame_info键: {list(frame_info.keys())}")
+
             from .frame_segment_mapper import create_frame_segment_mapper
 
             mapper = create_frame_segment_mapper()
             enhanced_transcript = mapper.generate_enhanced_transcript(
-                transcript_json_data, frame_info, str(output_dir / "transcription_format.json")
+                transcript_json_data,
+                frame_info,
+                str(output_dir / "transcription_format.json"),
             )
 
             files.append(
@@ -1264,27 +1341,58 @@ class VideoProcessor:
         files = []
         ai_prompts = {}  # 🆕 收集提示词信息
 
+        logger.info("🚀 _generate_ai_content_files 方法开始执行")
+        logger.info(
+            f"🔍 传入参数: ai_output_types={ai_output_types}, task_id={task_id}"
+        )
+        logger.info(f"🔍 传入subtitles数量: {len(subtitles) if subtitles else 0}")
+
         try:
             ai_factory = await self._get_ai_factory()
+            logger.info("🔍 AI工厂获取成功")
 
-            # 🎯 优先使用增强版转录（包含精确帧映射）
+            # 🎯 必须使用增强版转录（包含精确帧映射），否则报错
             enhanced_transcript_file = output_dir / "transcription_format.json"
-            if enhanced_transcript_file.exists():
-                try:
-                    with open(enhanced_transcript_file, "r", encoding="utf-8") as f:
-                        enhanced_data = json.load(f)
-                    subtitles = enhanced_data.get("segments", subtitles)
-                    frame_info = {**frame_info, "enhanced_mapping": True}
-                    logger.info("🎯 使用增强版转录进行AI内容生成")
-                except Exception as e:
-                    logger.warning(f"读取增强版转录失败，使用原始数据: {e}")
+            if not enhanced_transcript_file.exists():
+                error_msg = f"❌ 必需的增强版转录文件不存在: {enhanced_transcript_file}。无法进行AI内容生成。"
+                logger.error(error_msg)
+                raise Exception(error_msg)
+
+            try:
+                with open(enhanced_transcript_file, "r", encoding="utf-8") as f:
+                    enhanced_data = json.load(f)
+                subtitles = enhanced_data.get("segments", [])
+
+                logger.info(f"🔍 从增强版转录文件读取的subtitles数量: {len(subtitles)}")
+                if subtitles and len(subtitles) > 0:
+                    logger.info(f"🔍 第一个增强版subtitle: {subtitles[0]}")
+
+                # 验证增强版转录是否包含帧映射信息
+                if not subtitles or not any(
+                    "frame" in segment for segment in subtitles
+                ):
+                    error_msg = (
+                        "❌ 增强版转录文件存在但缺少帧映射信息，无法进行AI内容生成。"
+                    )
+                    logger.error(error_msg)
+                    raise Exception(error_msg)
+
+                logger.info(
+                    f"🎯 使用增强版转录进行AI内容生成，subtitles数量: {len(subtitles)}"
+                )
+                logger.info(
+                    f"🎯 帧映射统计: {sum(1 for s in subtitles if s.get('frame'))} 个时间段包含帧映射"
+                )
+
+            except Exception as e:
+                error_msg = f"❌ 读取增强版转录文件失败: {e}"
+                logger.error(error_msg)
+                raise Exception(error_msg)
 
             # 处理视频/音频路径
             video_path = ""
             audio_path = ""
-            # 使用传递的字幕信息，如果没有则使用空列表
-            if subtitles is None:
-                subtitles = []
+            # 注意：subtitles已经从增强版转录文件中读取，包含帧映射信息，不要重置为空
 
             total_types = len(ai_output_types)
             for i, output_type in enumerate(ai_output_types):
@@ -1308,18 +1416,41 @@ class VideoProcessor:
                         },
                     )
 
-                    # 🎯 传递content_role参数和媒体时长信息
+                    # 🎯 传递增强版转录信息和必要参数
                     generate_kwargs = {
                         "video_path": video_path,
                         "audio_path": audio_path,
-                        "subtitles": subtitles,
-                        "frame_info": frame_info,
+                        "subtitles": subtitles,  # 🎯 这里的subtitles已经包含精确的帧映射
                         "language": config.get("language", "zh"),
                         "task_id": task_id,
-                        "media_duration": config.get(
-                            "media_duration", 0
-                        ),  # 🕐 传递媒体时长
+                        "media_duration": config.get("media_duration", 0),
+                        "enhanced_transcript_file": str(
+                            enhanced_transcript_file
+                        ),  # 🎯 传递增强版转录文件路径
                     }
+
+                    # 🎯 传递简化的frame_info：仅用于统计和封面信息，不用于提示词生成
+                    simplified_frame_info = {
+                        "enhanced_mapping": True,  # 🎯 明确标记使用增强版映射
+                        "has_frames": True,
+                        "type": frame_info.get("type", "video"),
+                        "cover_frame": frame_info.get(
+                            "cover_frame", ""
+                        ),  # 🎯 保留封面帧
+                        "frame_dir": frame_info.get("frame_dir", ""),  # 🎯 保留帧目录
+                        "frame_count": len(
+                            frame_info.get("frames", [])
+                        ),  # 🎯 仅保留帧数量统计
+                    }
+                    generate_kwargs["frame_info"] = simplified_frame_info
+
+                    logger.info(
+                        f"🚀 使用增强版映射模式 - 帧数量统计: {simplified_frame_info['frame_count']}"
+                    )
+                    logger.info(f"🎯 增强版转录文件: {enhanced_transcript_file}")
+                    logger.info(
+                        f"� 包含帧映射的时间段数量: {sum(1 for s in subtitles if s.get('frame'))}"
+                    )
 
                     # 如果配置中有content_role，传递给AI生成器
                     if "content_role" in config:
@@ -1452,13 +1583,13 @@ class VideoProcessor:
                     ],
                 }
 
-            elif output_type == "ai_analysis":
-                filename = "AI分析结果.json"
-                file_path = output_dir / filename
-                # 清理JSON内容中的代码块标记
-                cleaned_content = self._clean_json_content(content)
-                file_path.write_text(cleaned_content, encoding="utf-8")
-                return {"name": filename, "path": str(file_path), "type": output_type}
+            # elif output_type == "ai_analysis":
+            #     filename = "AI分析结果.json"
+            #     file_path = output_dir / filename
+            #     # 清理JSON内容中的代码块标记
+            #     cleaned_content = self._clean_json_content(content)
+            #     file_path.write_text(cleaned_content, encoding="utf-8")
+            #     return {"name": filename, "path": str(file_path), "type": output_type}
 
             else:
                 return None
