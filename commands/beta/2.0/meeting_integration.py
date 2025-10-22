@@ -127,7 +127,7 @@ class MeetingDetector:
         )
         self.monitoring_thread.start()
 
-        print("🔍 开始监控会议软件...")
+        print("开始监控会议软件...")
 
     def stop_monitoring(self):
         """停止监控"""

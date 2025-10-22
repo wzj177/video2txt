@@ -116,10 +116,8 @@ class AIContentFactory:
         """
         try:
             logger.info(f"🚀 AI工厂generate方法被调用，output_type={output_type}")
-            logger.info(
-                f"🔍 参数检查: subtitles数量={len(subtitles) if subtitles else 0}"
-            )
-            logger.info(f"🔍 kwargs键: {list(kwargs.keys())}")
+            logger.info(f"参数检查: subtitles数量={len(subtitles) if subtitles else 0}")
+            logger.info(f"kwargs键: {list(kwargs.keys())}")
 
             # 验证输出类型
             if output_type not in [t.value for t in OutputType]:
@@ -143,8 +141,17 @@ class AIContentFactory:
                     **kwargs,
                 )
 
+                # 🔧 修复：安全访问 analysis_result 属性进行日志输出
+                primary_domain = getattr(analysis_result, "primary_domain", None)
+                domain_value = (
+                    primary_domain.value
+                    if primary_domain and hasattr(primary_domain, "value")
+                    else getattr(analysis_result, "primary_domain", "general")
+                )
+                confidence = getattr(analysis_result, "confidence", 0.0)
+
                 logger.info(
-                    f" 内容分析完成: {analysis_result.primary_domain.value}领域, 置信度: {analysis_result.confidence:.2f}"
+                    f" 内容分析完成: {domain_value}领域, 置信度: {confidence:.2f}"
                 )
             except Exception as e:
                 logger.warning(f"内容分析失败，使用默认提示词: {e}")
@@ -176,35 +183,48 @@ class AIContentFactory:
                 temperature=kwargs.get("temperature", 0.7),
             )
 
-            # 🎯 验证增强版转录文件是否存在（必需）
+            # 🎯 验证增强版转录文件是否存在（仅视频文件必需）
             enhanced_transcript_file = kwargs.get("enhanced_transcript_file")
+            frame_info_type = kwargs.get("frame_info", {}).get("type", "video")
+            is_video = frame_info_type == "video"
 
-            # 🎯 特殊处理：如果明确传递None，说明是摘要生成等不需要增强版转录的场景
-            if enhanced_transcript_file is None:
-                logger.info("🎯 摘要生成模式：跳过增强版转录文件验证")
-            elif (
-                not enhanced_transcript_file
-                or not Path(enhanced_transcript_file).exists()
-            ):
-                error_msg = "❌ AI内容生成必须使用增强版转录文件(transcription_format.json)，当前文件不存在或未传递"
-                logger.error(error_msg)
-                raise ValueError(error_msg)
-            else:
-                logger.info(f"🎯 AI内容生成使用增强版转录: {enhanced_transcript_file}")
+            logger.info(f"🎯 文件类型检查: type={frame_info_type}, is_video={is_video}")
 
-            # 🎯 验证增强版映射的有效性（仅当使用增强版转录时）
-            if enhanced_transcript_file is not None:
-                if not subtitles or not any(
-                    "frame" in segment for segment in subtitles
+            if is_video:
+                # 🎯 视频文件需要增强版转录（包含帧映射）
+                # 特殊处理：如果明确传递None，说明是纯文本模式（无帧）或摘要生成等不需要增强版转录的场景
+                if enhanced_transcript_file is None:
+                    logger.info(
+                        "🎯 纯文本模式或摘要生成：跳过增强版转录文件验证（视频无关键帧或特殊场景）"
+                    )
+                elif (
+                    not enhanced_transcript_file
+                    or not Path(enhanced_transcript_file).exists()
                 ):
-                    error_msg = "❌ 传递的subtitles缺少帧映射信息，无法进行AI内容生成"
+                    error_msg = "视频AI内容生成必须使用增强版转录文件(transcription_format.json)，当前文件不存在或未传递"
                     logger.error(error_msg)
                     raise ValueError(error_msg)
+                else:
+                    logger.info(
+                        f"✅ 视频AI内容生成使用增强版转录: {enhanced_transcript_file}"
+                    )
 
-                frame_mapping_count = sum(1 for s in subtitles if s.get("frame"))
-                logger.info(
-                    f"🎯 验证通过：{frame_mapping_count} 个时间段包含帧映射信息"
-                )
+                # 🎯 验证增强版映射的有效性（仅当使用增强版转录时）
+                if enhanced_transcript_file is not None:
+                    if not subtitles or not any(
+                        "frame" in segment for segment in subtitles
+                    ):
+                        error_msg = "传递的subtitles缺少帧映射信息，无法进行AI内容生成"
+                        logger.error(error_msg)
+                        raise ValueError(error_msg)
+
+                    frame_mapping_count = sum(1 for s in subtitles if s.get("frame"))
+                    logger.info(
+                        f"✅ 验证通过：{frame_mapping_count} 个时间段包含帧映射信息"
+                    )
+            else:
+                # 🎯 音频文件不需要增强版转录和帧映射
+                logger.info(f"✅ 音频文件处理模式，跳过增强版转录验证")
 
             #  关键修复：使用传入的帧信息，而不是重新处理
             if frame_info is None:
@@ -218,15 +238,15 @@ class AIContentFactory:
                 {
                     "analysis_result": analysis_result,
                     "dynamic_prompts": dynamic_prompts,
-                    "subtitles": subtitles,  # 🎯 关键修复：确保subtitles参数被传递
+                    "subtitles": subtitles,  # 关键修复：确保subtitles参数被传递
                 }
             )
 
             # 根据类型生成内容
             if output_type == OutputType.CONTENT_CARD.value:
-                logger.info("🔍 即将调用 _generate_content_card_smart")
-                logger.info(f"🔍 调用前kwargs: {list(kwargs.keys())}")
-                logger.info(f"🔍 调用前frame_info: {frame_info}")
+                logger.info("即将调用 _generate_content_card_smart")
+                logger.info(f"调用前kwargs: {list(kwargs.keys())}")
+                logger.info(f"调用前frame_info: {frame_info}")
                 return await self._generate_content_card_smart(
                     config, transcript, frame_info, stream_callback, **kwargs
                 )
@@ -448,26 +468,34 @@ class AIContentFactory:
             # 获取分析结果（如果有的话）
             analysis_result = kwargs.get("analysis_result")
 
-            # 根据内容领域获取角色名称
+            # 根据内容领域获取角色名称 - 🔧 修复：安全访问 analysis_result
             if analysis_result:
                 from biz.routes.settings_api import get_role_name
 
+                # 安全获取domain值
+                primary_domain = getattr(analysis_result, "primary_domain", None)
+                domain_value = (
+                    primary_domain.value
+                    if primary_domain and hasattr(primary_domain, "value")
+                    else getattr(analysis_result, "primary_domain", "general")
+                )
+
                 role_name = get_role_name(
-                    analysis_result.primary_domain.value,
+                    domain_value,
                     "content_generator",
                     "信息结构化专家",
                 )
-                system_prompt = f"""你是一位专业的{role_name}，擅长将{analysis_result.primary_domain.value}领域的内容转化为清晰的思维导图结构。
+                system_prompt = f"""你是一位专业的{role_name}，擅长将{domain_value}领域的内容转化为清晰的思维导图结构。
 
 我将提供一个视频或音频的转录文本内容，请你：
 
-1. 深入分析{analysis_result.primary_domain.value}领域的知识体系和逻辑脉络
+1. 深入分析{domain_value}领域的知识体系和逻辑脉络
 2. 提炼出一个清晰的思维导图大纲，格式为层级结构（可用 Markdown 的标题或列表表示）
 3. 主干不超过 4~6 个核心模块，每个模块下分 2~4 个子点，总节点控制在 15 个以内
 4. 每个节点用简洁短语概括，避免完整句子
 5. 优先提取：核心观点、关键概念、步骤流程、案例证据、结论建议
 6. 忽略口语化表达、重复语句、寒暄和无信息量内容
-7. 体现{analysis_result.primary_domain.value}领域特色，突出该领域的重要概念
+7. 体现{domain_value}领域特色，突出该领域的重要概念
 
 **重要要求：无论输入语言是什么（中文、方言、英文等），你必须严格使用简体中文输出，绝对不能使用繁体字。即使是专有名词、术语也要转换为简体中文。**
 
@@ -574,23 +602,31 @@ class AIContentFactory:
 4. **层次分明**：从基础概念到高级应用，循序渐进
 """
 
-            # 根据内容领域获取角色名称和专业提示词
+            # 根据内容领域获取角色名称和专业提示词 - 🔧 修复：安全访问 analysis_result
             if analysis_result:
                 from biz.routes.settings_api import get_role_name
 
+                # 安全获取domain值
+                primary_domain = getattr(analysis_result, "primary_domain", None)
+                domain_value = (
+                    primary_domain.value
+                    if primary_domain and hasattr(primary_domain, "value")
+                    else getattr(analysis_result, "primary_domain", "general")
+                )
+
                 role_name = get_role_name(
-                    analysis_result.primary_domain.value,
+                    domain_value,
                     "flashcard_generator",
                     "学习闪卡专家",
                 )
                 domain_specific = f"""
-## 🎯 {analysis_result.primary_domain.value}领域专业要求
-- 深入理解{analysis_result.primary_domain.value}领域的核心概念和实践要点
+## 🎯 {domain_value}领域专业要求
+- 深入理解{domain_value}领域的核心概念和实践要点
 - 熟悉该领域的常见问题和学习难点
-- 关注{analysis_result.primary_domain.value}领域的实际应用和操作要点
+- 关注{domain_value}领域的实际应用和操作要点
 - 体现该领域的专业特色和重要概念
 """
-                system_prompt = f"""你是一位专业的{role_name}，专门为{analysis_result.primary_domain.value}领域创建高质量的学习闪卡。
+                system_prompt = f"""你是一位专业的{role_name}，专门为{domain_value}领域创建高质量的学习闪卡。
 
 # 核心任务
 基于转录内容生成结构化、高价值的学习闪卡，确保学习效果最佳。
@@ -687,24 +723,30 @@ class AIContentFactory:
             # 获取分析结果（如果有的话）
             analysis_result = kwargs.get("analysis_result")
 
-            # 根据内容领域获取角色名称和专业提示词
+            # 根据内容领域获取角色名称和专业提示词 - 🔧 修复：安全访问 analysis_result
             if analysis_result:
                 from biz.routes.settings_api import get_role_name
 
-                role_name = get_role_name(
-                    analysis_result.primary_domain.value, "ai_analysis", "内容分析专家"
+                # 安全获取domain值
+                primary_domain = getattr(analysis_result, "primary_domain", None)
+                domain_value = (
+                    primary_domain.value
+                    if primary_domain and hasattr(primary_domain, "value")
+                    else getattr(analysis_result, "primary_domain", "general")
                 )
-                system_prompt = f"""你是一位专业的{role_name}，专门对{analysis_result.primary_domain.value}领域内容进行深度分析和价值评估。
+
+                role_name = get_role_name(domain_value, "ai_analysis", "内容分析专家")
+                system_prompt = f"""你是一位专业的{role_name}，专门对{domain_value}领域内容进行深度分析和价值评估。
 
 # 核心任务
 基于已有的内容分析结果进行深度分析，核心要求：
-- 从{analysis_result.primary_domain.value}领域角度评价内容价值
+- 从{domain_value}领域角度评价内容价值
 - 分析内容与目标受众的匹配程度
 - 提供专业的改进建议和扩展方向
 - 识别具体应用场景和实用价值
 
 ## 专业分析要点
-1. **{analysis_result.primary_domain.value}领域相关性**：评估内容在该领域的专业价值
+1. **{domain_value}领域相关性**：评估内容在该领域的专业价值
 2. **知识体系完整性**：分析内容是否涵盖该领域核心要点
 3. **实践应用价值**：评估内容的实际应用潜力
 4. **学习效果预期**：预测学习者的掌握程度和学习效果
@@ -718,7 +760,7 @@ class AIContentFactory:
         "overall_score": 8.5,
         "strengths": ["优势1", "优势2", "优势3"],
         "weaknesses": ["不足1", "不足2"],
-        "domain_relevance": "在{analysis_result.primary_domain.value}领域的相关性评价"
+        "domain_relevance": "在{domain_value}领域的相关性评价"
     }},
     "audience_matching": {{
         "match_score": 7.8,
@@ -727,7 +769,7 @@ class AIContentFactory:
         "recommendations": ["建议1", "建议2"]
     }},
     "improvement_suggestions": [
-        "针对{analysis_result.primary_domain.value}领域的改进建议1",
+        "针对{domain_value}领域的改进建议1",
         "改进建议2",
         "改进建议3"
     ],
@@ -809,11 +851,11 @@ class AIContentFactory:
         """智能生成内容卡片 - 使用动态提示词"""
         try:
             logger.info("🚀 进入 _generate_content_card_smart 方法")
-            logger.info(f"🔍 kwargs键: {list(kwargs.keys())}")
-            logger.info(f"🔍 frame_info: {frame_info}")
-            logger.info(f"🔍 kwargs中subtitles数量: {len(kwargs.get('subtitles', []))}")
+            logger.info(f"kwargs键: {list(kwargs.keys())}")
+            logger.info(f"frame_info: {frame_info}")
+            logger.info(f"kwargs中subtitles数量: {len(kwargs.get('subtitles', []))}")
             if kwargs.get("subtitles"):
-                logger.info(f"🔍 kwargs中第一个subtitle: {kwargs.get('subtitles')[0]}")
+                logger.info(f"kwargs中第一个subtitle: {kwargs.get('subtitles')[0]}")
 
             analysis_result = kwargs.get("analysis_result")
             dynamic_prompts = kwargs.get("dynamic_prompts")  # 使用动态提示词
@@ -835,19 +877,17 @@ class AIContentFactory:
                 subtitles = kwargs.get("subtitles", [])
                 task_id = kwargs.get("task_id", "")
 
-                # 🔍 调试日志
+                # 调试日志
                 logger.info(
-                    f"🔍 AI生成器调试: subtitles数量={len(subtitles)}, kwargs键={list(kwargs.keys())}"
+                    f"AI生成器调试: subtitles数量={len(subtitles)}, kwargs键={list(kwargs.keys())}"
                 )
                 logger.info(
-                    f"🔍 kwargs中的subtitles数量: {len(kwargs.get('subtitles', []))}"
+                    f"kwargs中的subtitles数量: {len(kwargs.get('subtitles', []))}"
                 )
                 if subtitles and len(subtitles) > 0:
-                    logger.info(f"🔍 第一个subtitle: {subtitles[0]}")
+                    logger.info(f"第一个subtitle: {subtitles[0]}")
                 if kwargs.get("subtitles") and len(kwargs.get("subtitles", [])) > 0:
-                    logger.info(
-                        f"🔍 kwargs中第一个subtitle: {kwargs.get('subtitles')[0]}"
-                    )
+                    logger.info(f"kwargs中第一个subtitle: {kwargs.get('subtitles')[0]}")
 
                 # 使用内容卡片生成器的智能匹配功能
                 return await self.content_card_generator.generate_content_card(
@@ -860,12 +900,24 @@ class AIContentFactory:
                 )
             else:
                 # 纯文本生成
+                # 🔧 修复：提前定义domain_value，确保后续代码可用
+                primary_domain = (
+                    getattr(analysis_result, "primary_domain", None)
+                    if analysis_result
+                    else None
+                )
+                domain_value = (
+                    primary_domain.value
+                    if primary_domain and hasattr(primary_domain, "value")
+                    else "general"
+                )
+
                 if stream_callback:
                     await stream_callback(
                         "ai_generating",
                         {
                             "type": "content_card",
-                            "message": f"🎨 正在生成{analysis_result.primary_domain.value}领域内容卡片...",
+                            "message": f"🎨 正在生成{domain_value}领域内容卡片...",
                         },
                     )
 
@@ -890,16 +942,16 @@ class AIContentFactory:
                     "type": "content_card",
                     "content": content,
                     "format": "text",
-                    "analysis_result": analysis_result.__dict__,
+                    "analysis_result": (
+                        analysis_result.__dict__
+                        if analysis_result and hasattr(analysis_result, "__dict__")
+                        else {}
+                    ),
                     # 🆕 添加提示词信息
                     "prompts": {
                         "system_prompt": system_prompt,
                         "user_prompt": user_prompt,
-                        "domain": (
-                            analysis_result.primary_domain.value
-                            if analysis_result
-                            else "通用"
-                        ),
+                        "domain": (domain_value if analysis_result else "通用"),
                         "role_name": (
                             config.content_role
                             if hasattr(config, "content_role")
@@ -924,9 +976,16 @@ class AIContentFactory:
             analysis_result = kwargs.get("analysis_result")
             subtitles = kwargs.get("subtitles", [])
 
-            # 🎯 角色定义（从配置文件读取）
+            # 🎯 角色定义（从配置文件读取） - 修复：安全获取domain值
+            primary_domain = getattr(analysis_result, "primary_domain", None)
+            domain_value = (
+                primary_domain.value
+                if primary_domain and hasattr(primary_domain, "value")
+                else getattr(analysis_result, "primary_domain", "general")
+            )
+
             role_name = get_role_name(
-                analysis_result.primary_domain.value,
+                domain_value,
                 "content_generator",
                 "内容结构化专家",
             )
@@ -939,25 +998,41 @@ class AIContentFactory:
             timed_text = ""
             if subtitles:
                 for sub in subtitles:
-                    timed_text += f"[{sub.start}] {sub.content.strip()}\n"
+                    # 🔧 修复：处理字典和对象两种格式的 subtitles
+                    if isinstance(sub, dict):
+                        start_time = sub.get("start", "00:00")
+                        content = sub.get("text", sub.get("content", "")).strip()
+                    else:
+                        # 对象格式
+                        start_time = getattr(sub, "start", "00:00")
+                        content = getattr(
+                            sub, "content", getattr(sub, "text", "")
+                        ).strip()
+
+                    if content:
+                        timed_text += f"[{start_time}] {content}\n"
             else:
                 # 如果没有字幕，使用原始转录文本
                 timed_text = transcript
 
-            # 内容主题上下文
+            # 内容主题上下文 - 🔧 修复：安全访问 analysis_result 属性
+            content_style = getattr(analysis_result, "content_style", "通俗")
+            target_audience = getattr(analysis_result, "target_audience", "一般用户")
+            key_topics = getattr(analysis_result, "key_topics", [])
+
             theme_context = f"""
 ## 🎯 内容主题上下文
-- 主要领域：{analysis_result.primary_domain.value}
-- 内容风格：{analysis_result.content_style}
-- 目标受众：{analysis_result.target_audience}
-- 关键话题：{', '.join(analysis_result.key_topics[:5])}
+- 主要领域：{domain_value}
+- 内容风格：{content_style}
+- 目标受众：{target_audience}
+- 关键话题：{', '.join(key_topics[:5]) if key_topics else '暂无'}
 
 请基于以上内容特征优化思维导图结构，确保体现该类型内容的特点。
 """
 
             # STEP 1: 提取结构化大纲
             step1_prompt = f"""# 角色
-你是一位专业的{role_name}，擅长将{analysis_result.primary_domain.value}领域内容转化为清晰的思维导图结构。
+你是一位专业的{role_name}，擅长将{domain_value}领域内容转化为清晰的思维导图结构。
 
 {theme_context}
 

@@ -143,7 +143,7 @@ class VoiceAnalysisService:
             await self.initialize()
 
         try:
-            logger.info(f"🔍 开始分析音频文件: {Path(audio_path).name}")
+            logger.info(f"开始分析音频文件: {Path(audio_path).name}")
             start_time = time.time()
 
             results = {

@@ -409,6 +409,7 @@ async def create_video_task(
     force_sync: bool = Form(False),
     ai_correction: bool = Form(False),
     content_role: str = Form("auto"),
+    ai_enhancement: bool = Form(False),
 ) -> Dict[str, Any]:
     """创建视频处理任务"""
     # 验证输入参数
@@ -455,6 +456,7 @@ async def create_video_task(
         "force_sync": force_sync,
         "ai_correction": ai_correction,
         "content_role": content_role,
+        "ai_enhancement": ai_enhancement,
     }
 
     # debug config to log

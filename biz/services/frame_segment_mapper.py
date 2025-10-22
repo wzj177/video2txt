@@ -44,12 +44,12 @@ class FrameSegmentMapper:
             # 获取帧列表
             frames = frame_info.get("frames", [])
 
-            # 🔍 调试日志
+            # 调试日志
             logger.info(
-                f"🔍 映射器调试: frame_info键={list(frame_info.keys())}, frames数量={len(frames)}"
+                f"映射器调试: frame_info键={list(frame_info.keys())}, frames数量={len(frames)}"
             )
             if frame_info:
-                logger.info(f"🔍 frame_info样例: {str(frame_info)[:200]}...")
+                logger.info(f"frame_info样例: {str(frame_info)[:200]}...")
 
             if not frames:
                 logger.warning("📸 没有可用的帧信息，将生成无帧版本")

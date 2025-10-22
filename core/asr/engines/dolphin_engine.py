@@ -174,7 +174,7 @@ class DolphinEngine(BaseVoiceEngine):
         from datetime import timedelta
 
         try:
-            logger.debug(f"🔍 解析Dolphin原始输出: {raw_text[:100]}...")
+            logger.debug(f"解析Dolphin原始输出: {raw_text[:100]}...")
 
             # 移除语言和地区标签 <zh><CN><asr>
             text = re.sub(r"<[a-zA-Z]+>", "", raw_text)
@@ -187,7 +187,7 @@ class DolphinEngine(BaseVoiceEngine):
 
             # 分割文本，找到所有时间戳
             parts = re.split(timestamp_pattern, text)
-            logger.debug(f"🔍 分割结果: {parts}")
+            logger.debug(f"分割结果: {parts}")
 
             if len(parts) >= 3:
                 # 对于格式 <0.00> 文本内容 <30.00>
@@ -442,7 +442,7 @@ class DolphinEngine(BaseVoiceEngine):
                 # end: float
                 text += result.text
             # debug
-            logger.info(f"🔍 Dolphin输出: {text}")
+            logger.info(f"Dolphin输出: {text}")
             parsed_result = self._parse_dolphin_output(text)
 
             # 构建返回结果

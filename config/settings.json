@@ -3,7 +3,9 @@
     "api_key": "sk-b4a1cde0146044baab660bc789c83790",
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "model": "qwen-max-2025-01-25",
-    "max_tokens": 4096
+    "max_tokens": 4096,
+    "timeout": 120,
+    "temperature": 0.7
   },
   "ollama": {
     "installed": true,
@@ -17,7 +19,12 @@
   "system": {
     "default_language": "zh",
     "storage_path": "/Users/jiechengyang/src/py-app/ai-video2text/data/outputs",
-    "max_concurrent": 3
+    "max_concurrent": 3,
+    "ai_enhancement": {
+      "timeout": 180,
+      "max_retries": 2,
+      "conservative_timeout": 60
+    }
   },
   "roles": {
     "education": {

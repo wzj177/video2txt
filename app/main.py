@@ -206,7 +206,7 @@ async def lifespan(app: FastAPI):
         raise
 
     # 智能队列系统启动
-    logger.info("🔍 正在启动智能队列系统...")
+    logger.info("正在启动智能队列系统...")
     await start_queue_system()
 
     yield

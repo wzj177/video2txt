@@ -335,7 +335,7 @@ class MeetingAnalyzer:
 
 def analyze_meeting_command(transcription_file: str):
     """命令行工具：分析会议文件"""
-    print(f"🔍 分析会议文件: {transcription_file}")
+    print(f"分析会议文件: {transcription_file}")
 
     analyzer = MeetingAnalyzer()
     analyzer.initialize()

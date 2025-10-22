@@ -38,7 +38,7 @@
                     <label class="form-label">语言选择</label>
                     <select v-model="formData.language" class="form-select" @change="onLanguageChange">
                         <option v-for="option in languageOptions" :key="option.value" :value="option.value"
-                                :selected="option.value === formData.language">
+                                :selected="option.value === formData.language" :disabled="option.disabled">
                             {{ option.label }}
                         </option>
                     </select>
@@ -158,6 +158,11 @@
                     <input type="checkbox" v-model="formData.aiCorrection">
                     <span>🤖 AI智能纠错</span>
                     <small style="color: #999; margin-left: 8px;">（结合内嵌字幕进行智能纠错，提升准确性）</small>
+                </label>
+                <label class="checkbox-item" :class="{ disabled: !isContentCardSelected }" :title="!isContentCardSelected ? '请先选择内容卡片' : ''">
+                    <input type="checkbox" v-model="formData.aiEnhancement" :disabled="!isContentCardSelected">
+                    <span>✨ AI扩写+润色</span>
+                    <small style="color: #999; margin-left: 8px;">（对内容卡片进行智能扩写和润色，仅支持内容卡片）</small>
                 </label>
             </div>
         </div>
@@ -288,7 +293,8 @@
                         aiOutputTypes: ['content_card'], // 默认只选择内容卡片
                         url: '',
                         forceSync: false,  // 强制同步处理选项
-                        aiCorrection: false  // AI智能纠错选项
+                        aiCorrection: false,  // AI智能纠错选项
+                        aiEnhancement: false  // AI扩写+润色选项
                     },
 
                     // 文件上传相关
@@ -301,10 +307,10 @@
                     models: [],
                     contentRoles: [], // 内容角色选项 - 从接口动态加载
                     languageOptions: [
-                        {label: '自动检测', value: 'auto'},
-                        {label: '中文', value: 'zh'},
-                        {label: '英语', value: 'en'},
-                        {label: '方言', value: 'dialect'}
+                        // {label: '自动检测', value: 'auto', disabled: false},
+                        {label: '中文', value: 'zh', disabled: false},
+                        {label: '英语（暂不支持）', value: 'en', disabled: true},
+                        {label: '方言', value: 'dialect', disabled: false}
                     ],
                     languageRecommendation: {
                         text: '',
@@ -347,6 +353,10 @@
                     const allAITypes = ['content_card', 'mind_map', 'flashcards'];
                     const aiOutputTypes = this.formData.aiOutputTypes;
                     return allAITypes.every(type => aiOutputTypes.includes(type));
+                },
+
+                isContentCardSelected() {
+                    return this.formData.aiOutputTypes.includes('content_card');
                 },
 
                 availableModels() {
@@ -585,6 +595,11 @@
                 // === AI输出类型相关 ===
                 onAIOutputTypeChange(type) {
                     // Vue的双向绑定会自动处理
+                    
+                    // 如果取消选择内容卡片，同时取消AI扩写+润色
+                    if (type === 'content_card' && !this.formData.aiOutputTypes.includes('content_card')) {
+                        this.formData.aiEnhancement = false;
+                    }
                 },
 
                 onAllAIToggle(event) {
@@ -677,6 +692,7 @@
                         formData.append('ai_output_types', this.formData.aiOutputTypes.join(','));
                         formData.append('force_sync', this.formData.forceSync);
                         formData.append('ai_correction', this.formData.aiCorrection);
+                        formData.append('ai_enhancement', this.formData.aiEnhancement);
                         // 打印 formData values
                         console.log(JSON.stringify(Object.fromEntries(formData)))
 

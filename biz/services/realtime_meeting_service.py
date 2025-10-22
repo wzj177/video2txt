@@ -618,7 +618,7 @@ class RealtimeMeetingProcessor:
                         logger.info(f"✅ 音频文件已保存: {audio_file_path}")
 
                         # 🎯 进行完整的语音分析（说话人分离 + 情感分析）
-                        logger.info("🔍 开始进行完整的语音分析...")
+                        logger.info("开始进行完整的语音分析...")
                         detailed_analysis = await self._perform_detailed_analysis(
                             audio_file_path
                         )

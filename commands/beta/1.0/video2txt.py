@@ -1625,7 +1625,7 @@ def ai_correct_subtitles(
     if verbose:
         print(f"✅ AI纠错完成，共 {rounds} 轮，总计修正 {len(all_corrections)} 处")
         if all_corrections and verbose:
-            print("🔍 AI纠错详情：")
+            print("AI纠错详情：")
             for correction in all_corrections[:5]:  # 显示前5个
                 print(f"   {correction}")
             if len(all_corrections) > 5:
@@ -2053,7 +2053,7 @@ def main():
 
     # 计算视频文件MD5
     if args.verbose:
-        print("🔍 计算视频文件MD5...")
+        print("计算视频文件MD5...")
     video_md5 = compute_md5(video_file)
     if args.verbose:
         print(f"📊 视频MD5: {video_md5}")
@@ -2264,10 +2264,10 @@ def main():
 
         if args.credibility:
             if args.verbose:
-                print("🔍 正在分析可信度...")
+                print("正在分析可信度...")
             credibility = analyze_credibility(client, full_text, args.gpt_model)
             Path(credibility_file).write_text(credibility, encoding="utf-8")
-            print(f"🔍 可信度分析: {credibility_file}")
+            print(f"可信度分析: {credibility_file}")
             generated_count += 1
 
         if args.structure:
