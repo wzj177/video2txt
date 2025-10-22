@@ -47,7 +47,7 @@ def sync_process_uploaded_audio(
         return result
 
     except Exception as e:
-        logger.error(f"❌ 上传音频任务失败: {task_id}, 错误: {e}")
+        logger.error(f"上传音频任务失败: {task_id}, 错误: {e}")
         return {"success": False, "error": str(e)}
 
 

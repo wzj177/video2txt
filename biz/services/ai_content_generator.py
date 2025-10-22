@@ -183,19 +183,19 @@ class AIContentFactory:
                 temperature=kwargs.get("temperature", 0.7),
             )
 
-            # 🎯 验证增强版转录文件是否存在（仅视频文件必需）
+            # 验证增强版转录文件是否存在（仅视频文件必需）
             enhanced_transcript_file = kwargs.get("enhanced_transcript_file")
             frame_info_type = kwargs.get("frame_info", {}).get("type", "video")
             is_video = frame_info_type == "video"
 
-            logger.info(f"🎯 文件类型检查: type={frame_info_type}, is_video={is_video}")
+            logger.info(f"文件类型检查: type={frame_info_type}, is_video={is_video}")
 
             if is_video:
-                # 🎯 视频文件需要增强版转录（包含帧映射）
+                # 视频文件需要增强版转录（包含帧映射）
                 # 特殊处理：如果明确传递None，说明是纯文本模式（无帧）或摘要生成等不需要增强版转录的场景
                 if enhanced_transcript_file is None:
                     logger.info(
-                        "🎯 纯文本模式或摘要生成：跳过增强版转录文件验证（视频无关键帧或特殊场景）"
+                        "纯文本模式或摘要生成：跳过增强版转录文件验证（视频无关键帧或特殊场景）"
                     )
                 elif (
                     not enhanced_transcript_file
@@ -209,7 +209,7 @@ class AIContentFactory:
                         f"✅ 视频AI内容生成使用增强版转录: {enhanced_transcript_file}"
                     )
 
-                # 🎯 验证增强版映射的有效性（仅当使用增强版转录时）
+                # 验证增强版映射的有效性（仅当使用增强版转录时）
                 if enhanced_transcript_file is not None:
                     if not subtitles or not any(
                         "frame" in segment for segment in subtitles
@@ -223,7 +223,7 @@ class AIContentFactory:
                         f"✅ 验证通过：{frame_mapping_count} 个时间段包含帧映射信息"
                     )
             else:
-                # 🎯 音频文件不需要增强版转录和帧映射
+                # 音频文件不需要增强版转录和帧映射
                 logger.info(f"✅ 音频文件处理模式，跳过增强版转录验证")
 
             #  关键修复：使用传入的帧信息，而不是重新处理
@@ -332,7 +332,7 @@ class AIContentFactory:
 
         try:
             if video_path and subtitles:
-                # 🎯 使用固定间隔提取（2秒一帧）
+                # 使用固定间隔提取（2秒一帧）
                 frame_dir = str(
                     Path(video_path).parent / "keyframes"
                 )  # 改为keyframes目录
@@ -443,7 +443,7 @@ class AIContentFactory:
                     }
                 )
 
-        logger.info(f"🎯 SRT匹配完成: {len(matches)} 个精确匹配")
+        logger.info(f"SRT匹配完成: {len(matches)} 个精确匹配")
         return matches
 
     def _parse_time(self, time_value) -> float:
@@ -620,7 +620,7 @@ class AIContentFactory:
                     "学习闪卡专家",
                 )
                 domain_specific = f"""
-## 🎯 {domain_value}领域专业要求
+## {domain_value}领域专业要求
 - 深入理解{domain_value}领域的核心概念和实践要点
 - 熟悉该领域的常见问题和学习难点
 - 关注{domain_value}领域的实际应用和操作要点
@@ -917,7 +917,7 @@ class AIContentFactory:
                         "ai_generating",
                         {
                             "type": "content_card",
-                            "message": f"🎨 正在生成{domain_value}领域内容卡片...",
+                            "message": f"正在生成{domain_value}领域内容卡片...",
                         },
                     )
 
@@ -976,7 +976,7 @@ class AIContentFactory:
             analysis_result = kwargs.get("analysis_result")
             subtitles = kwargs.get("subtitles", [])
 
-            # 🎯 角色定义（从配置文件读取） - 修复：安全获取domain值
+            # 角色定义（从配置文件读取） - 修复：安全获取domain值
             primary_domain = getattr(analysis_result, "primary_domain", None)
             domain_value = (
                 primary_domain.value
@@ -1021,7 +1021,7 @@ class AIContentFactory:
             key_topics = getattr(analysis_result, "key_topics", [])
 
             theme_context = f"""
-## 🎯 内容主题上下文
+## 内容主题上下文
 - 主要领域：{domain_value}
 - 内容风格：{content_style}
 - 目标受众：{target_audience}
@@ -1412,7 +1412,7 @@ class AIContentFactory:
         try:
             analysis_result = kwargs.get("analysis_result")
 
-            # 🎯 角色定义（从配置文件读取）
+            # 角色定义（从配置文件读取）
             role_name = get_role_name(
                 analysis_result.primary_domain.value,
                 "flashcard_generator",
@@ -1524,7 +1524,7 @@ class AIContentFactory:
         try:
             analysis_result = kwargs.get("analysis_result")
 
-            # 🎯 角色定义（从配置文件读取）
+            # 角色定义（从配置文件读取）
             role_name = get_role_name(
                 analysis_result.primary_domain.value, "ai_analysis", "内容分析专家"
             )

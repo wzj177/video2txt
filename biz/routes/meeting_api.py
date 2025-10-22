@@ -163,10 +163,10 @@ class MeetingTaskManager:
             if result:
                 logger.info(f"✅ 上传音频任务处理完成: {task_id}")
             else:
-                logger.error(f"❌ 上传音频任务处理失败: {task_id}")
+                logger.error(f"上传音频任务处理失败: {task_id}")
 
         except Exception as e:
-            logger.error(f"❌ 异步上传音频任务执行异常: {task_id}, 错误: {e}")
+            logger.error(f"异步上传音频任务执行异常: {task_id}, 错误: {e}")
             # 更新任务状态为失败
             try:
                 await task_service.update_task(

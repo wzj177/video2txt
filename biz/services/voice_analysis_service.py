@@ -49,7 +49,7 @@ class VoiceAnalysisService:
             return True
 
         except Exception as e:
-            logger.error(f"❌ 语音分析服务初始化失败: {e}")
+            logger.error(f"语音分析服务初始化失败: {e}")
             return False
 
     async def _initialize_diarization(self):
@@ -62,7 +62,7 @@ class VoiceAnalysisService:
                 from pyannote.audio import Pipeline
                 from pyannote.core import Annotation, Segment
             except ImportError as e:
-                logger.error(f"❌ PyAnnote依赖缺失: {e}")
+                logger.error(f"PyAnnote依赖缺失: {e}")
                 logger.info("请运行: pip install pyannote.audio")
                 raise
 
@@ -95,13 +95,13 @@ class VoiceAnalysisService:
                 logger.warning("⚠️ 说话人分离模型未加载，将使用简单的时间分割")
 
         except Exception as e:
-            logger.error(f"❌ 初始化说话人分离模型失败: {e}")
+            logger.error(f"初始化说话人分离模型失败: {e}")
             self.diarization_pipeline = None
 
     async def _initialize_voice_recognition(self):
         """初始化语音识别核心"""
         try:
-            logger.info("🎯 初始化SenseVoice语音识别...")
+            logger.info("初始化SenseVoice语音识别...")
 
             from core.asr import get_voice_core, initialize_voice_recognition
 
@@ -119,7 +119,7 @@ class VoiceAnalysisService:
             logger.info("✅ SenseVoice语音识别初始化成功")
 
         except Exception as e:
-            logger.error(f"❌ 初始化语音识别失败: {e}")
+            logger.error(f"初始化语音识别失败: {e}")
             raise
 
     async def analyze_audio_file(
@@ -184,7 +184,7 @@ class VoiceAnalysisService:
             return results
 
         except Exception as e:
-            logger.error(f"❌ 音频分析失败: {e}")
+            logger.error(f"音频分析失败: {e}")
             return {
                 "error": str(e),
                 "audio_path": audio_path,

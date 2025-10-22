@@ -148,11 +148,11 @@ class VideoService:
                 logger.info(f"✅ 文件任务处理完成: {task_id}")
             else:
                 logger.error(
-                    f"❌ 文件任务处理失败: {task_id}, 错误: {result.get('error')}"
+                    f"文件任务处理失败: {task_id}, 错误: {result.get('error')}"
                 )
 
         except Exception as e:
-            logger.error(f"❌ 异步文件任务执行异常: {task_id}, 错误: {e}")
+            logger.error(f"异步文件任务执行异常: {task_id}, 错误: {e}")
             # 更新任务状态为失败
             try:
                 await task_service.update_task(
@@ -180,11 +180,11 @@ class VideoService:
                 logger.info(f"✅ URL任务处理完成: {task_id}")
             else:
                 logger.error(
-                    f"❌ URL任务处理失败: {task_id}, 错误: {result.get('error')}"
+                    f"URL任务处理失败: {task_id}, 错误: {result.get('error')}"
                 )
 
         except Exception as e:
-            logger.error(f"❌ 异步URL任务执行异常: {task_id}, 错误: {e}")
+            logger.error(f"异步URL任务执行异常: {task_id}, 错误: {e}")
             # 更新任务状态为失败
             try:
                 await task_service.update_task(
@@ -291,11 +291,11 @@ class VideoService:
             # 创建AI工厂
             factory = await create_ai_factory(settings)
 
-            # 🎯 关键：处理content_role参数
+            # 关键：处理content_role参数
             content_role = kwargs.get("content_role", "auto")
             if content_role != "auto":
                 # 如果指定了特定角色，强制覆盖智能分析结果
-                logger.info(f"🎯 使用指定角色: {content_role}")
+                logger.info(f"使用指定角色: {content_role}")
                 kwargs["force_domain"] = content_role
 
             # 调用AI工厂生成内容

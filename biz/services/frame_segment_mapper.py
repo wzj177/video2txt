@@ -18,7 +18,7 @@ class FrameSegmentMapper:
 
     def __init__(self):
         self.frame_interval = 2.0  # 每2秒一帧
-        logger.info("🎯 帧-时间段映射器初始化完成")
+        logger.info("帧-时间段映射器初始化完成")
 
     def generate_enhanced_transcript(
         self,
@@ -62,7 +62,7 @@ class FrameSegmentMapper:
             segments = enhanced_data.get("segments", [])
             enhanced_segments = []
 
-            # 🎯 新的智能映射策略：确保帧的合理分布
+            # 新的智能映射策略：确保帧的合理分布
             used_frames = set()  # 追踪已使用的帧，避免重复
 
             for i, segment in enumerate(segments):
@@ -73,7 +73,7 @@ class FrameSegmentMapper:
                 end_time = segment.get("end", start_time + 6)
                 mid_time = (start_time + end_time) / 2
 
-                # 🎯 改进的帧选择策略
+                # 改进的帧选择策略
                 selected_frame = self._select_optimal_frame(
                     mid_time, time_to_frame, used_frames, i, len(segments)
                 )
@@ -82,7 +82,7 @@ class FrameSegmentMapper:
                     enhanced_segment["frame"] = f"keyframes/{selected_frame}"
                     used_frames.add(selected_frame)
                     logger.debug(
-                        f"🎯 时间段 {start_time:.1f}s-{end_time:.1f}s (中点{mid_time:.1f}s) → {selected_frame}"
+                        f"时间段 {start_time:.1f}s-{end_time:.1f}s (中点{mid_time:.1f}s) → {selected_frame}"
                     )
                 else:
                     # 如果没找到对应帧，使用封面帧或第一帧
@@ -116,7 +116,7 @@ class FrameSegmentMapper:
             return enhanced_data
 
         except Exception as e:
-            logger.error(f"❌ 生成增强版转录失败: {e}")
+            logger.error(f"生成增强版转录失败: {e}")
             return transcript_data
 
     def _build_time_frame_mapping(self, frames: List) -> Dict[float, str]:
@@ -163,7 +163,7 @@ class FrameSegmentMapper:
                 if frame_name and frame_time is not None:
                     time_to_frame[float(frame_time)] = frame_name
 
-        # 🎯 调试信息：显示映射结果
+        # 调试信息：显示映射结果
         logger.info(f"📊 构建时间-帧映射：{len(time_to_frame)}个帧")
         if time_to_frame:
             sorted_mapping = sorted(time_to_frame.items())
@@ -204,7 +204,7 @@ class FrameSegmentMapper:
         if not time_to_frame:
             return None
 
-        # 🎯 策略1：优先选择未使用且最接近的帧
+        # 策略1：优先选择未使用且最接近的帧
         available_frames = {
             t: f for t, f in time_to_frame.items() if f not in used_frames
         }
@@ -217,7 +217,7 @@ class FrameSegmentMapper:
             if abs(closest_time - target_time) <= 5.0:  # 5秒内的帧都可以接受
                 return available_frames[closest_time]
 
-        # 🎯 策略2：如果所有接近的帧都被使用了，使用智能分配
+        # 策略2：如果所有接近的帧都被使用了，使用智能分配
         # 根据segment在整个视频中的相对位置选择帧
         if time_to_frame:
             frame_times = sorted(time_to_frame.keys())
@@ -233,7 +233,7 @@ class FrameSegmentMapper:
             selected_time = frame_times[target_frame_index]
 
             logger.debug(
-                f"🎯 智能分配: segment {segment_index}/{total_segments} → 帧索引{target_frame_index} → 时间{selected_time}s"
+                f"智能分配: segment {segment_index}/{total_segments} → 帧索引{target_frame_index} → 时间{selected_time}s"
             )
 
             return time_to_frame[selected_time]
@@ -272,12 +272,12 @@ class FrameSegmentMapper:
             logger.info(f"💾 增强版转录已保存: {output_file}")
 
         except Exception as e:
-            logger.error(f"❌ 保存增强版转录失败: {e}")
+            logger.error(f"保存增强版转录失败: {e}")
 
     def get_segment_frame_summary(self, enhanced_data: Dict[str, Any]) -> str:
         """获取时间段-帧图映射摘要"""
         segments = enhanced_data.get("segments", [])
-        summary_lines = ["### 🎯 时间段-帧图精确映射"]
+        summary_lines = ["### 时间段-帧图精确映射"]
 
         for i, segment in enumerate(segments[:10]):  # 只显示前10个
             start = segment.get("start", 0)

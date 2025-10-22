@@ -150,7 +150,7 @@ class MeetingRecorderWindow:
             logger.info(f"✅ 录制窗口创建成功: {self.title}")
 
         except Exception as e:
-            logger.error(f"❌ 创建录制窗口失败: {e}")
+            logger.error(f"创建录制窗口失败: {e}")
             raise
 
     def start_timer(self):

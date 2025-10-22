@@ -132,7 +132,7 @@ class RealtimeMeetingProcessor:
                         logger.info("🌐 macOS系统：请通过Web界面控制录制")
 
                 except Exception as e:
-                    logger.error(f"❌ 启动录制窗口失败: {e}")
+                    logger.error(f"启动录制窗口失败: {e}")
                     # 即使GUI启动失败，也继续录制过程
                     self.recorder_window_thread = None
                     logger.info("⚠️ 继续无GUI模式录制")
@@ -165,7 +165,7 @@ class RealtimeMeetingProcessor:
             return True
 
         except Exception as e:
-            logger.error(f"❌ 启动会议处理器失败: {e}")
+            logger.error(f"启动会议处理器失败: {e}")
             await self._cleanup()
             return False
 
@@ -224,7 +224,7 @@ class RealtimeMeetingProcessor:
             return True
 
         except Exception as e:
-            logger.error(f"❌ 开始录制失败: {e}")
+            logger.error(f"开始录制失败: {e}")
             await task_service.update_task(
                 "meeting",
                 self.task_id,
@@ -617,14 +617,14 @@ class RealtimeMeetingProcessor:
                         audio_file_path = str(final_audio_path)
                         logger.info(f"✅ 音频文件已保存: {audio_file_path}")
 
-                        # 🎯 进行完整的语音分析（说话人分离 + 情感分析）
+                        # 进行完整的语音分析（说话人分离 + 情感分析）
                         logger.info("开始进行完整的语音分析...")
                         detailed_analysis = await self._perform_detailed_analysis(
                             audio_file_path
                         )
 
                     else:
-                        logger.error("❌ 音频缓冲区保存失败")
+                        logger.error("音频缓冲区保存失败")
 
                 except Exception as e:
                     logger.error(f"保存音频文件失败: {e}")
@@ -653,7 +653,7 @@ class RealtimeMeetingProcessor:
                 "\n".join(self.accumulated_text) if self.accumulated_text else ""
             )
 
-            # 🎯 整合详细分析结果到最终数据
+            # 整合详细分析结果到最终数据
             final_results = ai_results.copy() if ai_results else {}
 
             if detailed_analysis and detailed_analysis.get("success"):
@@ -739,7 +739,7 @@ class RealtimeMeetingProcessor:
         try:
             ai_results = {}
 
-            # 🎯 会议专用：传入meeting role
+            # 会议专用：传入meeting role
             meeting_kwargs = {
                 "content_role": "meeting",  # 强制指定为会议角色
                 "transcript": transcript,
@@ -796,7 +796,7 @@ class RealtimeMeetingProcessor:
             enable_emotion = self.config.get("enable_ai_analysis", True)
 
             logger.info(
-                f"🎯 语音分析配置: 说话人分离={enable_diarization}, 情感分析={enable_emotion}"
+                f"语音分析配置: 说话人分离={enable_diarization}, 情感分析={enable_emotion}"
             )
 
             # 执行完整的语音分析

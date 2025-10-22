@@ -271,7 +271,7 @@ class VideoProcessor:
                 "av", task_id, {"current_step": "生成输出文件...", "progress": 70}
             )
 
-            # 🕐 将媒体时长信息添加到配置中
+            # 将媒体时长信息添加到配置中
             enhanced_config = config.copy()
             enhanced_config["media_duration"] = media_duration
 
@@ -560,12 +560,12 @@ class VideoProcessor:
             if "-" in model and model != "auto":
                 # 新格式：已经包含引擎和大小信息
                 model_id = model
-                logger.info(f"🎯 使用模型: {model_id}")
+                logger.info(f"使用模型: {model_id}")
             else:
                 # 传统格式：组合引擎和大小
                 model_id = f"{model}-{model_size}" if model != "auto" else model
                 logger.info(
-                    f"🎯 组合模型: 引擎={model}, 大小={model_size} -> {model_id}"
+                    f"组合模型: 引擎={model}, 大小={model_size} -> {model_id}"
                 )
 
             # 初始化语音识别（支持新格式）
@@ -851,7 +851,7 @@ class VideoProcessor:
                     else str(transcript)
                 )
 
-                # 🎯 生成纯文本摘要（不使用ai_factory.generate，避免参数冲突）
+                # 生成纯文本摘要（不使用ai_factory.generate，避免参数冲突）
                 # 直接使用AI客户端生成摘要，避免与后续内容卡片生成的参数混淆
 
                 # 构建摘要专用的提示词
@@ -881,7 +881,7 @@ class VideoProcessor:
 
                     ai_client = create_ai_client("openai", settings)
 
-                    logger.info("🎯 使用独立AI客户端生成内容摘要（避免参数冲突）")
+                    logger.info("使用独立AI客户端生成内容摘要（避免参数冲突）")
                     summary_response = await ai_client.chat_completion(
                         messages=[{"role": "user", "content": summary_prompt}],
                         temperature=0.7,
@@ -935,7 +935,7 @@ class VideoProcessor:
             ai_output_types = config.get("ai_output_types", [])
             content_role = config.get("content_role", "auto")
 
-            # 🎯 BUG修复: 当用户选择了content_role但没有选择ai_output_types时，智能添加合适的类型
+            # BUG修复: 当用户选择了content_role但没有选择ai_output_types时，智能添加合适的类型
             if content_role != "auto" and not ai_output_types:
                 # 根据不同角色推荐合适的AI输出类型
                 role_recommendations = {
@@ -964,7 +964,7 @@ class VideoProcessor:
                     content_role, ["content_card"]
                 )
                 logger.info(
-                    f"🎯 用户选择了角色'{content_role}'但未选择AI输出类型，智能推荐: {ai_output_types}"
+                    f"用户选择了角色'{content_role}'但未选择AI输出类型，智能推荐: {ai_output_types}"
                 )
                 # 更新config中的ai_output_types，确保后续逻辑能使用
                 config["ai_output_types"] = ai_output_types
@@ -1040,7 +1040,7 @@ class VideoProcessor:
                     {"current_step": "正在生成AI分析内容...", "progress": 85},
                 )
 
-                # 🎯 修复：确保frame_info不为None，并正确保留原有的type字段（尤其是audio类型）
+                # 修复：确保frame_info不为None，并正确保留原有的type字段（尤其是audio类型）
                 if frame_info is None:
                     safe_frame_info = {
                         "frames": [],
@@ -1070,9 +1070,9 @@ class VideoProcessor:
 
                 # 调试日志
                 logger.info(
-                    f"🎯 传递给AI内容生成的frame_info: type={safe_frame_info.get('type')}, frames数量={len(safe_frame_info.get('frames', []))}, has_frames={safe_frame_info.get('has_frames')}"
+                    f"传递给AI内容生成的frame_info: type={safe_frame_info.get('type')}, frames数量={len(safe_frame_info.get('frames', []))}, has_frames={safe_frame_info.get('has_frames')}"
                 )
-                logger.info(f"🎯 当前文件类型: file_type={file_type}")
+                logger.info(f"当前文件类型: file_type={file_type}")
 
                 # 调用AI内容生成函数
                 ai_files, ai_prompts = await self._generate_ai_content_files(
@@ -1171,7 +1171,7 @@ class VideoProcessor:
                 logger.info(f"格式化后subtitles数量: {len(formatted_subtitles)}")
 
                 # 修复：不依赖 formatted_subtitles，直接提取帧
-                # 🎯 使用新的固定间隔提取方法（2秒一帧）
+                # 使用新的固定间隔提取方法（2秒一帧）
                 frames, cover_frame = frame_extractor.extract_frames_by_interval(
                     video_path,
                     formatted_subtitles,
@@ -1307,7 +1307,7 @@ class VideoProcessor:
             }
         )
 
-        # 🎯 生成transcription_format.json文件（包含帧图映射）
+        # 生成transcription_format.json文件（包含帧图映射）
         if frame_info and frame_info.get("has_frames", False):
             # 调试：在传递给mapper之前检查frame_info
             logger.info(
@@ -1331,7 +1331,7 @@ class VideoProcessor:
                     "type": "enhanced_transcript_json",
                 }
             )
-            logger.info("🎯 增强版转录生成完成，包含精确的时间段-帧图映射")
+            logger.info("增强版转录生成完成，包含精确的时间段-帧图映射")
 
         # 生成字幕文件.srt
         subtitle_file = output_dir / "字幕文件.srt"
@@ -1372,11 +1372,11 @@ class VideoProcessor:
             enhanced_transcript_file = output_dir / "transcription_format.json"
 
             logger.info(
-                f"🎯 AI内容生成检查: is_video={is_video}, has_frames={has_frames}"
+                f"AI内容生成检查: is_video={is_video}, has_frames={has_frames}"
             )
 
             if is_video:
-                # 🎯 视频文件需要帧提取和增强版转录
+                # 视频文件需要帧提取和增强版转录
                 if not has_frames:
                     # 帧提取失败，降级处理：不使用帧映射，仅使用文本
                     logger.warning(
@@ -1386,12 +1386,12 @@ class VideoProcessor:
                     # 继续执行，但不验证增强版转录文件
                 elif not enhanced_transcript_file.exists():
                     # 有帧但没有增强版转录文件，这是异常情况
-                    error_msg = f"❌ 视频已提取关键帧，但增强版转录文件不存在: {enhanced_transcript_file}。这是一个内部错误。"
+                    error_msg = f"视频已提取关键帧，但增强版转录文件不存在: {enhanced_transcript_file}。这是一个内部错误。"
                     logger.error(error_msg)
-                    logger.error(f"❌ frame_info: {frame_info}")
+                    logger.error(f"frame_info: {frame_info}")
                     raise Exception(error_msg)
                 else:
-                    # 🎯 有帧且增强版转录文件存在，读取并使用
+                    # 有帧且增强版转录文件存在，读取并使用
                     try:
                         with open(enhanced_transcript_file, "r", encoding="utf-8") as f:
                             enhanced_data = json.load(f)
@@ -1407,19 +1407,19 @@ class VideoProcessor:
                         if not subtitles or not any(
                             "frame" in segment for segment in subtitles
                         ):
-                            error_msg = "❌ 增强版转录文件存在但缺少帧映射信息，无法进行AI内容生成。"
+                            error_msg = "增强版转录文件存在但缺少帧映射信息，无法进行AI内容生成。"
                             logger.error(error_msg)
                             raise Exception(error_msg)
 
                         logger.info(
-                            f"🎯 使用增强版转录进行AI内容生成，subtitles数量: {len(subtitles)}"
+                            f"使用增强版转录进行AI内容生成，subtitles数量: {len(subtitles)}"
                         )
                         logger.info(
-                            f"🎯 帧映射统计: {sum(1 for s in subtitles if s.get('frame'))} 个时间段包含帧映射"
+                            f"帧映射统计: {sum(1 for s in subtitles if s.get('frame'))} 个时间段包含帧映射"
                         )
 
                     except Exception as e:
-                        error_msg = f"❌ 读取增强版转录文件失败: {e}"
+                        error_msg = f"读取增强版转录文件失败: {e}"
                         logger.error(error_msg)
                         raise Exception(error_msg)
 
@@ -1450,15 +1450,15 @@ class VideoProcessor:
                         },
                     )
 
-                    # 🎯 传递增强版转录信息和必要参数
+                    # 传递增强版转录信息和必要参数
                     generate_kwargs = {
                         "video_path": video_path,
                         "audio_path": audio_path,
-                        "subtitles": subtitles,  # 🎯 这里的subtitles可能包含精确的帧映射（视频有帧时）
+                        "subtitles": subtitles,  # 这里的subtitles可能包含精确的帧映射（视频有帧时）
                         "language": config.get("language", "zh"),
                         "task_id": task_id,
                         "media_duration": config.get("media_duration", 0),
-                        # 🎯 只在视频有帧时传递增强版转录文件路径，否则传递None表示使用纯文本模式
+                        # 只在视频有帧时传递增强版转录文件路径，否则传递None表示使用纯文本模式
                         "enhanced_transcript_file": (
                             str(enhanced_transcript_file)
                             if is_video
@@ -1468,32 +1468,32 @@ class VideoProcessor:
                         ),
                         "ai_enhancement": config.get(
                             "ai_enhancement", False
-                        ),  # 🎯 传递AI扩写润色参数
+                        ),  # 传递AI扩写润色参数
                     }
 
-                    # 🎯 传递简化的frame_info：仅用于统计和封面信息，不用于提示词生成
+                    # 传递简化的frame_info：仅用于统计和封面信息，不用于提示词生成
                     simplified_frame_info = {
-                        "enhanced_mapping": has_frames,  # 🎯 只在有帧时才标记使用增强版映射
-                        "has_frames": has_frames,  # 🎯 使用实际的has_frames值
+                        "enhanced_mapping": has_frames,  # 只在有帧时才标记使用增强版映射
+                        "has_frames": has_frames,  # 使用实际的has_frames值
                         "type": frame_info.get("type", "video"),
                         "cover_frame": frame_info.get(
                             "cover_frame", ""
-                        ),  # 🎯 保留封面帧
-                        "frame_dir": frame_info.get("frame_dir", ""),  # 🎯 保留帧目录
+                        ),  # 保留封面帧
+                        "frame_dir": frame_info.get("frame_dir", ""),  # 保留帧目录
                         "frame_count": len(
                             frame_info.get("frames", [])
-                        ),  # 🎯 仅保留帧数量统计
+                        ),  # 仅保留帧数量统计
                     }
                     generate_kwargs["frame_info"] = simplified_frame_info
 
-                    # 🎯 输出调试信息
+                    # 输出调试信息
                     if has_frames:
                         logger.info(
                             f"🚀 使用增强版映射模式 - 帧数量统计: {simplified_frame_info['frame_count']}"
                         )
-                        logger.info(f"🎯 增强版转录文件: {enhanced_transcript_file}")
+                        logger.info(f"增强版转录文件: {enhanced_transcript_file}")
                         logger.info(
-                            f"🎯 包含帧映射的时间段数量: {sum(1 for s in subtitles if s.get('frame'))}"
+                            f"包含帧映射的时间段数量: {sum(1 for s in subtitles if s.get('frame'))}"
                         )
                     else:
                         logger.info(f"📝 使用纯文本模式 - 无关键帧映射")
@@ -1501,7 +1501,7 @@ class VideoProcessor:
                     # 如果配置中有content_role，传递给AI生成器
                     if "content_role" in config:
                         generate_kwargs["force_domain"] = config["content_role"]
-                        logger.info(f"🎯 使用指定内容角色: {config['content_role']}")
+                        logger.info(f"使用指定内容角色: {config['content_role']}")
 
                     result = await ai_factory.generate(
                         output_type, transcript_text, **generate_kwargs
@@ -1998,7 +1998,7 @@ class VideoProcessor:
 
                 if "ai_enhancement_enabled" in prompts:
                     enhancement_status = (
-                        "✅ 启用" if prompts["ai_enhancement_enabled"] else "❌ 未启用"
+                        "✅ 启用" if prompts["ai_enhancement_enabled"] else "未启用"
                     )
                     report += f"\n**AI增强状态**: {enhancement_status}"
 

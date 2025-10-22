@@ -119,7 +119,7 @@ class NotificationService:
             return True
 
         except Exception as e:
-            logger.error(f"❌ 发送桌面通知失败: {e}")
+            logger.error(f"发送桌面通知失败: {e}")
             notification_record["error"] = str(e)
             self.notification_history.append(notification_record)
             return False
@@ -159,7 +159,7 @@ class NotificationService:
 
             message = f"任务 「{task_name}」 已成功完成{duration_text}。\n\n点击查看详细结果。"
         else:
-            title = f"❌ {self._get_task_type_name(task_type)}任务失败"
+            title = f"{self._get_task_type_name(task_type)}任务失败"
             message = f"任务 「{task_name}」 处理失败。\n\n请检查任务详情或重新尝试。"
 
         return self.show_notification(
@@ -194,7 +194,7 @@ class NotificationService:
                 "title": "🎉 会议记录任务完成",
                 "emoji": "✅",
             },  # 添加 finished 状态
-            "error": {"title": "❌ 会议记录出错", "emoji": "⚠️"},
+            "error": {"title": "会议记录出错", "emoji": "⚠️"},
         }
 
         status_info = status_map.get(

@@ -32,7 +32,7 @@ class SemanticFrameMatcher:
 
     def __init__(self, ai_client):
         self.ai_client = ai_client
-        logger.info("🎯 语义帧匹配器初始化完成")
+        logger.info("语义帧匹配器初始化完成")
 
     async def match_frames_to_content(
         self,
@@ -76,11 +76,11 @@ class SemanticFrameMatcher:
             # 4. 优化匹配结果
             optimized_matches = self._optimize_matches(matches)
 
-            logger.info(f"🎯 语义匹配完成: {len(optimized_matches)} 个高质量匹配")
+            logger.info(f"语义匹配完成: {len(optimized_matches)} 个高质量匹配")
             return optimized_matches
 
         except Exception as e:
-            logger.error(f"❌ 语义帧匹配失败: {e}")
+            logger.error(f"语义帧匹配失败: {e}")
             return []
 
     async def _extract_semantic_segments(
@@ -415,10 +415,10 @@ class SemanticFrameMatcher:
         strategy_prompt = f"""## 📌 语义智能匹配策略
 - 🧠 **智能匹配**: 基于语义相似度进行帧内容匹配
 - 📊 **匹配统计**: 共 {len(matches)} 个高质量语义匹配
-- 🎯 **匹配精度**: 平均语义分数 {sum(m.semantic_score for m in matches) / len(matches):.2f}
+- **匹配精度**: 平均语义分数 {sum(m.semantic_score for m in matches) / len(matches):.2f}
 - 📁 **图片路径**: ![图片名](file://{keyframes_path}/图片名)
 
-### 🎯 语义匹配映射：
+### 语义匹配映射：
 """
 
         for i, match in enumerate(matches, 1):

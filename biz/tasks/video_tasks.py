@@ -48,7 +48,7 @@ def sync_process_video_file(
         return result
 
     except Exception as e:
-        logger.error(f"❌ 视频文件任务失败: {task_id}, 错误: {e}")
+        logger.error(f"视频文件任务失败: {task_id}, 错误: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -78,7 +78,7 @@ def sync_process_video_url(
         return result
 
     except Exception as e:
-        logger.error(f"❌ 视频URL任务失败: {task_id}, 错误: {e}")
+        logger.error(f"视频URL任务失败: {task_id}, 错误: {e}")
         return {"success": False, "error": str(e)}
 
 

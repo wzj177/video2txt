@@ -1,6 +1,6 @@
 {
   "openai": {
-    "api_key": "sk-b4a1cde0146044baab660bc789c83790",
+    "api_key": "sk-fc0fab8cc8a54b37946f1d65f377a060",
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "model": "qwen-max-2025-01-25",
     "max_tokens": 4096,
@@ -9,12 +9,10 @@
   },
   "ollama": {
     "installed": true,
-    "version": "ollama version is 0.12.5",
-    "running": true,
+    "version": "Warning: could not connect to a running Ollama instance\nWarning: client version is 0.12.6",
+    "running": false,
     "base_url": "http://localhost:11434",
-    "models": [
-      "qwen3:1.7b"
-    ]
+    "models": []
   },
   "system": {
     "default_language": "zh",
