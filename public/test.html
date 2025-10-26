@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>回合制图片切换</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #f0f0f0;
+        }
+
+        #image-container {
+            text-align: center;
+        }
+
+        img {
+            max-width: 80vw;
+            max-height: 80vh;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #counter {
+            margin-top: 16px;
+            font-size: 18px;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="image-container">
+        <img id="anime-img" src="" alt="加载中..." style="display: none;" />
+        <div id="counter" style="display: none;">第 0 / 200 轮</div>
+        <div id="loading">启动中...</div>
+    </div>
+
+    <script>
+        const totalRounds = 2;
+        let currentRound = 0;
+
+        const imgElement = document.getElementById('anime-img');
+        const counterElement = document.getElementById('counter');
+        const loadingElement = document.getElementById('loading');
+
+        // 随机整数 [min, max]
+        function rand(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // 获取随机二次元图片（使用 waifu.pics 免费 API）
+        async function fetchRandomImage() {
+            // try {
+            //     const response = await fetch('https://api.waifu.pics/sfw/waifu');
+            //     const data = await response.json();
+            //     return data.url;
+            // } catch (error) {
+            //     console.error('获取图片失败:', error);
+            //     // 备用图片
+            //     return 'https://via.placeholder.com/400x600?text=加载失败';
+            // }
+            try {
+                const response = await fetch('https://api.lolicon.app/setu/v2?r18=0&num=1'); //https://api.lolicon.app/setu/v2
+                const data = await response.json();
+                return data[0].urls.original;
+            } catch (error) {
+                try {
+                    const response = await fetch('https://api.waifu.pics/sfw/waifu');
+                    const data = await response.json();
+                    return data.url;
+                } catch (error) {
+                    console.error('获取图片失败:', error);
+                    // 备用图片
+                    return 'https://via.placeholder.com/400x600?text=加载失败';
+                }
+            }
+        }
+
+        // 自动切换下一张图片
+        async function autoChangeNext() {
+            if (currentRound >= totalRounds) {
+                counterElement.innerHTML = '<span style="color: green; cursor: pointer;" onclick="restart()">继续...</span>';
+                return;
+            }
+
+            const imageUrl = await fetchRandomImage();
+            imgElement.src = imageUrl;
+            counterElement.textContent = `切换下一张中...`;
+            imgElement.onload = () => {
+                currentRound++;
+                const randSecond = rand(1, 3) * 1000; // 转为毫秒
+                counterElement.textContent = `第 ${currentRound} / ${totalRounds} 轮，耗时：${randSecond / 1000} 秒`;
+                if (currentRound === 1) {
+                    imgElement.style.display = 'block'; // 显示图片
+                    counterElement.style.display = 'block';
+                    loadingElement.style.display = 'none';
+                }
+
+
+                // 下一轮递归调用
+                setTimeout(autoChangeNext, randSecond);
+            };
+        }
+
+        // 启动游戏
+        window.onload = () => {
+            autoChangeNext(); // 立即开始第一轮
+        };
+
+        function restart() {
+            currentRound = 0;
+            imgElement.style.display = 'none'; // 隐藏图片
+            counterElement.style.display = 'none';
+            loadingElement.style.display = 'block';
+            autoChangeNext(); // 继续下一轮
+        }
+    </script>
+</body>
+
+</html>

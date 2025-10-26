@@ -1,0 +1,219 @@
+{
+  "openai": {
+    "api_key": "sk-fc0fab8cc8a54b37946f1d65f377a060",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "model": "qwen-max-2025-01-25",
+    "max_tokens": 4096,
+    "timeout": 120,
+    "temperature": 0.7
+  },
+  "ollama": {
+    "installed": true,
+    "version": "ollama version is 0.12.6",
+    "running": true,
+    "base_url": "http://localhost:11434",
+    "models": [
+      "qwen3:1.7b"
+    ]
+  },
+  "system": {
+    "default_language": "zh",
+    "storage_path": "/Users/jiechengyang/src/py-app/ai-video2text/data/outputs",
+    "max_concurrent": 3,
+    "ai_enhancement": {
+      "timeout": 180,
+      "max_retries": 2,
+      "conservative_timeout": 60
+    },
+    "huggingface": {
+      "api_key": "",
+      "token": "",
+      "enable_pyannote": true,
+      "pyannote_timeout": 10
+    }
+  },
+  "roles": {
+    "education": {
+      "name": "教育专家",
+      "description": "专注于教育内容的专业分析和知识整理",
+      "content_generator": "教育内容结构化专家",
+      "flashcard_generator": "教育学习卡片专家",
+      "ai_analysis": "教育内容分析专家",
+      "content_card": "教育内容专家"
+    },
+    "exam_review": {
+      "name": "试卷评讲专家",
+      "description": "专业的考试分析和题目讲解专家",
+      "content_generator": "试卷评讲分析专家",
+      "flashcard_generator": "试卷评讲分析专家",
+      "ai_analysis": "考试评估专家",
+      "content_card": "试卷评讲专家"
+    },
+    "cooking": {
+      "name": "美食专家",
+      "description": "烹饪技巧和美食知识的专业整理者",
+      "content_generator": "美食知识整理专家",
+      "flashcard_generator": "美食知识整理专家",
+      "ai_analysis": "美食内容评估师",
+      "content_card": "美食教学专家"
+    },
+    "travel": {
+      "name": "旅行专家",
+      "description": "旅行攻略和旅游体验的专业规划师",
+      "content_generator": "旅行攻略规划专家",
+      "flashcard_generator": "旅行攻略规划专家",
+      "ai_analysis": "旅行内容分析师",
+      "content_card": "旅行攻略专家"
+    },
+    "meeting": {
+      "name": "会议专家",
+      "description": "会议管理和纪要整理的专业顾问",
+      "content_generator": "会议管理专家",
+      "flashcard_generator": "会议管理专家",
+      "ai_analysis": "会议效果评估专家",
+      "content_card": "会议纪要专家"
+    },
+    "technology": {
+      "name": "科技专家",
+      "description": "科技内容和技术知识的专业架构师",
+      "content_generator": "科技内容架构师",
+      "flashcard_generator": "科技内容架构师",
+      "ai_analysis": "科技内容分析师",
+      "content_card": "科技解说专家"
+    },
+    "business": {
+      "name": "商业专家",
+      "description": "商业分析和市场洞察的专业顾问",
+      "content_generator": "商业分析专家",
+      "flashcard_generator": "商业分析专家",
+      "ai_analysis": "商业内容评估专家",
+      "content_card": "商业分析专家"
+    },
+    "it": {
+      "name": "IT专家",
+      "description": "IT技术和系统架构的专业工程师",
+      "content_generator": "IT技术专家",
+      "flashcard_generator": "IT技术专家",
+      "ai_analysis": "IT内容评估专家",
+      "content_card": "IT技术专家"
+    },
+    "emotion": {
+      "name": "情感专家",
+      "description": "情感咨询和心理分析的专业顾问",
+      "content_generator": "情感咨询专家",
+      "flashcard_generator": "情感咨询专家",
+      "ai_analysis": "情感内容评估专家",
+      "content_card": "情感咨询专家"
+    },
+    "finance": {
+      "name": "金融专家",
+      "description": "金融分析和投资理财的专业顾问",
+      "content_generator": "金融分析专家",
+      "flashcard_generator": "金融分析专家",
+      "ai_analysis": "金融内容评估专家",
+      "content_card": "金融分析专家"
+    },
+    "beauty": {
+      "name": "美妆专家",
+      "description": "美容护肤和化妆技巧的专业顾问",
+      "content_generator": "美妆护肤专家",
+      "flashcard_generator": "美妆护肤专家",
+      "ai_analysis": "美妆内容评估师",
+      "content_card": "美妆护肤专家"
+    },
+    "male": {
+      "name": "男性兴趣专家",
+      "description": "男性兴趣和生活方式的专业顾问",
+      "content_generator": "男性兴趣专家",
+      "flashcard_generator": "男性兴趣专家",
+      "ai_analysis": "男性兴趣评估专家",
+      "content_card": "男性兴趣专家"
+    },
+    "female": {
+      "name": "女性兴趣专家",
+      "description": "女性兴趣和生活方式的专业顾问",
+      "content_generator": "女性兴趣专家",
+      "flashcard_generator": "女性兴趣专家",
+      "ai_analysis": "女性兴趣评估专家",
+      "content_card": "女性兴趣专家"
+    },
+    "health": {
+      "name": "健康专家",
+      "description": "健康养生和医疗保健的专业顾问",
+      "content_generator": "健康养生专家",
+      "flashcard_generator": "健康养生专家",
+      "ai_analysis": "健康内容评估专家",
+      "content_card": "健康养生专家"
+    },
+    "fitness": {
+      "name": "健身专家",
+      "description": "健身运动和体能训练的专业教练",
+      "content_generator": "健身运动专家",
+      "flashcard_generator": "健身运动专家",
+      "ai_analysis": "健身内容评估专家",
+      "content_card": "健身运动专家"
+    },
+    "parenting": {
+      "name": "育儿专家",
+      "description": "育儿教育和亲子关系的专业顾问",
+      "content_generator": "育儿教育专家",
+      "flashcard_generator": "育儿教育专家",
+      "ai_analysis": "育儿内容评估专家",
+      "content_card": "育儿教育专家"
+    },
+    "biography": {
+      "name": "人物志讲解专家",
+      "description": "人物传记和历史人物解读的专业讲解者",
+      "content_generator": "人物传记解读专家",
+      "flashcard_generator": "人物历史学习专家",
+      "ai_analysis": "人物传记内容评估专家",
+      "content_card": "人物志讲解专家"
+    },
+    "movie": {
+      "name": "电影讲解专家",
+      "description": "电影分析和影视作品解读的专业评论家",
+      "content_generator": "电影解读专家",
+      "flashcard_generator": "影视文化学习专家",
+      "ai_analysis": "电影内容评估专家",
+      "content_card": "电影讲解专家"
+    },
+    "chinese_anime": {
+      "name": "中国动漫讲解专家",
+      "description": "中国动画和国漫文化的专业解说员",
+      "content_generator": "国漫文化专家",
+      "flashcard_generator": "中国动漫学习专家",
+      "ai_analysis": "国漫内容评估专家",
+      "content_card": "中国动漫讲解专家"
+    },
+    "japanese_anime": {
+      "name": "日本动漫讲解专家",
+      "description": "日本动画和二次元文化的专业解说员",
+      "content_generator": "日漫文化专家",
+      "flashcard_generator": "日本动漫学习专家",
+      "ai_analysis": "日漫内容评估专家",
+      "content_card": "日本动漫讲解专家"
+    },
+    "general": {
+      "name": "通用专家",
+      "description": "通用内容分析和知识整理的万能专家",
+      "content_generator": "内容结构化专家",
+      "flashcard_generator": "学习闪卡专家",
+      "ai_analysis": "内容分析专家",
+      "content_card": "视频知识萃取专家"
+    }
+  },
+  "prompt_templates": {
+    "mind_map": {
+      "system_prompt": "# 角色\n你是一位专业的{role_name}，专门将{domain}领域内容转化为清晰的思维导图结构。\n\n# 任务\n基于转录内容生成思维导图，核心要求：\n- 深入理解{domain}领域的知识体系和逻辑脉络\n- 熟悉该领域的重要概念和关键要点\n- 了解{target_audience}的认知特点和学习需求\n- 重点关注：{key_topics}\n\n# 约束条件\n1. **语言**：简体中文\n2. **结构层次**：\n   - 主节点：3-5个核心主题\n   - 子节点：每个主节点下2-4个要点\n   - 总节点数：控制在9-15个\n3. **节点要求**：\n   - 使用简洁短语，避免完整句子\n   - 体现{domain}领域特色\n   - 突出核心观点和关键概念\n\n# 输出模板\n```\n# 思维导图：{{主题标题}}\n\n- {{主节点1}}\n  - {{子节点1.1}}\n  - {{子节点1.2}}\n- {{主节点2}}\n  - {{子节点2.1}}\n  - {{子节点2.2}}\n- {{主节点3}}\n  - {{子节点3.1}}\n  - {{子节点3.2}}\n```\n\n请严格按照模板输出，不要添加额外解释。",
+      "user_prompt": "请为以下{domain}内容生成专业的思维导图：\n\n## 转录内容：\n{transcript}\n\n## 分析要点：\n- 主要领域：{domain}\n- 内容风格：{content_style}\n- 目标受众：{target_audience}\n- 核心话题：{key_topics}\n\n请生成结构清晰、层次分明的思维导图。"
+    },
+    "flashcards": {
+      "system_prompt": "# 角色\n你是一位专业的{role_name}，专门为{domain}领域创建高质量的学习闪卡。\n\n# 任务\n基于转录内容生成学习闪卡，核心要求：\n- 深入理解{domain}领域的核心概念和实践要点\n- 熟悉该领域的常见问题和学习难点\n- 了解{target_audience}的学习需求和认知特点\n- 重点关注：{key_topics}\n\n# 约束条件\n1. **语言**：简体中文\n2. **数量**：8-12张闪卡\n3. **类型分布**：\n   - 核心概念类（30%）：基础定义和重要原理\n   - 实践应用类（40%）：具体操作和方法技巧\n   - 问题解决类（20%）：常见问题和解决方案\n   - 经验总结类（10%）：关键要点和注意事项\n4. **质量标准**：\n   - 问题紧密结合{domain}领域特色\n   - 关注该领域的实际应用和操作要点\n   - 适合{target_audience}的认知水平\n   - 体现{content_style}的特点\n\n# 输出模板\n```\n**Q**: {{简洁明确的问题，具有挑战性}}\n**A**: {{详细易懂的答案，包含：}}\n- 直接答案\n- 关键理解要点\n- 实际应用提示（如适用）\n- 记忆技巧（如适用）\n\n---\n\n**Q**: {{下一个问题}}\n**A**: {{对应答案}}\n```\n\n请严格按照模板输出，每张闪卡用\"---\"分隔。",
+      "user_prompt": "请为以下{domain}内容生成专业的学习闪卡：\n\n## 转录内容：\n{transcript}\n\n## 分析要点：\n- 主要领域：{domain}\n- 内容风格：{content_style}\n- 目标受众：{target_audience}\n- 核心话题：{key_topics}\n\n请生成8-12张高质量的学习闪卡，确保问题有挑战性，答案有价值。"
+    },
+    "ai_analysis": {
+      "system_prompt": "# 角色\n你是一位专业的{role_name}，专门对{domain}领域内容进行深度分析和价值评估。\n\n# 任务\n基于已有的内容分析结果进行深度分析，核心要求：\n- 从{domain}领域角度评价内容价值\n- 分析内容与目标受众的匹配程度\n- 提供专业的改进建议和扩展方向\n- 识别具体应用场景和实用价值\n\n# 约束条件\n1. **语言**：简体中文\n2. **输出格式**：JSON结构\n3. **分析深度**：基于以下已知信息进行深度分析\n   - 主要领域：{domain}\n   - 次要领域：{secondary_domains}\n   - 置信度：{confidence}\n   - 关键话题：{key_topics}\n   - 内容风格：{content_style}\n   - 目标受众：{target_audience}\n\n# 输出模板\n```json\n{{\n    \"content_value_assessment\": {{\n        \"overall_score\": 8.5,\n        \"strengths\": [\"优势1\", \"优势2\", \"优势3\"],\n        \"weaknesses\": [\"不足1\", \"不足2\"],\n        \"domain_relevance\": \"在{domain}领域的相关性评价\"\n    }},\n    \"audience_matching\": {{\n        \"match_score\": 7.8,\n        \"target_audience\": \"{target_audience}\",\n        \"suitability_analysis\": \"受众适配性分析\",\n        \"recommendations\": [\"建议1\", \"建议2\"]\n    }},\n    \"improvement_suggestions\": [\n        \"针对{domain}领域的改进建议1\",\n        \"改进建议2\",\n        \"改进建议3\"\n    ],\n    \"application_scenarios\": [\n        \"应用场景1\",\n        \"应用场景2\",\n        \"应用场景3\"\n    ],\n    \"extension_directions\": [\n        \"扩展方向1\",\n        \"扩展方向2\"\n    ]\n}}\n```\n\n请严格按照JSON格式输出，确保格式正确。",
+      "user_prompt": "请对以下{domain}内容进行深度AI分析：\n\n## 转录内容：\n{transcript}\n\n## 已知分析结果：\n- 主要领域：{domain}\n- 置信度：{confidence}\n- 关键话题：{key_topics}\n- 内容风格：{content_style}\n- 目标受众：{target_audience}\n- 内容长度：{content_length}\n\n请基于以上信息进行深度分析，输出结构化的JSON分析结果。"
+    }
+  }
+}

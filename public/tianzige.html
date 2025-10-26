@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>田字格批改 Demo</title>
+  <style>
+    body {
+      font-family: "Microsoft YaHei", sans-serif;
+      padding: 20px;
+    }
+
+    .tianzige {
+      display: grid;
+      grid-gap: 5px;
+      user-select: none;
+    }
+
+    .tianzige span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #333;
+      font-size: 1em;
+      cursor: pointer;
+      position: relative;
+      min-width: 1em;
+      min-height: 1em;
+    }
+
+    /* 田字格辅助线 */
+    .tianzige span::before,
+    .tianzige span::after {
+      content: "";
+      position: absolute;
+      background: #ccc;
+    }
+    .tianzige span::before { /* 竖线 */
+      top: 0; bottom: 0; left: 50%;
+      width: 1px;
+    }
+    .tianzige span::after { /* 横线 */
+      left: 0; right: 0; top: 50%;
+      height: 1px;
+    }
+
+    /* 可编辑文字 */
+    .tianzige span[contenteditable="true"] {
+      outline: none;
+    }
+
+    /* 错误标记（纯红色） */
+    .error {
+      background-color: red !important;
+      color: #fff;
+      border: 2px solid red;
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      margin: 5px 5px 15px 0;
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>田字格批改 Demo</h2>
+  <p>👉 输入文字 → 点击“生成格子”；双击或拖动选择格子可高亮错误，点击文字可改错。</p>
+
+  <textarea id="inputText" placeholder="请输入要生成的文字"></textarea><br>
+  <button onclick="generateGrid()">生成格子</button>
+  <button onclick="exportText()">导出修改后的文本</button>
+
+  <div class="tianzige" id="grid"></div>
+
+  <script>
+    let isDragging = false; // 拖拽选择标记
+
+    function generateGrid() {
+      const text = document.getElementById("inputText").value.trim();
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+
+      if (!text) return;
+
+      // 自动计算格子大小
+      const totalChars = text.length;
+      let cellSize = 60; // 默认大小
+
+      if (totalChars > 200) cellSize = 40;
+      if (totalChars > 500) cellSize = 30;
+      if (totalChars > 1000) cellSize = 24;
+
+      grid.style.gridTemplateColumns = `repeat(auto-fill, minmax(${cellSize}px, 1fr))`;
+
+      [...text].forEach(char => {
+        const cell = document.createElement("span");
+        cell.contentEditable = "true";
+        cell.textContent = char;
+
+        // 双击切换错误标记
+        cell.addEventListener("dblclick", () => {
+          cell.classList.toggle("error");
+        });
+
+        // 鼠标拖动时选中
+        cell.addEventListener("mousedown", (e) => {
+          isDragging = true;
+          cell.classList.toggle("error");
+          e.preventDefault();
+        });
+        cell.addEventListener("mouseenter", () => {
+          if (isDragging) {
+            cell.classList.add("error");
+          }
+        });
+
+        grid.appendChild(cell);
+      });
+
+      // 鼠标松开时停止拖拽
+      document.addEventListener("mouseup", () => {
+        isDragging = false;
+      });
+    }
+
+    function exportText() {
+      const chars = [...document.querySelectorAll("#grid span")].map(cell => cell.textContent);
+      alert("导出结果：\n" + chars.join(""));
+    }
+  </script>
+</body>
+</html>

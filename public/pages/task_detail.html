@@ -1,0 +1,2000 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>听语AI - 任务详情</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/common.css">
+    <link rel="stylesheet" href="/assets/css/icons.css">
+    <link href="/assets/js/layui/css/layui.css" rel="stylesheet">
+    <link href="/assets/css/task_detail.css" rel="stylesheet">
+    <style>
+        /* 文件项hover效果样式 */
+        .file-item {
+            position: relative;
+        }
+
+        .file-main {
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+
+        .file-main:hover {
+            background-color: #f5f7fa;
+        }
+
+        .file-actions {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 4px 8px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        .file-item:hover .file-actions {
+            display: flex;
+        }
+
+        .file-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .file-action-btn:hover {
+            background: #e8f4fd;
+            color: #1890ff;
+        }
+
+        .file-action-btn[title="查看"]:hover, .file-action-btn[title="查看信息"]:hover {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+
+        .file-action-btn[title="播放"]:hover {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+
+        .file-action-btn[title="下载"]:hover {
+            background: #f0f9ff;
+            color: #0ea5e9;
+        }
+
+        .file-action-btn[title="导出PDF"]:hover {
+            background: #fff1f0;
+            color: #ff4d4f;
+        }
+
+        .file-action-btn[title="下载"]:hover {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="app" class="task-detail-container">
+        <!-- 加载中 -->
+        <div v-if="loading" class="loading">
+            <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i>
+            加载任务详情中...
+        </div>
+
+        <!-- 错误状态 -->
+        <div v-else-if="error" class="error">
+            <i class="layui-icon layui-icon-face-cry"></i>
+            <h3>加载失败</h3>
+            <p>{{ error }}</p>
+            <button class="layui-btn layui-btn-primary" @click="loadTask">重试</button>
+        </div>
+
+        <!-- 任务详情 -->
+        <div v-else-if="task" class="task-content">
+            <!-- 任务头部信息 -->
+            <div class="task-header">
+                <h1 class="task-title">{{ getTaskTitle(task) }}</h1>
+                <div class="task-meta">
+                    <div class="meta-item">
+                        <div class="meta-label">任务状态</div>
+                        <div class="meta-value">
+                            <span class="task-status" :class="task.status">{{ getStatusText(task.status) }}</span>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">任务类型</div>
+                        <div class="meta-value">{{ getTaskType(task) }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">创建时间</div>
+                        <div class="meta-value">{{ formatDate(task.created_at) }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">完成时间</div>
+                        <div class="meta-value">{{ formatDate(task.updated_at) }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">识别语言</div>
+                        <div class="meta-value">{{ task.config?.language || 'auto' }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">识别模型</div>
+                        <div class="meta-value">{{ task.config?.model || 'auto' }}</div>
+                    </div>
+                    <div class="meta-item" v-if="task.task_type === 'video'">
+                        <div class="meta-label">视频时长</div>
+                        <div class="meta-value">{{ formatDuration(task.media_duration || task.video_duration ||
+                            task.audio_duration) }}</div>
+                    </div>
+                    <div class="meta-item" v-if="task.task_type === 'audio'">
+                        <div class="meta-label">音频时长</div>
+                        <div class="meta-value">{{ formatDuration(task.media_duration || task.audio_duration) }}</div>
+                    </div>
+                </div>
+
+                <!-- 处理进度 -->
+                <div v-if="task.status === 'running'" class="progress-section">
+                    <div class="progress-bar">
+                        <div class="progress-fill" :style="{width: (task.progress || 0) + '%'}"></div>
+                    </div>
+                    <div class="current-step">{{ task.current_step || '处理中...' }}</div>
+                </div>
+
+                <!-- 失败信息 -->
+                <div v-if="task.status === 'failed'" class="error-section">
+                    <div class="error-message">
+                        <i class="layui-icon layui-icon-close-fill"></i>
+                        <span>{{ task.current_step || task.error_message || '处理失败' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 处理结果 -->
+            <div v-if="task.results && Object.keys(task.results).length > 0" class="task-results">
+                <!-- 第一行：处理报告和AI分析结果 -->
+                <div class="result-section">
+                    <!-- 处理报告 -->
+                    <div v-if="processingReport" class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">📋 处理报告</div>
+                            <div class="result-actions">
+                                <button class="action-btn" @click="showFullscreenProcessingReport" title="全屏查看">
+                                    <i class="layui-icon layui-icon-screen-full"></i>
+                                    全屏
+                                </button>
+                                <button class="action-btn" @click="exportProcessingReportToPdf" title="导出PDF">
+                                    <i class="layui-icon layui-icon-file"></i>
+                                    PDF
+                                </button>
+                                <button class="download-btn" @click="downloadProcessingReport">下载</button>
+                            </div>
+                        </div>
+                        <div class="result-content processing-report" v-html="renderMarkdown(processingReport)"></div>
+                    </div>
+
+                    <!-- AI分析结果 -->
+                    <div v-if="aiAnalysis" class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">🤖 AI分析结果</div>
+                        </div>
+                        <div class="result-content ai-analysis">
+                            <div class="analysis-item">
+                                <div class="analysis-label">主题</div>
+                                <div class="analysis-value">{{ aiAnalysis.theme }}</div>
+                            </div>
+                            <div class="analysis-item">
+                                <div class="analysis-label">质量评分</div>
+                                <div class="analysis-value">
+                                    <span class="score">{{ aiAnalysis.quality_score }}</span>/10
+                                </div>
+                            </div>
+                            <div class="analysis-item">
+                                <div class="analysis-label">关键要点</div>
+                                <div class="analysis-value">
+                                    <ul>
+                                        <li v-for="point in aiAnalysis.key_points" :key="point">{{ point }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="analysis-item" v-if="aiAnalysis.applications && aiAnalysis.applications.length">
+                                <div class="analysis-label">应用场景</div>
+                                <div class="analysis-value">
+                                    <span v-for="(app, index) in aiAnalysis.applications" :key="app" class="tag">
+                                        {{ app }}
+                                        <span v-if="index < aiAnalysis.applications.length - 1">, </span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="analysis-item" v-if="aiAnalysis.suggestions && aiAnalysis.suggestions.length">
+                                <div class="analysis-label">改进建议</div>
+                                <div class="analysis-value">
+                                    <ul>
+                                        <li v-for="suggestion in aiAnalysis.suggestions" :key="suggestion">{{ suggestion
+                                            }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- 转录结果 -->
+                <div v-if="task.results.transcript" class="result-card">
+                    <div class="result-header">
+                        <div class="result-title">📝 转录文本</div>
+                        <div class="transcript-controls">
+                            <button class="control-btn" @click="toggleTranscriptEdit" :class="{ active: isEditingTranscript }">
+                                <i class="layui-icon" :class="isEditingTranscript ? 'layui-icon-ok' : 'layui-icon-edit'"></i>
+                                {{ isEditingTranscript ? '保存' : '编辑' }}
+                            </button>
+                            <button class="control-btn" @click="toggleSegmentView" :class="{ active: showSegments }">
+                                <i class="layui-icon layui-icon-template-1"></i>
+                                {{ showSegments ? '整段' : '分段' }}
+                            </button>
+                    </div>
+                </div>
+
+                    <!-- 分段显示模式 -->
+                    <div v-if="showSegments && !isEditingTranscript" class="transcript-segments">
+                        <div v-if="segmentsLoading" class="segments-loading">
+                            <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i>
+                            正在智能分段...
+                        </div>
+                        <div v-else>
+                            <div v-for="(segment, index) in transcriptSegments" :key="'segment-' + index" 
+                                 class="transcript-segment" :class="'segment-' + segment.segment_type">
+                                <div class="segment-header">
+                                    <div class="segment-info">
+                                        <span class="segment-number">段落 {{ index + 1 }}</span>
+                                        <span class="segment-type" v-if="segment.segment_type && segment.segment_type !== 'paragraph'">
+                                            {{ getSegmentTypeText(segment.segment_type) }}
+                                        </span>
+                                    </div>
+                                    <div class="segment-meta">
+                                        <span class="segment-length">{{ segment.length }} 字符</span>
+                                        <span v-if="segment.confidence && segment.confidence < 1" 
+                                              class="segment-confidence" 
+                                              :class="getConfidenceClass(segment.confidence)">
+                                            {{ Math.round(segment.confidence * 100) }}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="segment-content" v-html="processedSegmentText(segment)"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 编辑模式 -->
+                    <div v-else-if="isEditingTranscript" class="transcript-editor">
+                        <div class="editor-header">
+                            <div class="editor-title">
+                                <i class="layui-icon layui-icon-edit"></i>
+                                转录文本编辑器
+                            </div>
+                            <div class="editor-actions">
+                                <button class="editor-action-btn" @click="previewMath" title="预览数学公式">
+                                    <i class="layui-icon layui-icon-calculator"></i>
+                                    数学预览
+                                </button>
+                                <button class="editor-action-btn" @click="formatText" title="格式化文本">
+                                    <i class="layui-icon layui-icon-template-1"></i>
+                                    格式化
+                                </button>
+                                <button class="editor-action-btn" @click="clearText" title="清空内容">
+                                    <i class="layui-icon layui-icon-delete"></i>
+                                    清空
+                                </button>
+                            </div>
+                        </div>
+                        <textarea 
+                            v-model="editedTranscript"
+                            class="transcript-textarea"
+                            placeholder="在此编辑转录文本...&#10;&#10;提示：&#10;• 支持多行编辑&#10;• 自动保存功能&#10;• 实时字符统计"
+                            @input="onTranscriptChange"
+                            @keydown="onKeyDown"
+                        ></textarea>
+                        <div class="editor-footer">
+                            <div class="editor-stats">
+                                <div class="stat-item">
+                                    <span>字符数:</span>
+                                    <span class="stat-value">{{ editedTranscript.length }}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span>行数:</span>
+                                    <span class="stat-value">{{ editedTranscript.split('\n').length }}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span>段落数:</span>
+                                    <span class="stat-value">{{ editedTranscript.split('\n\n').filter(p => p.trim()).length }}</span>
+                                </div>
+                            </div>
+                            <div class="change-indicator" v-if="transcriptChanged">
+                                已修改
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 整段显示模式 -->
+                    <div v-else class="result-content" v-html="processedTranscript"></div>
+                </div>
+
+                <!-- 第二行：内容卡片和内容摘要 -->
+                <div class="results-section">
+                    <!-- 内容卡片 -->
+                    <div v-if="task.results.content_card" class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">🎨 内容卡片</div>
+                            <div class="result-actions">
+                                <button class="action-btn" @click="showFullscreenContentCard" title="全屏查看">
+                                    <i class="layui-icon layui-icon-screen-full"></i>
+                                    全屏
+                                </button>
+                                <button class="action-btn" @click="exportContentCardToPdf" title="导出PDF">
+                                    <i class="layui-icon layui-icon-file"></i>
+                                    PDF
+                                </button>
+                                <button class="download-btn" @click="downloadContentCard">下载</button>
+                            </div>
+                        </div>
+                        <div class="result-content" v-html="renderMarkdown(task.results.content_card)"></div>
+                    </div>
+
+                    <!-- 内容摘要 -->
+                    <div v-if="task.results.summary" class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">📄 内容摘要</div>
+                            <div class="result-actions">
+                                <button class="action-btn" @click="showFullscreenSummary" title="全屏查看">
+                                    <i class="layui-icon layui-icon-screen-full"></i>
+                                    全屏
+                                </button>
+                                <button class="action-btn" @click="exportSummaryToPdf" title="导出PDF">
+                                    <i class="layui-icon layui-icon-file"></i>
+                                    PDF
+                                </button>
+                                <button class="download-btn" @click="downloadSummary">下载</button>
+                            </div>
+                        </div>
+                        <div class="result-content" v-html="compiledMarkdown" ref="resultContent"></div>
+                    </div>
+                    </div>
+
+                <!-- 第三行：思维导图 -->
+                <div class="results-section" v-if="task.results.mindmap">
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">🧠 思维导图</div>
+                            <div class="result-actions">
+                                <button class="action-btn" @click="showFullscreenMindmap" title="全屏查看">
+                                    <i class="layui-icon layui-icon-screen-full"></i>
+                                    全屏
+                                </button>
+                                <button class="action-btn" @click="exportMindmapToPdf" title="导出PDF">
+                                    <i class="layui-icon layui-icon-file"></i>
+                                    PDF
+                                </button>
+                            <button class="download-btn" @click="downloadMindmap">下载</button>
+                        </div>
+                        </div>
+                        <div class="result-content" v-html="compiledMindmap"></div>
+                    </div>
+                </div>
+
+                <!-- 学习学习闪卡 -->
+                <div v-if="task.results.flashcards" class="result-card">
+                    <div class="result-header">
+                        <div class="result-title">📚 学习学习闪卡</div>
+                        <div class="result-actions">
+                            <button class="action-btn" @click="showFullscreenFlashcards" title="全屏查看">
+                                <i class="layui-icon layui-icon-screen-full"></i>
+                                全屏
+                            </button>
+                            <button class="action-btn" @click="exportFlashcardsToPdf" title="导出PDF">
+                                <i class="layui-icon layui-icon-file"></i>
+                                PDF
+                            </button>
+                        <button class="download-btn" @click="downloadFlashcards">下载</button>
+                        </div>
+                    </div>
+                    <div class="result-content" v-html="renderMarkdown(task.results.flashcards)"></div>
+                </div>
+
+                <!-- 输出文件 -->
+                <div v-if="displayFiles && displayFiles.length > 0" class="result-card">
+                    <div class="result-header">
+                        <div class="result-title">📁 输出文件</div>
+                        <button class="download-btn" @click="downloadAll">下载全部</button>
+                    </div>
+                    <div class="file-list">
+                        <!-- 普通文件 -->
+                        <div v-for="file in displayFiles.regular" :key="'file-' + file.name" class="file-item">
+                            <div class="file-main">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                                </svg>
+                                <span class="file-name">{{ file.name }}</span>
+                                <!-- 悬停操作按钮 -->
+                                <div class="file-actions">
+                                    <button class="file-action-btn" @click.stop="viewFile(file.name)" title="查看">
+                                        <i class="layui-icon layui-icon-eye"></i>
+                                    </button>
+                                    <button class="file-action-btn" @click.stop="exportFileToPdf(file.name)" title="导出PDF" v-if="isMarkdownFile(file.name)">
+                                        <i class="layui-icon layui-icon-file"></i>
+                                    </button>
+                                    <button class="file-action-btn" @click.stop="downloadOutputFile(file.name)" title="下载">
+                                        <i class="layui-icon layui-icon-download-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 学习闪卡文件组合按钮 -->
+                        <div v-if="displayFiles.flashcards.length > 0" class="file-item special-item">
+                            <div class="file-main">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3M19,19H5V5H19V19M17,12H7V10H17V12M15,16H7V14H15V16M17,8H7V6H17V8Z" />
+                                </svg>
+                                <span class="file-name">📚 学习学习闪卡 ({{ displayFiles.flashcards.length }}个格式)</span>
+                                <!-- 悬停操作按钮 -->
+                                <div class="file-actions">
+                                    <button class="file-action-btn" @click.stop="showFullscreenFlashcards" title="查看">
+                                        <i class="layui-icon layui-icon-eye"></i>
+                                    </button>
+                                    <button class="file-action-btn" @click.stop="downloadFlashcardFiles" title="下载">
+                                        <i class="layui-icon layui-icon-download-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button class="anki-help-btn" @click.stop="showAnkiHelp" title="Anki导入帮助">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C7.59,4 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- 思维导图文件组合按钮 -->
+                        <div v-if="displayFiles.mindmaps.length > 0" class="file-item special-item">
+                            <div class="file-main">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z" />
+                                </svg>
+                                <span class="file-name">🧠 思维导图 ({{ displayFiles.mindmaps.length }}个格式)</span>
+                                <!-- 悬停操作按钮 -->
+                                <div class="file-actions">
+                                    <button class="file-action-btn" @click.stop="showFullscreenMindmap" title="查看">
+                                        <i class="layui-icon layui-icon-eye"></i>
+                                    </button>
+                                    <button class="file-action-btn" @click.stop="downloadMindmapFiles" title="下载">
+                                        <i class="layui-icon layui-icon-download-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 音频文件 -->
+                        <div v-if="displayFiles.audio.length > 0" class="file-item">
+                            <div class="file-main">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
+                                </svg>
+                                <span class="file-name">🎵 音频文件</span>
+                                <!-- 悬停操作按钮 -->
+                                <div class="file-actions">
+                                    <button class="file-action-btn" @click.stop="playAudio(displayFiles.audio[0])" title="播放">
+                                        <i class="layui-icon layui-icon-play"></i>
+                                    </button>
+                                    <button class="file-action-btn" @click.stop="downloadOutputFile(displayFiles.audio[0].name)" title="下载">
+                                        <i class="layui-icon layui-icon-download-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 视频关键帧查看按钮 -->
+                        <div v-if="displayFiles.keyframes.length > 0" class="file-item special-item">
+                            <div class="file-main">
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z" />
+                                </svg>
+                                <span class="file-name">🖼️ 查看视频帧 ({{ displayFiles.keyframes.length }}张)</span>
+                                <!-- 悬停操作按钮 -->
+                                <div class="file-actions">
+                                    <button class="file-action-btn" @click.stop="showKeyframeGallery(0)" title="查看">
+                                        <i class="layui-icon layui-icon-eye"></i>
+                                    </button>
+                                    <button class="file-action-btn" @click.stop="downloadKeyframes" title="下载">
+                                        <i class="layui-icon layui-icon-download-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 未完成状态 -->
+            <div v-else-if="task.status !== 'completed'" class="task-results">
+                <div class="result-card">
+                    <div class="result-header">
+                        <div class="result-title">📋 处理状态</div>
+                    </div>
+                    <div class="result-content">
+                        {{ task.status === 'pending' ? '任务等待中...' :
+                        task.status === 'running' ? '任务处理中...' :
+                        task.status === 'failed' ? '任务处理失败' : '未知状态' }}
+                    </div>
+                </div>
+            </div>
+            <div v-else class="task-results">
+                <div class="result-card">
+                    <div class="result-header">
+                        <div class="result-title">⚠️ 处理状态</div>
+                    </div>
+                    <div class="result-content">
+                        任务处理结果生成失败，请联系技术支持或重新创建任务。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 全屏查看组件 -->
+        <div v-if="fullscreenVisible" class="fullscreen-overlay" @click="closeFullscreen">
+            <div class="fullscreen-container" @click.stop>
+                <div class="fullscreen-header">
+                    <div class="fullscreen-title">
+                        <i class="layui-icon layui-icon-file"></i>
+                        {{ fullscreenTitle }}
+                    </div>
+                    <div class="fullscreen-actions">
+                        <button class="fullscreen-btn secondary" @click="closeFullscreen">
+                            <i class="layui-icon layui-icon-close"></i>
+                            关闭
+                        </button>
+                        <button class="fullscreen-btn" @click="downloadFullscreenContent">
+                            <i class="layui-icon layui-icon-download-circle"></i>
+                            下载
+                        </button>
+                    </div>
+                </div>
+                <div class="fullscreen-content">
+                    <div class="content-display" 
+                         :style="fullscreenContentStyle"
+                         v-html="fullscreenProcessedContent">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/js/vue.global.js"></script>
+    <script src="/assets/js/axios/axios.min.js"></script>
+    <script src="/assets/js/marked.min.js"></script>
+    <script src="/assets/js/layui/layui.js"></script>
+    <script src="/assets/js/http.js"></script>
+    <!-- MathJax for LaTeX math rendering -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+            },
+            startup: {
+                ready: () => {
+                    MathJax.startup.defaultReady();
+                    console.log('MathJax is ready');
+                }
+            }
+        };
+    </script>
+    <script src="/assets/js/polyfill.min.js"></script>
+    <script id="MathJax-script" async src="/assets/js/mathjax/tex-mml-chtml.js"></script>
+    <script type="module">
+        import { marked } from '/assets/js/marked.esm.js';
+        window.marked = marked;
+        
+        const { createApp } = Vue;
+
+        layui.use(['layer'], () => {
+            const layer = layui.layer;
+
+            createApp({
+                data() {
+                    return {
+                        task: null,
+                        loading: true,
+                        error: null,
+                        taskId: null,
+                        outputFiles: [],
+                        processingReport: null,
+                        processingReportHtml: '',
+                        aiAnalysis: null,
+                        // 转录文本相关
+                        showSegments: false,
+                        isEditingTranscript: false,
+                        editedTranscript: '',
+                        transcriptChanged: false,
+                        originalTranscript: '',
+                        cachedSegments: [],
+                        segmentsLoading: false,
+                        // 全屏查看相关
+                        fullscreenVisible: false,
+                        fullscreenTitle: '',
+                        fullscreenContent: '',
+                        fullscreenType: ''
+                    }
+                },
+
+                computed: {
+                    compiledMarkdown() {
+                        if (this.task && this.task.results && this.task.results.summary) {
+                            // 先处理数学公式，再解析Markdown
+                            const processedContent = this.processMathFormulas(this.task.results.summary);
+                            return marked.parse(this.task.results.summary);
+                        }
+
+                        return ''
+                    },
+
+                    // 内容卡片的Markdown编译
+                    compiledContentCard() {
+                        if (this.task && this.task.results && this.task.results.content_card) {
+                            // 先处理数学公式，再解析Markdown
+                            const processedContent = this.processMathFormulas(this.task.results.content_card);
+                            return marked.parse(processedContent);
+                        }
+                        return ''
+                    },
+
+                    // 思维导图的Markdown编译
+                    compiledMindmap() {
+                        if (this.task && this.task.results && this.task.results.mindmap) {
+                            // 思维导图通常是纯文本或特殊格式，先尝试Markdown解析
+                            const processedContent = this.processMathFormulas(this.task.results.mindmap);
+                            return marked.parse(processedContent);
+                        }
+                        return ''
+                    },
+
+                    // 处理数学公式的文本
+                    processedTranscript() {
+                        if (!this.task?.results?.transcript) return '';
+                        return this.task.results.transcript;
+                    },
+
+                    // 全屏内容处理
+                    fullscreenProcessedContent() {
+                        if (!this.fullscreenContent) return '';
+                        
+                        if (this.fullscreenType === 'summary') {
+                            // 先处理数学公式，再解析Markdown
+                            const processedContent = this.processMathFormulas(this.fullscreenContent);
+                            return marked.parse(processedContent);
+                        } else if (this.fullscreenType === 'content_card') {
+                            // 内容卡片也需要Markdown解析
+                            const processedContent = this.processMathFormulas(this.fullscreenContent);
+                            return marked.parse(processedContent);
+                        } else if (this.fullscreenType === 'processing_report') {
+                            // 处理报告需要Markdown解析
+                            return this.renderMarkdown(this.fullscreenContent);
+                        } else if (this.fullscreenType === 'mindmap') {
+                            // 思维导图也尝试Markdown解析
+                            const processedContent = this.processMathFormulas(this.fullscreenContent);
+                            return marked.parse(processedContent);
+                        } else if (this.fullscreenType === 'flashcards') {
+                            return this.processMathFormulas(this.fullscreenContent);
+                        } else if (this.fullscreenType === 'file') {
+                            // 文件查看 - 根据文件扩展名处理
+                            if (this.fullscreenTitle && this.fullscreenTitle.toLowerCase().endsWith('.md')) {
+                                return this.renderMarkdown(this.fullscreenContent);
+                            } else if (this.fullscreenTitle && this.fullscreenTitle.toLowerCase().endsWith('.json')) {
+                                // JSON文件美化显示
+                                try {
+                                    const jsonObj = JSON.parse(this.fullscreenContent);
+                                    return '<pre>' + JSON.stringify(jsonObj, null, 2) + '</pre>';
+                                } catch (e) {
+                                    return '<pre>' + this.fullscreenContent + '</pre>';
+                                }
+                            } else {
+                                // 其他文件类型以纯文本显示
+                                return '<pre>' + this.fullscreenContent + '</pre>';
+                            }
+                        }
+                        
+                        return this.processMathFormulas(this.fullscreenContent);
+                    },
+
+                    // 全屏内容样式
+                    fullscreenContentStyle() {
+                        if (this.fullscreenType === 'content_card') {
+                            return 'line-height: 1.8; font-size: 16px; color: var(--text-primary); max-width: none;';
+                        } else if (this.fullscreenType === 'processing_report') {
+                            return 'line-height: 1.8; font-size: 16px; color: var(--text-primary); max-width: none;';
+                        } else if (this.fullscreenType === 'mindmap') {
+                            return 'white-space: pre-wrap; font-family: monospace; line-height: 1.6; font-size: 16px; color: var(--text-primary);';
+                        } else if (this.fullscreenType === 'flashcards') {
+                            return 'white-space: pre-wrap; line-height: 1.8; font-size: 16px; color: var(--text-primary);';
+                        } else if (this.fullscreenType === 'file') {
+                            // 文件查看样式
+                            if (this.fullscreenTitle && this.fullscreenTitle.toLowerCase().endsWith('.md')) {
+                                return 'line-height: 1.8; font-size: 16px; color: var(--text-primary); max-width: none;';
+                            } else {
+                                return 'white-space: pre-wrap; font-family: monospace; line-height: 1.6; font-size: 14px; color: var(--text-primary); background: #f8f9fa; padding: 20px; border-radius: 8px;';
+                            }
+                        } else {
+                            return 'line-height: 1.8; font-size: 16px; color: var(--text-primary);';
+                        }
+                    },
+                    
+                    transcriptSegments() {
+                        // 如果已经有分段数据，直接返回
+                        if (this.cachedSegments && this.cachedSegments.length > 0) {
+                            return this.cachedSegments;
+                        }
+                        
+                        // 如果没有转录文本，返回空数组
+                        if (!this.task?.results?.transcript) return [];
+                        
+                        // 触发后端分段处理
+                        this.loadTranscriptSegments();
+                        
+                        // 在加载过程中，返回基础分段作为占位
+                        const text = this.task.results.transcript;
+                        const segments = this.segmentText(text);
+                        
+                        return segments.map((text, index) => ({
+                            text: text.trim(),
+                            length: text.trim().length,
+                            segment_type: "loading",
+                            confidence: 0.5
+                        }));
+                    },
+                    displayFiles() {
+                        const files = this.outputFiles || [];
+                        // console.log('📁 原始输出文件列表:', files);
+
+                        // 过滤掉在其他区域显示的文件
+                        const excludeFiles = ['处理报告.md', 'AI分析结果.json', 'audio_visuals/waveform.jpg', 'transcription_format.json', '原始转录.txt'];
+                        const filteredFiles = files.filter(file =>
+                            !excludeFiles.includes(file.name)
+                        );
+                        // console.log('过滤后的文件列表:', filteredFiles);
+
+                        const result = {
+                            regular: [],
+                            flashcards: [],
+                            mindmaps: [],
+                            audio: [],
+                            keyframes: [],
+                            length: 0
+                        };
+
+                        filteredFiles.forEach(file => {
+                            if (file.name.includes('学习学习闪卡') || file.name.includes('flashcards') || file.name.includes('Anki')) {
+                                console.log('  ➡️ 归类为学习闪卡文件');
+                                result.flashcards.push(file);
+                            } else if (file.name.includes('思维导图') || file.name.endsWith('.mm')) {
+                                console.log('  ➡️ 归类为思维导图文件');
+                                result.mindmaps.push(file);
+                            } else if (file.name.includes('_audio.wav') || file.name.endsWith('.wav') || file.name.endsWith('.mp3')) {
+                                console.log('  ➡️ 归类为音频文件');
+                                result.audio.push(file);
+                            } else if (file.name.startsWith('keyframes/') || file.name.endsWith('.jpg') || file.name.endsWith('.png')) {
+                                // console.log('  ➡️ 归类为关键帧文件');
+                                result.keyframes.push(file);
+                            } else {
+                                console.log('  ➡️ 归类为常规文件');
+                                result.regular.push(file);
+                            }
+                        });
+
+                        result.length = result.regular.length +
+                            (result.flashcards.length > 0 ? 1 : 0) +
+                            (result.mindmaps.length > 0 ? 1 : 0) +
+                            result.audio.length +
+                            result.keyframes.length;
+
+                        console.log('📊 文件分类结果:', result);
+                        return result;
+                    }
+                },
+
+                async mounted() {
+                    // 从URL获取任务ID
+                    const urlParams = new URLSearchParams(window.location.search);
+                    this.taskId = urlParams.get('task_id');
+
+                    if (!this.taskId) {
+                        this.error = '缺少任务ID参数';
+                        this.loading = false;
+                        return;
+                    }
+
+                    await this.loadTask();
+                    
+                    // 添加键盘事件监听
+                    this.addKeyboardListeners();
+                },
+
+                beforeUnmount() {
+                    // 清理键盘事件监听
+                    this.removeKeyboardListeners();
+                },
+
+                methods: {
+                    // 加载任务详情
+                    async loadTask() {
+                        try {
+                            this.loading = true;
+                            this.error = null;
+
+                            this.task = await http.get(`/api/tasks/video/${this.taskId}`);
+                            // ai_output_types = [] 就是全部
+
+                            // 如果任务已完成，尝试加载输出文件列表和详细内容
+                            if (this.task.status === 'completed') {
+                                await Promise.all([
+                                    this.loadOutputFiles(),
+                                    this.loadProcessingReport()
+                                    // this.loadAiAnalysis()
+                                ]);
+                            }
+
+                            this.loading = false;
+                            // 渲染数学公式
+                            this.renderMathAfterUpdate();
+                        } catch (error) {
+                            console.error('加载任务详情失败:', error);
+                            this.error = error.message || '加载任务详情失败';
+                            this.loading = false;
+                        }
+                    },
+
+                    // 加载输出文件列表
+                    async loadOutputFiles() {
+                        try {
+                            this.outputFiles = await http.get(`/api/tasks/video/${this.taskId}/outputs`);
+                        } catch (error) {
+                            console.error('❌ 加载输出文件列表失败:', error);
+                            this.outputFiles = [];
+                        }
+                    },
+
+                    // 处理分段中的数学公式
+                    processedSegmentText(segment) {
+                        if (!segment?.text) return '';
+                        return segment.text;
+                    },
+                    // 加载处理报告
+                    async loadProcessingReport() {
+                        try {
+                            const response = await http.get(`/api/tasks/video/${this.taskId}/files/处理报告.md`, {
+                                responseType: 'text'
+                            });
+                            this.processingReport = response;
+                            // 不再需要预处理HTML，直接使用renderMarkdown方法
+                        } catch (error) {
+                            console.warn('加载处理报告失败:', error);
+                            this.processingReport = null;
+                        }
+                    },
+
+                    // 加载AI分析结果
+                    async loadAiAnalysis() {
+                        if (this.task && (this.task.config.ai_output_types.includes('ai_analysis') || this.task.config.ai_output_types.length === 0)) {
+                            return
+                        }
+
+                        try {
+                            const response = await http.get(`/api/tasks/video/${this.taskId}/files/AI分析结果.json`);
+                            this.aiAnalysis = response;
+                        } catch (error) {
+                            console.warn('加载AI分析结果失败:', error);
+                            this.aiAnalysis = null;
+                        }
+                    },
+
+
+
+                    // 简单的Markdown转HTML
+                    markdownToHtml(markdown) {
+                        return markdown
+                            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                            .replace(/^\- (.*$)/gm, '<li>$1</li>')
+                            .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                            .replace(/\n/g, '<br>');
+                    },
+
+                    // 使用marked.js渲染Markdown
+                    renderMarkdown(text) {
+                        if (!text) return '';
+                        try {
+                            // 动态替换模板变量（可选）
+                            let processed = text
+                                .replace('{{videoStats.total}}', this.videoStats?.total || 0)
+                                .replace('{{lastUpdate}}', this.lastUpdate || '');
+                            
+                            let html = window.marked ? window.marked.parse(processed) : this.markdownToHtml(processed);
+                            
+                            // 如果有DOMPurify库，使用它来清理HTML
+                            if (typeof DOMPurify !== 'undefined') {
+                                html = DOMPurify.sanitize(html);
+                            }
+                            
+                            return html;
+                        } catch (error) {
+                            console.error('Markdown渲染错误:', error);
+                            return this.markdownToHtml(text);
+                        }
+                    },
+
+                    // 导出内容卡片为PDF
+                    async exportContentCardToPdf() {
+                        if (!this.task?.results?.content_card) {
+                            layer.msg('没有内容卡片可导出', { icon: 0 });
+                            return;
+                        }
+
+                        try {
+                            // 显示导出中状态
+                            const loadingMsg = layer.msg('正在导出PDF...', { icon: 16, time: 0 });
+                            
+                            const response = await http.post(`/api/tasks/video/${this.taskId}/export-pdf`, {
+                                file_name: '内容卡片.md'
+                            });
+                            
+                            layer.close(loadingMsg);
+                            
+                            if (response.success !== false) {
+                                layer.msg('PDF导出成功', { icon: 1 });
+                                // 自动下载PDF文件
+                                await this.downloadOutputFile(response.data.pdf_file_name);
+                            } else {
+                                layer.msg('PDF导出失败: ' + (response.error || '未知错误'), { icon: 2 });
+                            }
+                        } catch (error) {
+                            console.error('PDF导出失败:', error);
+                            layer.msg('PDF导出失败: ' + error.message, { icon: 2 });
+                        }
+                    },
+
+                    // 导出处理报告为PDF
+                    async exportProcessingReportToPdf() {
+                        if (!this.processingReport) {
+                            layer.msg('没有处理报告可导出', { icon: 0 });
+                            return;
+                        }
+
+                        try {
+                            const loadingMsg = layer.msg('正在导出PDF...', { icon: 16, time: 0 });
+                            
+                            const response = await http.post(`/api/tasks/video/${this.taskId}/export-pdf`, {
+                                file_name: '处理报告.md'
+                            });
+                            
+                            layer.close(loadingMsg);
+                            
+                            if (response.success !== false) {
+                                layer.msg('PDF导出成功', { icon: 1 });
+                                await this.downloadOutputFile(response.data.pdf_file_name);
+                            } else {
+                                layer.msg('PDF导出失败: ' + (response.error || '未知错误'), { icon: 2 });
+                            }
+                        } catch (error) {
+                            console.error('PDF导出失败:', error);
+                            layer.msg('PDF导出失败: ' + error.message, { icon: 2 });
+                        }
+                    },
+
+                    // 导出内容摘要为PDF
+                    async exportSummaryToPdf() {
+                        if (!this.task?.results?.summary) {
+                            layer.msg('没有内容摘要可导出', { icon: 0 });
+                            return;
+                        }
+
+                        try {
+                            const loadingMsg = layer.msg('正在导出PDF...', { icon: 16, time: 0 });
+                            
+                            const response = await http.post(`/api/tasks/video/${this.taskId}/export-pdf`, {
+                                file_name: '内容摘要.md'
+                            });
+                            
+                            layer.close(loadingMsg);
+                            
+                            if (response.success !== false) {
+                                layer.msg('PDF导出成功', { icon: 1 });
+                                await this.downloadOutputFile(response.data.pdf_file_name);
+                            } else {
+                                layer.msg('PDF导出失败: ' + (response.error || '未知错误'), { icon: 2 });
+                            }
+                        } catch (error) {
+                            console.error('PDF导出失败:', error);
+                            layer.msg('PDF导出失败: ' + error.message, { icon: 2 });
+                        }
+                    },
+
+                    // 导出思维导图为PDF
+                    async exportMindmapToPdf() {
+                        if (!this.task?.results?.mindmap) {
+                            layer.msg('没有思维导图可导出', { icon: 0 });
+                            return;
+                        }
+
+                        try {
+                            const loadingMsg = layer.msg('正在导出PDF...', { icon: 16, time: 0 });
+                            
+                            const response = await http.post(`/api/tasks/video/${this.taskId}/export-pdf`, {
+                                file_name: '思维导图.md'
+                            });
+                            
+                            layer.close(loadingMsg);
+                            
+                            if (response.success !== false) {
+                                layer.msg('PDF导出成功', { icon: 1 });
+                                await this.downloadOutputFile(response.data.pdf_file_name);
+                            } else {
+                                layer.msg('PDF导出失败: ' + (response.error || '未知错误'), { icon: 2 });
+                            }
+                        } catch (error) {
+                            console.error('PDF导出失败:', error);
+                            layer.msg('PDF导出失败: ' + error.message, { icon: 2 });
+                        }
+                    },
+
+                    // 导出学习闪卡为PDF
+                    async exportFlashcardsToPdf() {
+                        if (!this.task?.results?.flashcards) {
+                            layer.msg('没有学习闪卡可导出', { icon: 0 });
+                            return;
+                        }
+
+                        try {
+                            const loadingMsg = layer.msg('正在导出PDF...', { icon: 16, time: 0 });
+                            
+                            const response = await http.post(`/api/tasks/video/${this.taskId}/export-pdf`, {
+                                file_name: '学习学习闪卡.md'
+                            });
+                            
+                            layer.close(loadingMsg);
+                            
+                            if (response.success !== false) {
+                                layer.msg('PDF导出成功', { icon: 1 });
+                                await this.downloadOutputFile(response.data.pdf_file_name);
+                            } else {
+                                layer.msg('PDF导出失败: ' + (response.error || '未知错误'), { icon: 2 });
+                            }
+                        } catch (error) {
+                            console.error('PDF导出失败:', error);
+                            layer.msg('PDF导出失败: ' + error.message, { icon: 2 });
+                        }
+                    },
+
+                    // 安全获取任务标题
+                    getTaskTitle(task) {
+                        if (!task) return '未知任务';
+                        // 优先显示用户设置的任务名称
+                        if (task.name) return task.name;
+                        if (task.input_filename) return task.input_filename;
+                        if (task.input_url) return task.input_url;
+                        return task.id || '未知任务';
+                    },
+
+                    // 安全获取任务类型
+                    getTaskType(task) {
+                        if (!task) return '未知';
+                        return task.task_type === 'video' ? '视频' : '音频';
+                    },
+
+                    // 获取状态文本
+                    getStatusText(status) {
+                        const statusMap = {
+                            pending: '等待中',
+                            running: '处理中',
+                            completed: '已完成',
+                            failed: '失败'
+                        };
+                        return statusMap[status] || status;
+                    },
+
+                    // 格式化日期
+                    formatDate(dateString) {
+                        if (!dateString) return '';
+                        const date = new Date(dateString);
+                        return date.toLocaleString('zh-CN');
+                    },
+
+                    // 格式化时长（秒转为分:秒格式）
+                    formatDuration(seconds) {
+                        if (!seconds || seconds <= 0) return '';
+                        const minutes = Math.floor(seconds / 60);
+                        const remainingSeconds = Math.floor(seconds % 60);
+                        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+                    },
+
+                    // 下载转录文本
+                    downloadTranscript() {
+                        if (this.task?.results?.transcript) {
+                            const blob = new Blob([this.task.results.transcript], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_transcript.txt`);
+                        }
+                    },
+
+                    // 下载摘要
+                    downloadSummary() {
+                        if (this.task?.results?.summary) {
+                            const blob = new Blob([this.task.results.summary], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_summary.txt`);
+                        }
+                    },
+
+                    // 下载思维导图
+                    downloadMindmap() {
+                        if (this.task?.results?.mindmap) {
+                            const blob = new Blob([this.task.results.mindmap], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_mindmap.txt`);
+                        }
+                    },
+
+                    // 下载内容卡片
+                    downloadContentCard() {
+                        if (this.task?.results?.content_card) {
+                            const blob = new Blob([this.task.results.content_card], { type: 'text/markdown' });
+                            this.downloadBlob(blob, `${this.task.id}_content_card.md`);
+                        }
+                    },
+
+                    // 下载学习闪卡
+                    downloadFlashcards() {
+                        if (this.task?.results?.flashcards) {
+                            const blob = new Blob([this.task.results.flashcards], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_flashcards.txt`);
+                        }
+                    },
+
+                    // 下载处理报告
+                    downloadProcessingReport() {
+                        if (this.processingReport) {
+                            const blob = new Blob([this.processingReport], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.task.id}_处理报告.md`);
+                        }
+                    },
+
+                    // 下载AI分析结果
+                    downloadAiAnalysis() {
+                        if (this.aiAnalysis) {
+                            const blob = new Blob([JSON.stringify(this.aiAnalysis, null, 2)], { type: 'application/json' });
+                            this.downloadBlob(blob, `${this.task.id}_AI分析结果.json`);
+                        }
+                    },
+
+                    // 获取帧标签（从文件名提取时间）
+                    getFrameLabel(filename) {
+                        const match = filename.match(/(\d{2})_(\d{2})\.jpg$/);
+                        if (match) {
+                            return `${match[1]}:${match[2]}`;
+                        }
+                        return filename;
+                    },
+
+                    // 显示关键帧图片库
+                    showKeyframeGallery(startIndex) {
+                        const photos = this.displayFiles.keyframes.map(frame => ({
+                            src: frame.download_url,
+                            alt: frame.name
+                        }));
+
+                        layer.photos({
+                            photos: {
+                                title: '视频关键帧',
+                                data: photos,
+                                start: startIndex,
+                                anim: 5
+                            }
+                        });
+                    },
+
+
+
+                    // 下载学习闪卡文件（多格式）
+                    async downloadFlashcardFiles() {
+                        const flashcardFiles = this.displayFiles.flashcards;
+
+                        if (flashcardFiles.length === 1) {
+                            // 只有一个文件，直接下载
+                            await this.downloadOutputFile(flashcardFiles[0].name);
+                        } else {
+                            // 多个文件，显示选择菜单
+                            const options = flashcardFiles.map(file => {
+                                const ext = file.name.split('.').pop().toLowerCase();
+                                const formatMap = {
+                                    'md': 'Markdown格式',
+                                    'csv': 'Anki CSV格式',
+                                    'json': 'JSON格式'
+                                };
+                                return {
+                                    title: formatMap[ext] || file.name,
+                                    file: file
+                                };
+                            });
+
+                            let menuContent = '<div style="padding: 10px;">';
+                            menuContent += '<p style="margin-bottom: 15px; color: #666;">选择要下载的学习闪卡格式：</p>';
+                            options.forEach((option, index) => {
+                                menuContent += `<div style="margin-bottom: 8px;">
+                                    <button onclick="downloadFlashcard('${option.file.name}')" 
+                                            style="width: 100%; padding: 8px; border: 1px solid #ddd; background: #f9f9f9; cursor: pointer; border-radius: 4px;">
+                                        ${option.title}
+                                    </button>
+                                </div>`;
+                            });
+                            menuContent += '<div style="margin-top: 15px; text-align: center;">';
+                            menuContent += '<button onclick="downloadAllFlashcards()" style="padding: 8px 16px; background: #00B26A; color: white; border: none; border-radius: 4px; cursor: pointer;">下载全部格式</button>';
+                            menuContent += '</div></div>';
+
+                            // 临时添加全局方法
+                            window.downloadFlashcard = (fileName) => {
+                                this.downloadOutputFile(fileName);
+                                layer.closeAll();
+                            };
+
+                            window.downloadAllFlashcards = async () => {
+                                for (const file of flashcardFiles) {
+                                    await this.downloadOutputFile(file.name);
+                                }
+                                layer.closeAll();
+                            };
+
+                            layer.open({
+                                type: 1,
+                                title: '📚 下载学习学习闪卡',
+                                area: ['300px', 'auto'],
+                                content: menuContent,
+                                btn: false,
+                                closeBtn: 1
+                            });
+                        }
+                    },
+
+                    // 下载思维导图文件（多格式）
+                    async downloadMindmapFiles() {
+                        const mindmapFiles = this.displayFiles.mindmaps;
+
+                        if (mindmapFiles.length === 1) {
+                            await this.downloadOutputFile(mindmapFiles[0].name);
+                        } else {
+                            // 下载所有思维导图格式
+                            for (const file of mindmapFiles) {
+                                await this.downloadOutputFile(file.name);
+                            }
+                            layer.msg(`已下载 ${mindmapFiles.length} 个思维导图文件`, { icon: 1 });
+                        }
+                    },
+
+                    // 显示Anki导入帮助
+                    showAnkiHelp() {
+                        layer.open({
+                            type: 1,
+                            title: '📚 Anki导入帮助',
+                            area: ['780px', '540px'],
+                            content: `
+                                <div style="padding: 20px; line-height: 1.6;">
+                                    <h3>🎯 什么是Anki？</h3>
+                                    <p>Anki是一款基于间隔重复算法的记忆软件，能够帮助您高效记忆学习内容。</p>
+                                    
+                                    <h3>📥 如何导入我们的学习闪卡？</h3>
+                                    <ol style="margin-left: 20px;">
+                                        <li><strong>下载学习闪卡文件</strong>：点击"学习学习闪卡-Anki格式.csv"文件下载</li>
+                                        <li><strong>打开Anki软件</strong>：在电脑上启动Anki应用</li>
+                                        <li><strong>创建牌组</strong>：点击"创建牌组"，命名为您的学习主题</li>
+                                        <li><strong>导入文件</strong>：
+                                            <ul style="margin-left: 20px; margin-top: 8px;">
+                                                <li>点击"文件" → "导入"</li>
+                                                <li>选择下载的CSV文件</li>
+                                                <li>选择目标牌组</li>
+                                                <li>确认导入设置后点击"导入"</li>
+                                            </ul>
+                                        </li>
+                                    </ol>
+                                    
+                                    <h3>💡 学习建议</h3>
+                                    <ul style="margin-left: 20px;">
+                                        <li>每天坚持复习，利用Anki的间隔重复算法</li>
+                                        <li>根据难度调整复习间隔</li>
+                                        <li>可以在手机端同步，随时随地学习</li>
+                                    </ul>
+                                    
+                                    <h3>🔗 相关链接</h3>
+                                    <p>
+                                        <a href="https://apps.ankiweb.net/" target="_blank" style="color: #1890ff;">Anki官网下载</a> | 
+                                        <a href="https://docs.ankiweb.net/" target="_blank" style="color: #1890ff;">Anki使用文档</a>
+                                    </p>
+                                </div>
+                            `,
+                            btn: ['知道了'],
+                            yes: function (index) {
+                                layer.close(index);
+                            }
+                        });
+                    },
+
+                    // 下载单个文件
+                    async downloadFile(file) {
+                        try {
+                            await http.download(`/api/tasks/video/${this.task.id}/files/${file.name}`, file.name);
+                        } catch (error) {
+                            layer.msg('下载文件失败', { icon: 2 });
+                        }
+                    },
+
+                    // 下载输出文件
+                    async downloadOutputFile(fileName) {
+                        try {
+                            await http.download(`/api/tasks/video/${this.task.id}/files/${fileName}`, fileName);
+                        } catch (error) {
+                            layer.msg('下载文件失败', { icon: 2 });
+                        }
+                    },
+
+                    // 播放音频文件
+                    async playAudio(audioFile) {
+                        try {
+                            // 构建音频文件的访问URL
+                            const audioUrl = `/api/tasks/video/${this.task.id}/files/${audioFile.name}`;
+                            
+                            // 创建音频播放器弹窗
+                            layer.open({
+                                type: 1,
+                                title: '🎵 音频播放器',
+                                area: ['600px', '300px'],
+                                content: `
+                                    <div style="padding: 20px; text-align: center;">
+                                        <div style="margin-bottom: 20px;">
+                                            <h3 style="margin: 0; color: #333;">正在播放: ${audioFile.name}</h3>
+                                            <p style="margin: 10px 0; color: #666;">文件大小: ${this.formatFileSize(audioFile.size || 0)}</p>
+                                        </div>
+                                        <audio controls style="width: 100%; max-width: 500px;" preload="metadata" onloadstart="this.style.opacity='0.5'" oncanplay="this.style.opacity='1'">
+                                            <source src="${audioUrl}" type="audio/wav">
+                                            <source src="${audioUrl}" type="audio/mpeg">
+                                            您的浏览器不支持音频播放。
+                                        </audio>
+                                        <div style="margin-top: 20px; font-size: 12px; color: #999;">
+                                            支持的格式: MP3, WAV, AAC 等
+                                        </div>
+                                    </div>
+                                `,
+                                btn: ['下载音频', '关闭'],
+                                yes: (index) => {
+                                    this.downloadOutputFile(audioFile.name);
+                                },
+                                btn2: (index) => {
+                                    layer.close(index);
+                                }
+                            });
+                        } catch (error) {
+                            console.error('播放音频失败:', error);
+                            layer.msg('播放音频失败: ' + error.message, { icon: 2 });
+                        }
+                    },
+
+                    // 格式化文件大小
+                    formatFileSize(bytes) {
+                        if (bytes === 0) return '0 B';
+                        const k = 1024;
+                        const sizes = ['B', 'KB', 'MB', 'GB'];
+                        const i = Math.floor(Math.log(bytes) / Math.log(k));
+                        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                    },
+
+                    // 查看文件内容
+                    async viewFile(fileName) {
+                        try {
+                            const response = await http.get(`/api/tasks/video/${this.taskId}/files/${fileName}`, {
+                                responseType: 'text'
+                            });
+                            
+                            // 设置全屏查看内容
+                            this.fullscreenTitle = fileName;
+                            this.fullscreenContent = response;
+                            this.fullscreenType = 'file';
+                            this.fullscreenVisible = true;
+                        } catch (error) {
+                            console.error('查看文件失败:', error);
+                            layer.msg('查看文件失败: ' + error.message, { icon: 2 });
+                        }
+                    },
+
+                    // 导出文件为PDF
+                    async exportFileToPdf(fileName) {
+                        try {
+                            const loadingMsg = layer.msg('正在导出PDF...', { icon: 16, time: 0 });
+                            
+                            const response = await http.post(`/api/tasks/video/${this.taskId}/export-pdf`, {
+                                file_name: fileName
+                            });
+                            
+                            layer.close(loadingMsg);
+                            
+                            if (response.success !== false) {
+                                layer.msg('PDF导出成功', { icon: 1 });
+                                await this.downloadOutputFile(response.data.pdf_file_name);
+                            } else {
+                                layer.msg('PDF导出失败: ' + (response.error || '未知错误'), { icon: 2 });
+                            }
+                        } catch (error) {
+                            console.error('PDF导出失败:', error);
+                            layer.msg('PDF导出失败: ' + error.message, { icon: 2 });
+                        }
+                    },
+
+                    // 判断是否为Markdown文件
+                    isMarkdownFile(fileName) {
+                        return fileName.toLowerCase().endsWith('.md');
+                    },
+
+                    // 下载全部文件
+                    async downloadAll() {
+                        try {
+                            await http.download(`/api/tasks/video/${this.task.id}/download`, `${this.task.id}_all.zip`);
+                        } catch (error) {
+                            layer.msg('下载全部文件失败', { icon: 2 });
+                        }
+                    },
+
+                    // 下载关键帧文件
+                    async downloadKeyframes() {
+                        const keyframeFiles = this.displayFiles.keyframes;
+                        
+                        if (keyframeFiles.length === 0) {
+                            layer.msg('没有关键帧文件可下载', { icon: 0 });
+                            return;
+                        }
+
+                        if (keyframeFiles.length === 1) {
+                            // 只有一个文件，直接下载
+                            await this.downloadOutputFile(keyframeFiles[0].name);
+                        } else {
+                            // 多个文件，批量下载
+                            layer.confirm(`是否下载全部 ${keyframeFiles.length} 张关键帧图片？`, {
+                                icon: 3,
+                                title: '批量下载确认'
+                            }, async (index) => {
+                                layer.close(index);
+                                const loadingMsg = layer.msg('正在下载关键帧...', { icon: 16, time: 0 });
+                                
+                                try {
+                                    let downloadCount = 0;
+                                    for (const file of keyframeFiles) {
+                                        await this.downloadOutputFile(file.name);
+                                        downloadCount++;
+                                        
+                                        // 更新进度
+                                        layer.msg(`下载进度: ${downloadCount}/${keyframeFiles.length}`, { icon: 16, time: 1000 });
+                                        
+                                        // 添加小延迟避免过快请求
+                                        await new Promise(resolve => setTimeout(resolve, 200));
+                                    }
+                                    
+                                    layer.close(loadingMsg);
+                                    layer.msg(`成功下载 ${downloadCount} 张关键帧图片`, { icon: 1 });
+                                } catch (error) {
+                                    layer.close(loadingMsg);
+                                    layer.msg('批量下载失败: ' + error.message, { icon: 2 });
+                                }
+                            });
+                        }
+                    },
+
+                    // 下载Blob
+                    downloadBlob(blob, filename) {
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+
+                        layer.msg('下载成功', { icon: 1 });
+                    },
+
+                    // 转录文本相关方法
+                    segmentText(text) {
+                        if (!text) return [];
+                        
+                        // 智能分段算法
+                        const segments = [];
+                        let currentSegment = '';
+                        const lines = text.split('\n');
+                        
+                        for (const line of lines) {
+                            const trimmedLine = line.trim();
+                            if (!trimmedLine) {
+                                // 空行，如果当前段落不为空，则结束当前段落
+                                if (currentSegment.trim()) {
+                                    segments.push(currentSegment.trim());
+                                    currentSegment = '';
+                                }
+                                continue;
+                            }
+                            
+                            // 添加到当前段落
+                            currentSegment += (currentSegment ? '\n' : '') + trimmedLine;
+                            
+                            // 如果段落太长（超过500字符），尝试在句号后分段
+                            if (currentSegment.length > 500) {
+                                const sentences = currentSegment.split(/[。！？.!?]/);
+                                if (sentences.length > 1) {
+                                    // 保留前面的句子作为一个段落
+                                    const segmentText = sentences.slice(0, -1).join('。') + '。';
+                                    segments.push(segmentText.trim());
+                                    currentSegment = sentences[sentences.length - 1].trim();
+                                }
+                            }
+                        }
+                        
+                        // 添加最后一个段落
+                        if (currentSegment.trim()) {
+                            segments.push(currentSegment.trim());
+                        }
+                        
+                        // 如果没有合适的分段，按字符数强制分段
+                        if (segments.length === 0 && text.trim()) {
+                            const maxLength = 800;
+                            let start = 0;
+                            while (start < text.length) {
+                                let end = Math.min(start + maxLength, text.length);
+                                
+                                // 尝试在句号或标点符号处断开
+                                if (end < text.length) {
+                                    const nearEnd = text.substring(end - 50, end + 50);
+                                    const punctIndex = nearEnd.search(/[。！？.!?]/);
+                                    if (punctIndex !== -1) {
+                                        end = end - 50 + punctIndex + 1;
+                                    }
+                                }
+                                
+                                segments.push(text.substring(start, end).trim());
+                                start = end;
+                            }
+                        }
+                        
+                        return segments.filter(s => s.length > 0);
+                    },
+                    
+                    toggleSegmentView() {
+                        this.showSegments = !this.showSegments;
+                    },
+                    
+                    toggleTranscriptEdit() {
+                        if (this.isEditingTranscript) {
+                            // 保存模式
+                            this.saveTranscript();
+                        } else {
+                            // 编辑模式
+                            this.startEditTranscript();
+                        }
+                    },
+                    
+                    startEditTranscript() {
+                        this.originalTranscript = this.task.results.transcript;
+                        this.editedTranscript = this.task.results.transcript;
+                        this.isEditingTranscript = true;
+                        this.transcriptChanged = false;
+                        
+                        // 自动聚焦到文本域
+                        this.$nextTick(() => {
+                            const textarea = document.querySelector('.transcript-textarea');
+                            if (textarea) {
+                                textarea.focus();
+                            }
+                        });
+                    },
+                    
+                    onTranscriptChange() {
+                        this.transcriptChanged = this.editedTranscript !== this.originalTranscript;
+                    },
+
+                    // 键盘快捷键处理
+                    onKeyDown(event) {
+                        // Ctrl+S 保存
+                        if (event.ctrlKey && event.key === 's') {
+                            event.preventDefault();
+                            this.saveTranscript();
+                        }
+                        // Ctrl+Z 撤销（简单实现）
+                        if (event.ctrlKey && event.key === 'z') {
+                            event.preventDefault();
+                            this.undoText();
+                        }
+                    },
+
+                    // 格式化文本
+                    formatText() {
+                        if (!this.editedTranscript.trim()) {
+                            layer.msg('没有内容需要格式化', { icon: 0 });
+                            return;
+                        }
+
+                        // 简单的文本格式化
+                        let formatted = this.editedTranscript
+                            .replace(/\n\s*\n\s*\n/g, '\n\n') // 多个空行合并为双空行
+                            .replace(/\s+\n/g, '\n') // 行尾空格清理
+                            .replace(/\n\s+/g, '\n') // 行首空格清理
+                            .replace(/([。！？.!?])\s*([^。！？.!?\s])/g, '$1\n$2') // 句号后换行
+                            .trim();
+
+                        this.editedTranscript = formatted;
+                        this.onTranscriptChange();
+                        layer.msg('文本已格式化', { icon: 1 });
+                    },
+
+                    // 清空文本
+                    clearText() {
+                        layer.confirm('确定要清空所有内容吗？', {
+                            icon: 3,
+                            title: '确认清空'
+                        }, (index) => {
+                            this.editedTranscript = '';
+                            this.onTranscriptChange();
+                            layer.close(index);
+                            layer.msg('内容已清空', { icon: 1 });
+                        });
+                    },
+
+                    // 撤销文本（简单实现）
+                    undoText() {
+                        if (this.originalTranscript !== this.editedTranscript) {
+                            this.editedTranscript = this.originalTranscript;
+                            this.onTranscriptChange();
+                            layer.msg('已撤销', { icon: 1 });
+                        } else {
+                            layer.msg('没有可撤销的操作', { icon: 0 });
+                        }
+                    },
+                    
+                    async saveTranscript() {
+                        if (!this.transcriptChanged) {
+                            this.isEditingTranscript = false;
+                            return;
+                        }
+                        
+                        try {
+                            // 显示保存中状态
+                            const loadingMsg = layer.msg('保存中...', { icon: 16, time: 0 });
+                            
+                            // 调用后端API保存
+                            const response = await http.put(`/api/tasks/video/${this.taskId}/transcript`, {
+                                transcript: this.editedTranscript
+                            });
+                            
+                            layer.close(loadingMsg);
+                            
+                            if (response.success !== false) {
+                                // 更新本地数据
+                                this.task.results.transcript = this.editedTranscript;
+                                this.originalTranscript = this.editedTranscript;
+                                this.transcriptChanged = false;
+                                this.isEditingTranscript = false;
+                                
+                                layer.msg('保存成功', { icon: 1 });
+                            } else {
+                                layer.msg('保存失败: ' + (response.message || '未知错误'), { icon: 2 });
+                            }
+                        } catch (error) {
+                            console.error('保存转录文本失败:', error);
+                            layer.msg('保存失败: ' + error.message, { icon: 2 });
+                        }
+                    },
+
+                    // 加载转录文本分段
+                    async loadTranscriptSegments() {
+                        if (this.segmentsLoading || this.cachedSegments.length > 0) {
+                            return;
+                        }
+
+                        if (!this.task?.results?.transcript) {
+                            return;
+                        }
+
+                        try {
+                            this.segmentsLoading = true;
+
+                            const response = await http.post('/api/tasks/video/segment-text', {
+                                text: this.task.results.transcript,
+                                method: 'auto'  // 使用自动选择最佳分段方法
+                            });
+
+                            if (response.success !== false && response.segments) {
+                                this.cachedSegments = response.segments.map((seg, index) => ({
+                                    text: seg.text,
+                                    length: seg.length,
+                                    segment_type: seg.segment_type,
+                                    confidence: seg.confidence,
+                                    metadata: seg.metadata || {}
+                                }));
+                                
+                                console.log(`✅ 成功加载 ${this.cachedSegments.length} 个文本段落`);
+                                // 检测分段内容的滚动性
+                                this.checkSegmentScrollability();
+                                // 渲染数学公式
+                                this.renderMathAfterUpdate();
+                            } else {
+                                console.warn('后端分段失败，使用前端基础分段');
+                                // 回退到前端基础分段
+                                const segments = this.segmentText(this.task.results.transcript);
+                                this.cachedSegments = segments.map((text, index) => ({
+                                    text: text.trim(),
+                                    length: text.trim().length,
+                                    segment_type: "basic",
+                                    confidence: 0.8
+                                }));
+                                // 检测分段内容的滚动性
+                                this.checkSegmentScrollability();
+                                // 渲染数学公式
+                                this.renderMathAfterUpdate();
+                            }
+                        } catch (error) {
+                            console.error('加载文本分段失败:', error);
+                            // 回退到前端基础分段
+                            const segments = this.segmentText(this.task.results.transcript);
+                            this.cachedSegments = segments.map((text, index) => ({
+                                text: text.trim(),
+                                length: text.trim().length,
+                                segment_type: "basic",
+                                confidence: 0.8
+                            }));
+                            // 检测分段内容的滚动性
+                            this.checkSegmentScrollability();
+                            // 渲染数学公式
+                            this.renderMathAfterUpdate();
+                        } finally {
+                            this.segmentsLoading = false;
+                        }
+                    },
+
+                    // 获取分段类型显示文本
+                    getSegmentTypeText(type) {
+                        const typeMap = {
+                            'ai_optimized': 'AI优化',
+                            'sentence_group': '句群',
+                            'loading': '处理中',
+                            'basic': '基础',
+                            'paragraph': '段落'
+                        };
+                        return typeMap[type] || type;
+                    },
+
+                    // 获取置信度样式类
+                    getConfidenceClass(confidence) {
+                        if (confidence >= 0.8) return 'high';
+                        if (confidence >= 0.6) return 'medium';
+                        return 'low';
+                    },
+
+                    // 检测分段内容是否需要滚动
+                    checkSegmentScrollability() {
+                        this.$nextTick(() => {
+                            const segmentContents = document.querySelectorAll('.segment-content');
+                            segmentContents.forEach(content => {
+                                if (content.scrollHeight > content.clientHeight) {
+                                    content.classList.add('scrollable');
+                                } else {
+                                    content.classList.remove('scrollable');
+                                }
+                            });
+                        });
+                    },
+
+                    // 处理数学公式
+                    processMathFormulas(text) {
+                        return text
+                    },
+
+                    // 渲染数学公式
+                    renderMath() {
+                        if (window.MathJax && window.MathJax.typesetPromise) {
+                            window.MathJax.typesetPromise().then(() => {
+                                console.log('数学公式渲染完成');
+                            }).catch((err) => {
+                                console.error('数学公式渲染失败:', err);
+                            });
+                        }
+                    },
+
+                    // 在内容更新后渲染数学公式
+                    renderMathAfterUpdate() {
+                        this.$nextTick(() => {
+                            this.renderMath();
+                        });
+                    },
+
+                    // 预览数学公式
+                    previewMath() {
+                        if (!this.editedTranscript.trim()) {
+                            layer.msg('没有内容需要预览', { icon: 0 });
+                            return;
+                        }
+
+                        const mathPreview = this.processMathFormulas(this.editedTranscript);
+                        
+                        layer.open({
+                            type: 1,
+                            title: '🧮 数学公式预览',
+                            area: ['80%', '70%'],
+                            content: `
+                                <div style="padding: 20px; max-height: 500px; overflow-y: auto;">
+                                    <div class="math-preview" style="white-space: pre-wrap; line-height: 1.6;">
+                                        ${mathPreview}
+                                    </div>
+                                </div>
+                            `,
+                            success: () => {
+                                // 在弹窗中渲染数学公式
+                                setTimeout(() => {
+                                    this.renderMath();
+                                }, 100);
+                            },
+                            btn: ['关闭'],
+                            yes: function(index) {
+                                layer.close(index);
+                            }
+                        });
+                    },
+
+                    // 显示全屏内容卡片
+                    showFullscreenContentCard() {
+                        if (!this.task?.results?.content_card) {
+                            layer.msg('没有内容卡片可查看', { icon: 0 });
+                            return;
+                        }
+
+                        this.openFullscreen('内容卡片 - 全屏查看', this.task.results.content_card, 'content_card');
+                    },
+
+                    // 显示全屏处理报告
+                    showFullscreenProcessingReport() {
+                        if (!this.processingReport) {
+                            layer.msg('没有处理报告可查看', { icon: 0 });
+                            return;
+                        }
+
+                        this.openFullscreen('处理报告 - 全屏查看', this.processingReport, 'processing_report');
+                    },
+
+                    // 显示全屏内容摘要
+                    showFullscreenSummary() {
+                        if (!this.task?.results?.summary) {
+                            layer.msg('没有内容摘要可查看', { icon: 0 });
+                            return;
+                        }
+
+                        this.openFullscreen('内容摘要 - 全屏查看', this.task.results.summary, 'summary');
+                    },
+
+                    // 显示全屏思维导图
+                    showFullscreenMindmap() {
+                        if (!this.task?.results?.mindmap) {
+                            layer.msg('没有思维导图可查看', { icon: 0 });
+                            return;
+                        }
+
+                        this.openFullscreen('思维导图 - 全屏查看', this.task.results.mindmap, 'mindmap');
+                    },
+
+                    // 显示全屏学习学习闪卡
+                    showFullscreenFlashcards() {
+                        if (!this.task?.results?.flashcards) {
+                            layer.msg('没有学习学习闪卡可查看', { icon: 0 });
+                            return;
+                        }
+
+                        this.openFullscreen('学习学习闪卡 - 全屏查看', this.task.results.flashcards, 'flashcards');
+                    },
+
+                    // Vue 3方式打开全屏
+                    openFullscreen(title, content, type) {
+                        this.fullscreenTitle = title;
+                        this.fullscreenContent = content;
+                        this.fullscreenType = type;
+                        this.fullscreenVisible = true;
+                        
+                        // 禁止背景滚动
+                        document.body.style.overflow = 'hidden';
+                        
+                        // 渲染数学公式
+                        this.$nextTick(() => {
+                            this.renderMath();
+                        });
+                    },
+
+                    // 关闭全屏
+                    closeFullscreen() {
+                        this.fullscreenVisible = false;
+                        this.fullscreenTitle = '';
+                        this.fullscreenContent = '';
+                        this.fullscreenType = '';
+                        
+                        // 恢复背景滚动
+                        document.body.style.overflow = '';
+                    },
+
+                    // 下载全屏内容
+                    downloadFullscreenContent() {
+                        if (this.fullscreenType === 'content_card') {
+                            this.downloadContentCard();
+                        } else if (this.fullscreenType === 'summary') {
+                            this.downloadSummary();
+                        } else if (this.fullscreenType === 'mindmap') {
+                            this.downloadMindmap();
+                        } else if (this.fullscreenType === 'flashcards') {
+                            this.downloadFlashcards();
+                        } else if (this.fullscreenType === 'processing_report') {
+                            this.downloadProcessingReport();
+                        }
+                    },
+
+                    // 添加键盘事件监听
+                    addKeyboardListeners() {
+                        this.handleKeydown = (e) => {
+                            if (e.key === 'Escape' && this.fullscreenVisible) {
+                                this.closeFullscreen();
+                            }
+                        };
+                        document.addEventListener('keydown', this.handleKeydown);
+                    },
+
+                    // 移除键盘事件监听
+                    removeKeyboardListeners() {
+                        if (this.handleKeydown) {
+                            document.removeEventListener('keydown', this.handleKeydown);
+                        }
+                    },
+                }
+            }).mount('#app');
+        });
+    </script>
+</body>
+
+</html>

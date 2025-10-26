@@ -1,0 +1,104 @@
+/* SVG图标库 - 听语AI */
+/* 使用内联SVG图标，清新自然风格 */
+
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  vertical-align: middle;
+}
+
+.icon-sm { width: 14px; height: 14px; }
+.icon-md { width: 16px; height: 16px; }
+.icon-lg { width: 20px; height: 20px; }
+.icon-xl { width: 24px; height: 24px; }
+.icon-xxl { width: 32px; height: 32px; }
+
+/* 定义SVG图标库 */
+.svg-icons {
+  display: none;
+}
+
+/* 图标样式变体 */
+.icon-primary { color: var(--primary-color); }
+.icon-secondary { color: var(--secondary-color); }
+.icon-success { color: var(--success-color); }
+.icon-warning { color: var(--warning-color); }
+.icon-error { color: var(--error-color); }
+.icon-info { color: var(--info-color); }
+
+/* 图标动画 */
+.icon-spin {
+  animation: iconSpin 2s linear infinite;
+}
+
+.icon-pulse {
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+.icon-bounce {
+  animation: iconBounce 1s ease-in-out infinite;
+}
+
+@keyframes iconSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes iconPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes iconBounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-3px); }
+  60% { transform: translateY(-1px); }
+}
+
+/* 图标按钮 */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-medium);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: var(--border-light);
+  color: var(--primary-color);
+}
+
+.icon-btn.active {
+  background: var(--primary-color);
+  color: white;
+}
+
+/* 图标标签组合 */
+.icon-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.icon-label .icon {
+  flex-shrink: 0;
+}
+
+/* 彩色图标变体 */
+.icon-video { color: #ff6b6b; }
+.icon-audio { color: #4ecdc4; }
+.icon-text { color: #45b7d1; }
+.icon-ai { color: #96ceb4; }
+.icon-meeting { color: #feca57; }
+.icon-download { color: #48dbfb; }
+.icon-upload { color: #ff9ff3; }
+.icon-settings { color: #54a0ff; }

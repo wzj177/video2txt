@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+env/
+.venv
+.idea
+.codebuddy
+.cursor
+.DS_Store
+.promptx
+logs
+docs
+data
+URL_SUPPORT_GUIDE.md
+.vscode

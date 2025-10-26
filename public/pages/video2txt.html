@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>听语AI - 音视频转文本</title>
+    <link rel="icon" href="/favicon.ico">
+    <link href="/assets/js/layui/css/layui.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/common.css">
+    <link rel="stylesheet" href="/assets/css/icons.css">
+    <link rel="stylesheet" href="/assets/css/video2txt.css">
+</head>
+
+<body>
+    <div id="app" class="video2txt-container">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <a href="./" class="logo">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                        </svg>
+                        听语AI
+                    </a>
+                    <nav class="nav-menu">
+                        <a href="/dashboard" class="nav-item">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                            </svg>
+                            仪表盘
+                        </a>
+                        <a href="/video2txt" class="nav-item active">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path
+                                    d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z" />
+                            </svg>
+                            音视频转文本
+                        </a>
+                        <a href="/meeting2txt" class="nav-item">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path
+                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            实时会议记录
+                        </a>
+                        <a href="/settings" class="nav-item">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 15.5A3.5 3.5 0 018.5 12A3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0014 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" />
+                            </svg>
+                            设置
+                        </a>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要布局 -->
+        <div class="main-layout">
+            <!-- 任务列表核心内容 -->
+            <div class="tasks-container">
+                <!-- 页面标题和创建按钮 -->
+                <div class="tasks-header">
+                    <h1 class="tasks-title">音视频处理任务</h1>
+                    <button class="create-task-btn" @click="openCreatePage">
+                        <svg class="icon icon-md" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                        </svg>
+                        创建新任务
+                    </button>
+                </div>
+
+                <!-- 筛选器 -->
+                <div class="tasks-filters">
+                    <div class="filters-row">
+                        <!-- 状态筛选 -->
+                        <div class="filter-group">
+                            <label class="filter-label">状态筛选</label>
+                            <select v-model="filter" class="filter-select" @change="setFilter">
+                                <option value="all">全部状态</option>
+                                <option value="running">进行中</option>
+                                <option value="completed">已完成</option>
+                                <option value="failed">失败</option>
+                            </select>
+                        </div>
+
+                        <!-- 时间筛选 -->
+                        <div class="filter-group">
+                            <label class="filter-label">时间范围</label>
+                            <select v-model="timeFilter" class="filter-select" @change="onTimeFilterChange">
+                                <option value="all">全部时间</option>
+                                <option value="today">今天</option>
+                                <option value="yesterday">昨天</option>
+                                <option value="week">本周</option>
+                                <option value="month">本月</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+
+                        <!-- 自定义时间范围 -->
+                        <div v-if="timeFilter === 'custom'" class="filter-group">
+                            <label class="filter-label">开始时间</label>
+                            <input type="date" v-model="customStartDate" @change="onCustomDateChange"
+                                class="filter-select">
+                        </div>
+
+                        <div v-if="timeFilter === 'custom'" class="filter-group">
+                            <label class="filter-label">结束时间</label>
+                            <input type="date" v-model="customEndDate" @change="onCustomDateChange"
+                                class="filter-select">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 任务网格 -->
+                <div class="tasks-grid" v-if="currentPageTasks.length">
+                    <div v-for="task in currentPageTasks" :key="task.id" class="task-card"
+                        :class="{active: selectedTask?.id === task.id}" @click="selectTask(task)">
+                        <div class="task-card-header">
+                            <div class="task-card-title">{{ getTaskTitle(task) }}</div>
+                            <div class="task-card-status" :class="task.status">
+                                {{ getStatusText(task.status) }}
+                            </div>
+                        </div>
+
+                        <div class="task-card-meta">
+                            <span>{{ getTaskType(task) }}</span>
+                            <span>{{ task.config.model }}模型</span>
+                            <span v-if="task.task_type === 'audio'">{{ (task.media_duration || task.audio_duration) ? (task.media_duration || task.audio_duration).toFixed(2) : '--' }}秒</span>
+                            <span v-if="task.task_type === 'video'">{{ (task.media_duration || task.video_duration) ? (task.media_duration || task.video_duration).toFixed(2) : '--' }}秒</span>
+                            <span>{{ formatDate(task.created_at) }}</span>
+                        </div>
+
+                        <div v-if="task.status === 'running'" class="task-card-progress">
+                            <div class="progress-fill" :style="{width: task.progress + '%'}"></div>
+                        </div>
+
+                        <div class="task-card-actions">
+                            <button class="task-action-btn" @click.stop="viewTask(task)">
+                                查看详情
+                            </button>
+                            <button class="task-action-btn delete" @click.stop="deleteTask(task)">
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 空状态 -->
+                <div v-else class="empty-state">
+                    <div class="empty-icon">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                        </svg>
+                    </div>
+                    <h3>暂无任务</h3>
+                    <p>点击上方"创建新任务"按钮开始您的第一个音视频处理任务</p>
+                </div>
+
+                <!-- 分页控件 -->
+                <div v-if="totalPages > 0" class="pagination-container">
+                    <div class="pagination-info">
+                        共 {{ totalTasks }} 个任务，第 {{ currentPage }} / {{ totalPages }} 页
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="pagination-btn" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
+                            上一页
+                        </button>
+
+                        <!-- 页码按钮 -->
+                        <button v-for="page in visiblePages" :key="page" class="pagination-btn"
+                            :class="{active: page === currentPage}" @click="goToPage(page)">
+                            {{ page }}
+                        </button>
+
+                        <button class="pagination-btn" :disabled="currentPage === totalPages"
+                            @click="goToPage(currentPage + 1)">
+                            下一页
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <script src="/assets/js/vue.global.js"></script>
+    <script src="/assets/js/axios/axios.min.js"></script>
+    <script src="/assets/js/layui/layui.js"></script>
+    <script src="/assets/js/http.js"></script>
+    <script type="module">
+        const { createApp } = Vue;
+        layui.use(['layer'], () => {
+            createApp({
+                data() {
+                    return {
+                        tasks: [],
+                        selectedTask: null,
+                        filter: 'all',
+                        timeFilter: 'all',
+                        customStartDate: '',
+                        customEndDate: '',
+                        currentPage: 1,
+                        pageSize: 10,
+
+                    }
+                },
+
+                computed: {
+                    // 根据状态筛选任务
+                    filteredTasks() {
+                        let filtered = this.tasks;
+
+                        // 状态筛选
+                        if (this.filter !== 'all') {
+                            filtered = filtered.filter(task => task.status === this.filter);
+                        }
+
+                        // 时间筛选
+                        if (this.timeFilter !== 'all') {
+                            const now = new Date();
+                            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+                            switch (this.timeFilter) {
+                                case 'today':
+                                    filtered = filtered.filter(task => {
+                                        const taskDate = new Date(task.created_at);
+                                        return taskDate >= startOfDay && taskDate < endOfDay;
+                                    });
+                                    break;
+                                case 'yesterday':
+                                    const yesterdayStart = new Date(startOfDay);
+                                    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+                                    const yesterdayEnd = new Date(startOfDay);
+                                    filtered = filtered.filter(task => {
+                                        const taskDate = new Date(task.created_at);
+                                        return taskDate >= yesterdayStart && taskDate < yesterdayEnd;
+                                    });
+                                    break;
+                                case 'week':
+                                    const weekStart = new Date(startOfDay);
+                                    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // 本周开始
+                                    filtered = filtered.filter(task => {
+                                        const taskDate = new Date(task.created_at);
+                                        return taskDate >= weekStart;
+                                    });
+                                    break;
+                                case 'month':
+                                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                                    filtered = filtered.filter(task => {
+                                        const taskDate = new Date(task.created_at);
+                                        return taskDate >= monthStart;
+                                    });
+                                    break;
+                                case 'custom':
+                                    if (this.customStartDate && this.customEndDate) {
+                                        const customStart = new Date(this.customStartDate);
+                                        const customEnd = new Date(this.customEndDate);
+                                        customEnd.setDate(customEnd.getDate() + 1); // 包含结束日期
+                                        filtered = filtered.filter(task => {
+                                            const taskDate = new Date(task.created_at);
+                                            return taskDate >= customStart && taskDate < customEnd;
+                                        });
+                                    }
+                                    break;
+                            }
+                        }
+
+                        return filtered;
+                    },
+
+                    // 当前页的任务
+                    currentPageTasks() {
+                        const start = (this.currentPage - 1) * this.pageSize;
+                        const end = start + this.pageSize;
+                        return this.filteredTasks.slice(start, end);
+                    },
+
+                    // 总任务数
+                    totalTasks() {
+                        return this.filteredTasks.length;
+                    },
+
+                    // 总页数
+                    totalPages() {
+                        return Math.ceil(this.totalTasks / this.pageSize);
+                    },
+
+                    // 可见的页码
+                    visiblePages() {
+                        const pages = [];
+                        const maxVisible = 5;
+                        const start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+                        const end = Math.min(this.totalPages, start + maxVisible - 1);
+
+                        for (let i = start; i <= end; i++) {
+                            pages.push(i);
+                        }
+
+                        return pages;
+                    },
+
+
+                },
+
+                async mounted() {
+                    await this.loadTasks();
+
+                    // 将刷新方法暴露给全局，供子页面调用
+                    window.refreshTaskList = this.loadTasks;
+
+                    // 定期刷新任务列表
+                    setInterval(() => {
+                        this.loadTasks();
+                    }, 10000);
+                },
+
+                beforeUnmount() {
+                    // 清理SSE连接
+                    this.closeSSEConnection();
+                },
+
+                methods: {
+
+
+                    // 获取引擎显示名称
+                    getEngineDisplayName(engineType) {
+                        const engineMap = {
+                            'whisper': 'Whisper (OpenAI)',
+                            'faster_whisper': 'Whisper (OpenAI)',
+                            'sensevoice': 'SenseVoice (阿里)',
+                            'dolphin': 'Dolphin (方言专用)'
+                        };
+                        return engineMap[engineType] || engineType;
+                    },
+
+                    // 获取模型显示名称
+                    getModelDisplayName(model, engineType) {
+                        // 直接使用模型的name和size信息
+                        let displayName = model.name;
+                        if (engineType === 'whisper') {
+                            displayName = `whisper(${displayName})`
+                        }
+                        if (model.size) {
+                            displayName += ` (${model.size})`;
+                        }
+                        return displayName;
+                    },
+
+                    // 判断模型是否推荐
+                    isModelRecommended(model, language) {
+                        if (language === 'zh' && model.engineType === 'sensevoice') {
+                            return true;
+                        }
+                        if (language === 'en' && model.engineType.includes('whisper')) {
+                            return true;
+                        }
+                        if (language === 'dialect' && model.engineType === 'dolphin') {
+                            return true;
+                        }
+                        return false;
+                    },
+
+                    // 按厂商分组模型
+                    groupModelsByVendor(models) {
+                        const grouped = {};
+
+                        models.forEach(model => {
+                            const vendor = this.getEngineDisplayName(model.engineType);
+                            if (!grouped[vendor]) {
+                                grouped[vendor] = [];
+                            }
+
+                            // 添加推荐标记
+                            const recommended = this.isModelRecommended(model, this.formData.language);
+                            grouped[vendor].push({
+                                ...model,
+                                recommended,
+                                displayName: this.getModelDisplayName(model, model.engineType)
+                            });
+                        });
+
+                        // 对每个厂商内的模型进行排序：已安装的在前
+                        Object.keys(grouped).forEach(vendor => {
+                            grouped[vendor].sort((a, b) => {
+                                if (a.installed !== b.installed) {
+                                    return b.installed - a.installed;
+                                }
+                                return a.name.localeCompare(b.name);
+                            });
+                        });
+
+                        return grouped;
+                    },
+
+                    // 根据语言过滤和推荐模型
+                    filterModelsByLanguage(groupedModels, language) {
+                        const filtered = {};
+
+                        Object.entries(groupedModels).forEach(([vendor, models]) => {
+                            const filteredModels = models.filter(model => {
+                                // 检查语言支持
+                                if (language === 'auto') {
+                                    return true; // auto支持所有语言
+                                }
+
+                                // 检查模型是否支持指定语言
+                                if (model.supported_languages) {
+                                    if (Array.isArray(model.supported_languages)) {
+                                        return model.supported_languages.includes(language);
+                                    } else if (typeof model.supported_languages === 'object') {
+                                        return language in model.supported_languages;
+                                    }
+                                }
+
+                                return true; // 如果没有语言信息，默认支持
+                            });
+
+                            if (filteredModels.length > 0) {
+                                filtered[vendor] = filteredModels;
+                            }
+                        });
+
+                        return filtered;
+                    },
+                    preventDefaults(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    },
+
+                    handleDragEnter(e) {
+                        this.isDragOver = true;
+                        e.target.classList.add('dragover');
+                    },
+
+                    handleDragLeave(e) {
+                        this.isDragOver = false;
+                        e.target.classList.remove('dragover');
+                    },
+
+                    handleDrop(e) {
+                        this.isDragOver = false;
+                        e.target.classList.remove('dragover');
+
+                        const files = Array.from(e.dataTransfer.files);
+                        if (files.length > 0) {
+                            this.handleFileSelect(files[0]);
+                        }
+                    },
+
+                    // 处理文件选择
+                    handleFileSelect(file) {
+                        // 验证文件类型
+                        const validTypes = ['video/', 'audio/'];
+                        const isValid = validTypes.some(type => file.type.startsWith(type));
+
+                        if (!isValid) {
+                            alert('请选择音频或视频文件');
+                            return;
+                        }
+
+                        // 验证文件大小 (500MB限制)
+                        if (file.size > 500 * 1024 * 1024) {
+                            alert('文件大小不能超过500MB');
+                            return;
+                        }
+
+                        this.selectedFile = file;
+                        // this.smartLanguageDetection(file.name);
+                    },
+                    // 获取语言推荐
+                    getLanguageRecommendation(filename) {
+                        const lowerName = filename.toLowerCase();
+
+                        // 中文相关关键词
+                        const chineseKeywords = ['中文', '普通话', '国语', '中国', 'chinese', 'mandarin', 'cn', 'zh'];
+                        // 英文相关关键词  
+                        const englishKeywords = ['english', 'en', 'eng', '英文', '英语'];
+                        // 方言相关关键词
+                        const dialectKeywords = ['方言', '粤语', '闽南', '客家', '上海', '四川', 'dialect', 'cantonese'];
+
+                        if (chineseKeywords.some(keyword => lowerName.includes(keyword))) {
+                            return {
+                                language: 'zh',
+                                model: 'sensevoice',
+                                model_size: 'small',
+                                reason: '检测到中文内容，推荐使用SenseVoice模型'
+                            };
+                        }
+
+                        if (englishKeywords.some(keyword => lowerName.includes(keyword))) {
+                            return {
+                                language: 'en',
+                                model: 'whisper',
+                                model_size: 'large',
+                                reason: '检测到英文内容，推荐使用Whisper Large模型'
+                            };
+                        }
+
+                        if (dialectKeywords.some(keyword => lowerName.includes(keyword))) {
+                            return {
+                                language: 'dialect',
+                                model: 'dolphin',
+                                model_size: 'small',
+                                reason: '检测到方言内容，推荐使用Dolphin模型'
+                            };
+                        }
+
+                        return {
+                            language: 'auto',
+                            model: 'whisper',
+                            model_size: 'small',
+                            reason: '小型模型，平衡速度和精度，适合日常使用'
+                        };
+                    },
+                    async loadTasks() {
+                        try {
+                            // 构建查询参数
+                            const params = new URLSearchParams();
+
+                            // 状态筛选
+                            if (this.filter && this.filter !== 'all') {
+                                params.append('status', this.filter);
+                            }
+
+                            // 时间筛选
+                            if (this.timeFilter !== 'all') {
+                                params.append('time_filter', this.timeFilter);
+
+                                if (this.timeFilter === 'custom' && this.customStartDate && this.customEndDate) {
+                                    params.append('start_date', this.customStartDate);
+                                    params.append('end_date', this.customEndDate);
+                                }
+                            }
+
+                            // 分页参数
+                            params.append('page', this.currentPage);
+                            params.append('page_size', this.pageSize);
+
+                            const url = `/api/tasks/video?${params.toString()}`;
+                            const data = await http.get(url);
+                            console.log('tasks data:', data)
+                            // 如果API支持分页，使用API返回的数据
+                            if (data.tasks && data.total !== undefined) {
+                                this.tasks = data.tasks;
+                                // 这里可以添加总任务数的处理，如果API支持的话
+                            } else {
+                                // 否则使用前端分页
+                                this.tasks = Array.isArray(data) ? data : [];
+                            }
+
+                            // 如果当前选中的任务更新了，同步更新
+                            if (this.selectedTask) {
+                                const updated = this.tasks.find(t => t.id === this.selectedTask.id);
+                                if (updated) {
+                                    this.selectedTask = updated;
+                                }
+                            }
+
+                            // 确保当前页有效
+                            if (this.currentPage > this.totalPages && this.totalPages > 0) {
+                                this.currentPage = this.totalPages;
+                            }
+
+                        } catch (error) {
+                            console.error('加载任务列表失败:', error);
+                            this.tasks = [];
+                        }
+                    },
+
+                    selectTask(task) {
+                        this.selectedTask = task;
+                        if (task.status === 'running') {
+                            this.simulateProcessingLogs();
+                        }
+                    },
+
+                    async setFilter(filter) {
+                        this.filter = filter;
+                        this.currentPage = 1; // 重置到第一页
+                        await this.loadTasks();
+                    },
+
+                    // 时间筛选变化处理
+                    onTimeFilterChange() {
+                        this.currentPage = 1; // 重置到第一页
+                        // 如果是自定义时间，设置默认日期
+                        if (this.timeFilter === 'custom') {
+                            const today = new Date();
+                            const yesterday = new Date(today);
+                            yesterday.setDate(yesterday.getDate() - 7); // 默认显示最近7天
+
+                            this.customStartDate = yesterday.toISOString().split('T')[0];
+                            this.customEndDate = today.toISOString().split('T')[0];
+                        }
+                    },
+
+                    // 自定义日期变化处理
+                    onCustomDateChange() {
+                        this.currentPage = 1; // 重置到第一页
+                    },
+
+                    // 分页跳转
+                    goToPage(page) {
+                        if (page >= 1 && page <= this.totalPages) {
+                            this.currentPage = page;
+                            // 滚动到任务列表顶部
+                            const taskList = document.querySelector('.tasks-grid');
+                            if (taskList) {
+                                taskList.scrollTop = 0;
+                            }
+                        }
+                    },
+
+                    openCreatePage() {
+                        layui.layer.open({
+                            type: 2,
+                            title: '创建任务',
+                            offset: 'r',
+                            anim: 'slideLeft',
+                            shade: 0.1,
+                            shadeClose: true,
+                            content: `/task_create`,
+                            area: ['75%', '100%'],
+                            end: () => {
+                                this.loadTasks();
+                            }
+                        })
+                    },
+
+                    // 查看任务详情
+                    viewTask(task) {
+                        this.selectedTask = task;
+                        layui.layer.open({
+                            type: 2,
+                            title: '任务详情',
+                            offset: 'r',
+                            anim: 'slideLeft',
+                            shade: 0.1,
+                            shadeClose: true,
+                            content: `/task_detail?task_id=${task.id}`,
+                            area: ['80%', '100%']
+                        })
+                    },
+
+                    // 安全获取任务标题
+                    getTaskTitle(task) {
+                        if (!task) return '未知任务';
+                        // 优先显示用户设置的任务名称
+                        if (task.name) return task.name;
+                        if (task.input?.filename) return task.input.filename;
+                        if (task.input?.url) return task.input.url;
+                        return task.id || '未知任务';
+                    },
+
+                    // 安全获取任务类型
+                    getTaskType(task) {
+                        if (!task) return '未知';
+                        return task.task_type === 'video' ? '视频' : '音频';
+                    },
+
+                    // 删除任务
+                    deleteTask(task) {
+                        // 确认提示
+                        layer.confirm(`确认删除任务"${task.input?.filename || task.input?.url || task.id}"？\n删除之后会清理相关资源。`, {
+                            btn: ['确定', '关闭'] //按钮
+                        }, async () => {
+                            try {
+                                await http.delete(`/api/tasks/video/${task.id}`);
+
+                                // 如果删除的是当前选中的任务，清除选中状态
+                                if (this.selectedTask?.id === task.id) {
+                                    this.selectedTask = null;
+                                }
+
+                                // 刷新任务列表
+                                await this.loadTasks();
+
+                                layer.msg('任务删除成功', { icon: 1 });
+                            } catch (error) {
+                                console.error('删除任务失败:', error);
+                                layer.msg('删除任务失败: ' + (error.message || '未知错误'), { icon: 2 });
+                            }
+                        }, function () { });
+
+                    },
+                    // 新增：SSE连接管理
+                    startSSEConnection(taskId) {
+                        // 关闭之前的连接
+                        this.closeSSEConnection();
+
+                        // 创建新的SSE连接 - 这是大模型SSE Chat的核心
+                        this.eventSource = new EventSource(`/api/tasks/video/${taskId}/stream`);
+
+                        // 监听进度更新事件
+                        this.eventSource.addEventListener('progress', (event) => {
+                            const data = JSON.parse(event.data);
+                            this.updateTaskProgress(taskId, data);
+                        });
+
+                        // 监听日志事件 - 实时显示处理步骤
+                        this.eventSource.addEventListener('log', (event) => {
+                            const data = JSON.parse(event.data);
+                            this.addProcessingLog(data);
+                        });
+
+                        // 监听中间结果事件 - 显示部分处理结果
+                        this.eventSource.addEventListener('partial_result', (event) => {
+                            const data = JSON.parse(event.data);
+                            this.updatePartialResults(data);
+                        });
+
+                        // 监听完成事件
+                        this.eventSource.addEventListener('complete', (event) => {
+                            const data = JSON.parse(event.data);
+                            this.completeTask(taskId, data);
+                            this.closeSSEConnection();
+                        });
+
+                        // 监听错误事件
+                        this.eventSource.addEventListener('error', (event) => {
+                            console.error('SSE连接错误:', event);
+                            this.closeSSEConnection();
+                        });
+
+                        // 连接关闭事件
+                        this.eventSource.onclose = () => {
+                            console.log('SSE连接已关闭');
+                        };
+                    },
+
+                    closeSSEConnection() {
+                        if (this.eventSource) {
+                            this.eventSource.close();
+                            this.eventSource = null;
+                        }
+                    },
+
+                    // 更新任务进度 - SSE Chat的实时反馈
+                    updateTaskProgress(taskId, data) {
+                        const task = this.tasks.find(t => t.id === taskId);
+                        if (task) {
+                            task.progress = data.progress;
+                            task.status = data.status;
+                            task.current_step = data.current_step;
+
+                            // 如果当前选中的是这个任务，更新显示
+                            if (this.selectedTask && this.selectedTask.id === taskId) {
+                                this.selectedTask = { ...task };
+                            }
+                        }
+                    },
+
+                    // 添加处理日志 - 类似ChatGPT的流式文本显示
+                    addProcessingLog(logData) {
+                        const log = {
+                            id: Date.now() + Math.random(),
+                            timestamp: Date.now(),
+                            message: logData.message,
+                            level: logData.level || 'info',
+                            step: logData.step
+                        };
+
+                        this.processingLogs.push(log);
+
+                        // 自动滚动到最新日志
+                        this.$nextTick(() => {
+                            const logsContainer = document.querySelector('.processing-logs');
+                            if (logsContainer) {
+                                logsContainer.scrollTop = logsContainer.scrollHeight;
+                            }
+                        });
+                    },
+
+                    // 更新部分结果 - 实时显示中间处理结果
+                    updatePartialResults(data) {
+                        if (this.selectedTask) {
+                            // 更新转录文本（流式显示）
+                            if (data.transcript_chunk) {
+                                if (!this.selectedTask.partial_transcript) {
+                                    this.selectedTask.partial_transcript = '';
+                                }
+                                this.selectedTask.partial_transcript += data.transcript_chunk;
+                            }
+
+                            // 更新AI分析进度
+                            if (data.analysis_progress) {
+                                this.selectedTask.analysis_progress = data.analysis_progress;
+                            }
+                        }
+                    },
+
+                    // 任务完成处理
+                    completeTask(taskId, data) {
+                        const task = this.tasks.find(t => t.id === taskId);
+                        if (task) {
+                            task.status = 'completed';
+                            task.progress = 100;
+                            task.results = data.results;
+                            task.output_files = data.output_files;
+
+                            if (this.selectedTask && this.selectedTask.id === taskId) {
+                                this.selectedTask = { ...task };
+                            }
+
+                            // 添加完成日志
+                            this.addProcessingLog({
+                                message: '🎉 处理完成！所有文件已生成',
+                                level: 'success'
+                            });
+                        }
+                    },
+
+                    getStatusText(status) {
+                        const statusMap = {
+                            pending: '等待中',
+                            running: '处理中',
+                            completed: '已完成',
+                            failed: '失败'
+                        };
+                        return statusMap[status] || status;
+                    },
+
+                    getProcessingMessage(progress) {
+                        if (progress < 20) return '正在分析音视频文件...';
+                        if (progress < 40) return '正在提取音频数据...';
+                        if (progress < 60) return '正在进行语音识别...';
+                        if (progress < 80) return '正在生成AI分析...';
+                        return '正在生成最终结果...';
+                    },
+
+
+
+                    formatDate(dateString) {
+                        if (!dateString) return '';
+                        const date = new Date(dateString);
+                        return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                    },
+
+                    // 显示错误消息
+                    showErrorMessage(message) {
+                        // 使用layui的消息提示
+                        if (typeof layui !== 'undefined' && layui.layer) {
+                            layui.layer.msg(message, { icon: 2, time: 3000 });
+                        } else {
+                            // 备用方案：使用alert
+                            alert(message);
+                        }
+                    },
+
+                    formatTime(timestamp) {
+                        const date = new Date(timestamp);
+                        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+                    },
+
+                    async downloadTranscript() {
+                        if (this.selectedTask?.results?.transcript) {
+                            const blob = new Blob([this.selectedTask.results.transcript], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.selectedTask.id}_transcript.txt`);
+                        }
+                    },
+
+                    async downloadSummary() {
+                        if (this.selectedTask?.results?.summary) {
+                            const blob = new Blob([this.selectedTask.results.summary], { type: 'text/plain' });
+                            this.downloadBlob(blob, `${this.selectedTask.id}_summary.txt`);
+                        }
+                    },
+
+                    async downloadFile(file) {
+                        try {
+                            await http.download(`/api/tasks/video/${this.selectedTask.id}/files/${file.name}`, file.name);
+                        } catch (error) {
+                            console.error('下载文件失败:', error);
+                        }
+                    },
+
+                    async downloadAll() {
+                        try {
+                            await http.download(`/api/tasks/video/${this.selectedTask.id}/download`, `${this.selectedTask.id}_all.zip`);
+                        } catch (error) {
+                            console.error('下载全部文件失败:', error);
+                        }
+                    },
+
+                    downloadBlob(blob, filename) {
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    }
+                }
+            }).mount('#app');
+        })
+    </script>
+</body>
+
+</html>
