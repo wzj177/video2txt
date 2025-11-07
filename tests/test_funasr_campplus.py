@@ -125,6 +125,7 @@ if res and 'sentence_info' in res[0]:
 else:
     print("错误或警告：未能从ASR结果中获取 'sentence_info'。")
 
+
 final_sentences = merge_results(sentence_list, speaker_info)
 srt_output = to_srt(final_sentences)
 

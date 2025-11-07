@@ -14,3 +14,4 @@ docs
 data
 URL_SUPPORT_GUIDE.md
 .vscode
+tests/models

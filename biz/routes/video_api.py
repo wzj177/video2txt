@@ -863,14 +863,18 @@ def _select_best_model_for_language(language: str, available_engines: List[str])
     Returns:
         推荐的模型名称
     """
-    # 定义语言到模型的优先级映射 (与前端modelOptions保持一致)
+    # 定义语言到模型的优先级映射 (与前端保持一致)
     language_model_priority = {
-        "zh": ["sensevoice", "whisper-large", "whisper"],  # 中文优先SenseVoice
-        "en": ["whisper-large", "whisper", "sensevoice"],  # 英文优先Whisper
+        "zh": ["sensevoice", "whisper", "faster_whisper"],  # 中文优先SenseVoice
+        "en": [
+            "faster_whisper",
+            "whisper",
+            "sensevoice",
+        ],  # 英文优先Faster-Whisper (速度快)
         "dialect": ["dolphin", "sensevoice", "whisper"],  # 方言优先Dolphin
         "auto": [
-            "whisper-large",
             "sensevoice",
+            "faster_whisper",
             "whisper",
             "dolphin",
         ],  # 自动检测的通用优先级

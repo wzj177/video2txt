@@ -883,6 +883,20 @@
                                 <span class="feature-label">性能优势:</span>
                                 <span class="feature-value">{{ model.performance }}</span>
                             </div>
+                            <div v-if="model.supported_devices" class="feature-item">
+                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                    <path d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/>
+                                </svg>
+                                <span class="feature-label">支持设备:</span>
+                                <span class="feature-value">{{ Array.isArray(model.supported_devices) ? model.supported_devices.join('、') : model.supported_devices }}</span>
+                            </div>
+                            <div v-if="model.compute_types" class="feature-item">
+                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                    <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+                                </svg>
+                                <span class="feature-label">计算类型:</span>
+                                <span class="feature-value">{{ Array.isArray(model.compute_types) ? model.compute_types.join('、') : model.compute_types }}</span>
+                            </div>
                         </div>
 
                         <div v-if="model.status === 'installed' && model.localPath" class="model-path">
@@ -1106,6 +1120,30 @@
                                 type: 'whisper',
                                 modelName: model.config_key || model.name, // 使用配置键名
                                 localPath: model.local_path,
+                                currentStep: '',
+                                taskId: null,
+                                eventSource: null
+                            });
+                        });
+                    }
+
+                    // 处理 Faster-Whisper 模型
+                    if (data.faster_whisper) {
+                        data.faster_whisper.forEach(model => {
+                            this.whisperModels.push({
+                                name: model.name,
+                                size: model.size,
+                                description: model.description,
+                                status: model.installed ? 'installed' : 'not-installed',
+                                progress: model.installed ? 100 : 0,
+                                type: 'faster_whisper',
+                                modelName: model.config_key || model.name,
+                                localPath: model.local_path,
+                                // Faster-Whisper 特有字段
+                                features: model.features,
+                                performance: model.performance,
+                                supported_devices: model.supported_devices,
+                                compute_types: model.compute_types,
                                 currentStep: '',
                                 taskId: null,
                                 eventSource: null

@@ -21,20 +21,38 @@ class FasterWhisperEngine(BaseVoiceEngine):
         try:
             from faster_whisper import WhisperModel
 
-            logger.info(f"🚀 初始化FasterWhisper - 模型: {self.config.whisper_model}")
+            # 支持字典和对象两种配置格式
+            if isinstance(self.config, dict):
+                whisper_model = self.config.get(
+                    "whisper_model", self.config.get("model_size", "small")
+                )
+                device = self.config.get("device", "auto")
+                chinese_optimized = self.config.get("chinese_optimized", False)
+                preferred_chinese_model = self.config.get(
+                    "preferred_chinese_model", "medium"
+                )
+            else:
+                whisper_model = getattr(self.config, "whisper_model", "small")
+                device = getattr(self.config, "device", "auto")
+                chinese_optimized = getattr(self.config, "chinese_optimized", False)
+                preferred_chinese_model = getattr(
+                    self.config, "preferred_chinese_model", "medium"
+                )
+
+            logger.info(f"🚀 初始化FasterWhisper - 模型: {whisper_model}")
 
             # 如果是中文优化，使用更大的模型
-            whisper_model = self.config.whisper_model
-            if self.config.chinese_optimized:
-                whisper_model = self.config.preferred_chinese_model
+            if chinese_optimized:
+                whisper_model = preferred_chinese_model
 
             # 智能选择计算类型
             compute_type = self._get_optimal_compute_type()
 
             self.model = WhisperModel(
                 whisper_model,
-                device=self.config.device,
+                device=device,
                 compute_type=compute_type,
+                local_files_only=False,  # 允许在线下载模型
             )
 
             self.initialized = True
@@ -53,13 +71,20 @@ class FasterWhisperEngine(BaseVoiceEngine):
         try:
             import torch
 
+            # 支持字典和对象两种配置格式
+            device = (
+                self.config.get("device", "auto")
+                if isinstance(self.config, dict)
+                else getattr(self.config, "device", "auto")
+            )
+
             # 如果是CPU或者不支持float16，使用int8或float32
-            if self.config.device == "cpu":
+            if device == "cpu":
                 logger.info("🔧 CPU设备，使用int8计算类型")
                 return "int8"
 
             # 检查CUDA是否支持float16
-            if self.config.device == "cuda" or self.config.device == "auto":
+            if device == "cuda" or device == "auto":
                 try:
                     # 测试是否支持float16
                     device = torch.device(
@@ -125,6 +150,18 @@ class FasterWhisperEngine(BaseVoiceEngine):
 
             processing_time = time.time() - start_time
 
+            # 支持字典和对象两种配置格式
+            whisper_model = (
+                self.config.get("whisper_model", self.config.get("model_size", "small"))
+                if isinstance(self.config, dict)
+                else getattr(self.config, "whisper_model", "small")
+            )
+            device = (
+                self.config.get("device", "auto")
+                if isinstance(self.config, dict)
+                else getattr(self.config, "device", "auto")
+            )
+
             return {
                 "text": full_text.strip(),
                 "segments": result_segments,
@@ -132,8 +169,8 @@ class FasterWhisperEngine(BaseVoiceEngine):
                 "language_probability": info.language_probability,
                 "duration": info.duration,
                 "processing_time": processing_time,
-                "model": f"faster-whisper-{self.config.whisper_model}",
-                "device": self.config.device,
+                "model": f"faster-whisper-{whisper_model}",
+                "device": device,
             }
 
         except Exception as e:
@@ -142,6 +179,18 @@ class FasterWhisperEngine(BaseVoiceEngine):
 
     def get_engine_info(self) -> Dict[str, Any]:
         """获取引擎信息"""
+        # 支持字典和对象两种配置格式
+        if isinstance(self.config, dict):
+            model_size = self.config.get(
+                "whisper_model", self.config.get("model_size", "small")
+            )
+            device = self.config.get("device", "auto")
+            compute_type = self.config.get("compute_type", "float16")
+        else:
+            model_size = getattr(self.config, "whisper_model", "small")
+            device = getattr(self.config, "device", "auto")
+            compute_type = getattr(self.config, "compute_type", "float16")
+
         return {
             "name": "FasterWhisper",
             "version": "unknown",
@@ -157,9 +206,9 @@ class FasterWhisperEngine(BaseVoiceEngine):
                 "es",
                 "ru",
             ],
-            "model_size": getattr(self.config, "whisper_model", "small"),
-            "device": getattr(self.config, "device", "auto"),
-            "compute_type": getattr(self.config, "compute_type", "float16"),
+            "model_size": model_size,
+            "device": device,
+            "compute_type": compute_type,
             "initialized": self.initialized,
             "features": ["高性能优化", "GPU加速", "内存优化", "批处理支持"],
         }

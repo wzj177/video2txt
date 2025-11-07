@@ -369,10 +369,6 @@
                                 <i class="layui-icon layui-icon-screen-full"></i>
                                 全屏
                             </button>
-                            <button class="action-btn" @click="exportSummaryToWord" title="导出word">
-                                <i class="layui-icon layui-icon-file"></i>
-                                word
-                            </button>
                             <button class="download-btn" @click="downloadSummary">下载</button>
                         </div>
                     </div>
@@ -424,7 +420,7 @@
             <div v-if="displayFiles && displayFiles.length > 0" class="result-card">
                 <div class="result-header">
                     <div class="result-title">📁 输出文件</div>
-                    <button class="download-btn" @click="downloadAll">下载全部</button>
+<!--                    <button class="download-btn" @click="downloadAll">下载全部</button>-->
                 </div>
                 <div class="file-list">
                     <!-- 普通文件 -->
@@ -437,7 +433,7 @@
                             <span class="file-name">{{ file.name }}</span>
                             <!-- 悬停操作按钮 -->
                             <div class="file-actions">
-                                <button class="file-action-btn" @click.stop="viewFile(file.name)" title="查看">
+                                <button class="file-action-btn" @click.stop="viewFile(file.name)" title="查看" v-if="file.name !== '原始转录.json'">
                                     <i class="layui-icon layui-icon-eye"></i>
                                 </button>
                                 <button class="file-action-btn" @click.stop="exportFileToWord(file.name)"

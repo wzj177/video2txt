@@ -1102,7 +1102,8 @@ class VideoProcessor:
                 content_role,
                 analysis_result,
                 ai_output_types,
-                ai_prompts,  # 🆕 传递AI提示词信息
+                ai_prompts,  # 传递AI提示词信息
+                config,  # 🆕 传递配置信息
             )
             report_file.write_text(report_content, encoding="utf-8")
             files.append(
@@ -1843,7 +1844,8 @@ class VideoProcessor:
         content_role: str = None,
         analysis_result: Dict[str, Any] = None,
         ai_output_types: List[str] = None,
-        ai_prompts: Dict[str, Dict[str, str]] = None,  # 新增：AI提示词信息
+        ai_prompts: Dict[str, Dict[str, str]] = None,  # AI提示词信息
+        config: Dict[str, Any] = None,  # 新增：配置信息
     ) -> str:
         """生成处理报告"""
         word_count = len(transcript_text) if transcript_text else 0
@@ -1999,12 +2001,32 @@ class VideoProcessor:
                     report += f"\n**AI增强状态**: {enhancement_status}"
 
         # 技术参数部分
+        # 动态获取当前引擎名称
+        current_engine = voice_core.get_current_engine_name()
+
+        # 动态获取当前设备信息
+        current_device = getattr(voice_core.config, "device", "cpu").upper()
+        device_map = {"CPU": "CPU", "CUDA": "GPU (CUDA)", "AUTO": "自动检测"}
+        device_display = device_map.get(current_device, current_device)
+
+        # 从配置中获取语言信息
+        language = "中文 (zh)"  # 默认值
+        if config:
+            lang_code = config.get("language", "zh")
+            language_map = {
+                "zh": "中文 (zh)",
+                "en": "英文 (en)",
+                "auto": "自动检测 (auto)",
+                "dialect": "方言 (dialect)",
+            }
+            language = language_map.get(lang_code, f"{lang_code}")
+
         report += f"""
 
 ## 技术参数
-- 语音识别引擎: SenseVoice
-- 处理设备: CPU
-- 语言: 中文 (zh)"""
+- 语音识别引擎: {current_engine}
+- 处理设备: {device_display}
+- 语言: {language}"""
 
         # 如果有分析结果，添加提示词信息
         if analysis_result:

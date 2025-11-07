@@ -309,7 +309,7 @@
                     languageOptions: [
                         // {label: '自动检测', value: 'auto', disabled: false},
                         {label: '中文', value: 'zh', disabled: false},
-                        {label: '英语（暂不支持）', value: 'en', disabled: true},
+                        {label: '英语', value: 'en', disabled: false},
                         {label: '方言', value: 'dialect', disabled: false}
                     ],
                     languageRecommendation: {
@@ -526,11 +526,21 @@
                 },
 
                 onLanguageChange() {
-                    const models = this.availableModels;
-                    if (models.length > 0) {
-                        const recommended = models.find(m => m.label && m.label.includes('推荐'));
-                        this.formData.model = recommended ? recommended.value : models[0].value;
+                    // 根据语言选择推荐模型
+                    const languageModelMap = {
+                        'zh': 'sensevoice-small',
+                        'en': 'faster_whisper-small',
+                        'dialect': 'dolphin-small',
+                        'auto': 'sensevoice-small'
+                    };
+                    
+                    const recommendedModel = languageModelMap[this.formData.language];
+                    if (recommendedModel) {
+                        const [model, modelSize] = recommendedModel.split('-');
+                        this.formData.model = model;
+                        this.formData.modelSize = modelSize;
                     }
+                    
                     this.showLanguageRecommendation();
                 },
 
@@ -549,7 +559,7 @@
                 showLanguageRecommendation() {
                     const languageMap = {
                         'zh': {text: '已切换到中文模式', model: '推荐使用 SenseVoice 模型，对中文识别效果更佳'},
-                        'en': {text: '已切换到英文模式', model: '推荐使用 Whisper Large 模型，对英文识别效果更佳'},
+                        'en': {text: '已切换到英文模式', model: '推荐使用 Faster-Whisper Small 模型，速度快且精度高'},
                         'dialect': {text: '已切换到方言模式', model: '推荐使用 Dolphin 模型，对方言识别效果更佳'},
                         'auto': {text: '已切换到自动检测模式', model: '系统将自动选择最适合的识别模型'}
                     };
