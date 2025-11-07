@@ -54,6 +54,14 @@ async def video2txt():
     else:
         return HTMLResponse("<h1>听语AI - 视频转文字页面未找到</h1>", status_code=404)
 
+@pages_router.get("/mindmap", response_class=HTMLResponse)
+async def mindmap():
+    """思维导图页面"""
+    mindmap_file = PUBLIC_DIR / "pages" / "mindmap.html"
+    if mindmap_file.exists():
+        return FileResponse(mindmap_file)
+    else:
+        return HTMLResponse("<h1>听语AI - 思维导图页面未找到</h1>", status_code=404)
 
 @pages_router.get("/task_create", response_class=HTMLResponse)
 async def task_create():

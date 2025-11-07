@@ -48,10 +48,10 @@ class VoiceEngineConfig:
                 logger.info("🚀 检测到CUDA，使用GPU加速")
             else:
                 self.device = "cpu"
-                logger.info("🔧 使用CPU处理")
+                logger.info("使用CPU处理")
         except ImportError:
             self.device = "cpu"
-            logger.info("🔧 PyTorch未安装，使用CPU处理")
+            logger.info("PyTorch未安装，使用CPU处理")
 
     def optimize_for_chinese(self):
         """优化中文识别配置"""

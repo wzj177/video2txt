@@ -125,10 +125,10 @@ _queue_manager = None
 
 
 async def start_queue_system():
-    """启动SQLite队列系统 - 简化版本"""
+    """启动SQLite队列系统"""
     global _queue_manager
 
-    logger.info("✅ 使用SQLite队列系统（零依赖，适合个人PC）")
+    logger.info("使用SQLite队列系统")
     try:
         # 导入任务以注册到队列
         from biz.tasks import video_tasks, meeting_tasks
@@ -143,18 +143,18 @@ async def start_queue_system():
                 worker_count=2,
                 queue_names=["video_processing", "meeting_processing", "default"],
             )
-            logger.info("✅ SQLite Worker已启动（2个工作进程）")
+            logger.info("SQLite Worker已启动")
         else:
-            logger.info("✅ SQLite Worker已在运行")
+            logger.info("SQLite Worker已在运行")
 
         # 显示队列统计
         stats = manager.get_queue_stats()
-        logger.info(f"📊 队列统计: 总任务 {stats.get('total', 0)}")
-        logger.info("🚀 系统已启用零依赖异步任务处理")
+        logger.info(f"队列统计: 总任务 {stats.get('total', 0)}")
+        logger.info("系统已启用零依赖异步任务处理")
 
     except Exception as e:
         logger.error(f"SQLite队列系统启动失败: {e}")
-        logger.info("🔄 系统将使用同步处理模式")
+        logger.info("系统将使用同步处理模式")
 
 
 async def stop_queue_system():
@@ -163,9 +163,9 @@ async def stop_queue_system():
     try:
         if _queue_manager and _queue_manager.running:
             _queue_manager.stop_workers()
-            logger.info("✅ SQLite队列系统已停止")
+            logger.info("SQLite队列系统已停止")
         else:
-            logger.info("ℹ️  队列系统已停止或未启动")
+            logger.info("队列系统已停止或未启动")
     except Exception as e:
         logger.error(f"停止队列系统失败: {e}")
 
@@ -191,18 +191,18 @@ async def lifespan(app: FastAPI):
     logger.info("📁 正在更新存储路径配置...")
     try:
         update_storage_config()
-        logger.info("✅ 存储路径配置完成")
+        logger.info("存储路径配置完成")
     except Exception as e:
-        logger.error(f"❌ 存储路径配置失败: {e}")
+        logger.error(f"存储路径配置失败: {e}")
         # 不抛出异常，继续启动
 
     # 启动时初始化数据库
     logger.info("🗄️  正在初始化数据库...")
     try:
         await init_database()
-        logger.info("✅ 数据库初始化完成")
+        logger.info("数据库初始化完成")
     except Exception as e:
-        logger.error(f"❌ 数据库初始化失败: {e}")
+        logger.error(f"数据库初始化失败: {e}")
         raise
 
     # 智能队列系统启动
@@ -212,16 +212,16 @@ async def lifespan(app: FastAPI):
     yield
 
     # 关闭时清理队列系统
-    logger.info("🛑 正在关闭队列系统...")
+    logger.info("正在关闭队列系统...")
     await stop_queue_system()
 
     # 关闭时清理数据库连接
-    logger.info("🗄️  正在关闭数据库连接...")
+    logger.info("正在关闭数据库连接...")
     try:
         await close_database()
-        logger.info("✅ 数据库连接已关闭")
+        logger.info("数据库连接已关闭")
     except Exception as e:
-        logger.error(f"❌ 关闭数据库连接失败: {e}")
+        logger.error(f"关闭数据库连接失败: {e}")
 
 
 # 创建FastAPI应用
@@ -290,29 +290,29 @@ if __name__ == "__main__":
     def open_browser():
         """延迟1秒后打开浏览器"""
         time.sleep(1)
-        print(f"🌐 正在打开浏览器: {url}")
+        print(f" 正在打开浏览器: {url}")
         try:
             webbrowser.open(url)
         except Exception as e:
-            print(f"❌ 无法自动打开浏览器: {e}")
-            print(f"📱 请手动访问: {url}")
+            print(f" 无法自动打开浏览器: {e}")
+            print(f" 请手动访问: {url}")
 
     # 启动浏览器线程
     browser_thread = threading.Thread(target=open_browser, daemon=True)
     browser_thread.start()
 
     print(f"🚀 听语AI 启动中...")
-    print(f"📍 服务地址: {url}")
-    print(f"📚 API文档: {url}/docs")
+    print(f"服务地址: {url}")
+    # print(f"API文档: {url}/docs")
 
     # 显示使用提示
     print("\n📖 功能说明:")
-    print("  🎬 视频转文字：支持MP4、AVI等视频格式")
-    print("  🎵 音频转文字：支持MP3、WAV等音频格式")
-    print("  🔗 URL处理：支持在线视频链接")
-    print("  📝 智能摘要：AI生成内容摘要")
-    print("  📄 多格式输出：文本、字幕、记忆卡片等")
-    print(f"\n🛑 按 Ctrl+C 停止服务")
+    print("  视频转文字：支持MP4、AVI等视频格式")
+    print("  音频转文字：支持MP3、WAV等音频格式")
+    print("  URL处理：支持在线视频链接")
+    print("  智能摘要：AI生成内容摘要")
+    print("  多格式输出：文本、字幕、记忆卡片等")
+    print(f"\n 按 Ctrl+C 停止服务")
 
     try:
         uvicorn.run(app, host=host, port=port, reload=False)

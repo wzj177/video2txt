@@ -136,3 +136,7 @@ torch>=2.0.0
 torchaudio>=2.0.0
 
 git+https://github.com/wzj177/Dolphin.git
+
+
+# pyinstaller
+pyinstaller>=6.16.0

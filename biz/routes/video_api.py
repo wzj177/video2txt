@@ -973,33 +973,33 @@ async def list_output_files(task_id: str):
         return create_error_response(f"获取文件列表失败: {str(e)}")
 
 
-@video_router.post("/{task_id}/export-pdf")
-async def export_md_to_pdf(
+@video_router.post("/{task_id}/export-word")
+async def export_md_to_word(
     task_id: str, file_name: str = Body(..., embed=True)
 ) -> Dict[str, Any]:
-    """导出MD文件为PDF"""
+    """导出MD文件为word"""
     try:
         # 检查任务是否存在
         task = await task_service.get_task_by_id("av", task_id)
         if not task:
             raise HTTPException(status_code=404, detail="任务未找到")
 
-        # 导入PDF导出服务
-        from ..services.pdf_export_service import pdf_export_service
+        # 导入word导出服务
+        from ..services.doc_export_service import word_export_service
 
-        # 执行PDF导出
-        result = await pdf_export_service.export_md_to_pdf(task_id, file_name)
+        # 执行word导出
+        result = await word_export_service.export_md_to_word(task_id, file_name)
 
         if result["success"]:
-            return create_success_response(result["data"], "PDF导出成功")
+            return create_success_response(result["data"], "word导出成功")
         else:
             raise HTTPException(status_code=500, detail=result["error"])
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"PDF导出失败: {e}")
-        return create_error_response(f"PDF导出失败: {str(e)}")
+        logger.error(f"word导出失败: {e}")
+        return create_error_response(f"word导出失败: {str(e)}")
 
 
 @video_router.get("/{task_id}/status")

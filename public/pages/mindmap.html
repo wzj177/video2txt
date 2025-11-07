@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查看思维导图 - 听语AI</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/assets/js/markmap/toolbar.css"/>
+    <link rel="stylesheet" href="/assets/js/markmap/katex/katex.min.css">
+    <link rel="stylesheet" href="/assets/css/common.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .mindmap {
+            width: 100%;
+            height: 100%;
+        }
+
+        .mm-toolbar-brand {
+            display: none !important;
+        }
+
+        .mm-toolbar-item[title="Toggle dark theme"] {
+            display: none !important;
+        }
+
+        .mm-toolbar-item[title="Toggle recursively"] {
+            display: none !important;
+        }
+
+        .mm-toolbar-item svg {
+            width: 20px !important;
+            height: 20px !important;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="container">
+    <svg ref="svgRef" class="mindmap"/>
+    <div id="toolbar"></div>
+</div>
+
+<script src="/assets/js/vue.global.js"></script>
+<script src="/assets/js/axios/axios.min.js"></script>
+<script src="/assets/js/layui/layui.js"></script>
+<script src="/assets/js/http.js"></script>
+<!-- Markmap 相关 -->
+<script src="/assets/js/markmap/d3@7.9.0.js"></script>
+<script src="/assets/js/markmap/markmap-lib@0.18.12.js"></script>
+<script src="/assets/js/markmap/markmap-view@0.18.12.js"></script>
+<script src="/assets/js/markmap/markmap-toolbar@0.18.12.js"></script>
+<script src="/assets/js/markmap/katex/katex.min.js"></script>
+<script type="module">
+    const {createApp, ref, onMounted, onUpdated} = Vue;
+    createApp({
+        setup() {
+            const svgRef = ref(null);
+            const markdown = ref('');
+            let mm = null;
+
+            const update = async () => {
+                const transformer = new markmap.Transformer()
+                const {root} = transformer.transform(markdown.value);
+                await mm.setData(root);
+                mm.fit();
+            };
+
+            const renderFile = async () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const fileName = urlParams.get('file');
+                const taskId = urlParams.get('task_id');
+
+                if (!fileName) {
+                    layui.layer.closeAll()
+                    return layui.layer.msg('访问出错');
+                }
+
+                try {
+                    const mdStr = await http.get(`/api/tasks/video/${taskId}/files/${fileName}`, {
+                        responseType: 'text'
+                    });
+                    markdown.value = mdStr
+
+                    mm = markmap.Markmap.create(svgRef.value)
+                    update()
+
+                    markmap.Toolbar.defaultItems = ["zoomIn", "zoomOut", "fit", "recurse", "dark", "saveAsImage"];
+                    const toolbar = new markmap.Toolbar()
+                    toolbar.register({
+                        id: 'saveAsImage',
+                        title: '保存为图片',
+                        content: markmap.Toolbar.icon(
+                            'M4 7h3l2-3h6l2 3h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm8 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z',
+                        ),
+                        onClick: async () => {
+                            if (!mm?.svg) {
+                                console.warn('[markmap] SVG not available');
+                                return;
+                            }
+
+                            const svgEl = mm.svg._groups[0][0];
+                            const {width, height} = svgEl.getBoundingClientRect();
+
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = width * 2;
+                            canvas.height = height * 2;
+                            ctx.scale(2, 2);
+
+                            const svgData = new XMLSerializer().serializeToString(svgEl);
+                            const svgBase64 = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+
+                            const img = new Image();
+                            img.crossOrigin = 'anonymous';
+                            img.onload = () => {
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillRect(0, 0, width, height);
+                                ctx.drawImage(img, 0, 0, width, height);
+
+                                canvas.toBlob((blob) => {
+                                    const link = document.createElement('a');
+                                    link.download = 'markmap.png';
+                                    link.href = URL.createObjectURL(blob);
+                                    link.click();
+                                    URL.revokeObjectURL(link.href);
+                                }, 'image/png');
+
+                                canvas.remove();
+                            };
+
+                            img.src = svgBase64;
+                        }
+                    });
+                    toolbar.render();
+                    toolbar.attach(mm);
+
+                    const el = toolbar.el;
+                    // const {el} =markmap.Toolbar.create(mm);
+                    el.style.position = 'absolute';
+                    el.style.bottom = '0.5rem';
+                    el.style.right = '0.5rem';
+
+                    document.getElementById('toolbar').append(el);
+                } catch (error) {
+                    layui.layer.msg('查看文件失败: ' + error.message, {icon: 2});
+                }
+            };
+
+            onMounted(() => {
+                renderFile();
+            });
+
+            onUpdated(update);
+
+            return {
+                svgRef
+            }
+        }
+    }).mount('#app');
+
+</script>
+</body>
+</html>

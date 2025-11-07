@@ -40,7 +40,7 @@ class NotificationService:
         if not self.enabled:
             logger.warning("plyer库不可用，桌面通知功能已禁用")
         else:
-            logger.info("✅ 桌面通知服务已初始化")
+            logger.info("桌面通知服务已初始化")
 
     def _get_app_icon(self) -> Optional[str]:
         """获取应用图标路径"""
