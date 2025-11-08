@@ -25,7 +25,6 @@ from ..middleware.exception_handler import (
     create_error_response,
 )
 
-
 # 配置日志
 logger = logging.getLogger(__name__)
 # 创建视频API路由器
@@ -76,7 +75,7 @@ async def get_video_stats() -> Dict[str, Any]:
 
 @video_router.get("/browse")
 async def browse_local_files(
-    path: str = "/", file_types: str = "video,audio"
+        path: str = "/", file_types: str = "video,audio"
 ) -> Dict[str, Any]:
     """浏览本地文件系统（仅限音视频文件）"""
     try:
@@ -119,7 +118,7 @@ async def browse_local_files(
         # 遍历目录
         try:
             for item in sorted(
-                base_path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())
+                    base_path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())
             ):
                 try:
                     if item.is_dir():
@@ -221,7 +220,7 @@ async def get_video_task(task_id: str) -> Dict[str, Any]:
 
 @video_router.put("/{task_id}/transcript")
 async def update_transcript(
-    task_id: str, request: TranscriptUpdateRequest
+        task_id: str, request: TranscriptUpdateRequest
 ) -> Dict[str, Any]:
     """更新任务的转录文本"""
     try:
@@ -339,10 +338,9 @@ async def stream_task_progress(task_id: str):
 
                 # 检查状态变化
                 if (
-                    current_task.get("status") != last_status
-                    or current_task.get("progress") != last_progress
+                        current_task.get("status") != last_status
+                        or current_task.get("progress") != last_progress
                 ):
-
                     # 发送进度更新事件
                     progress_data = {
                         "progress": current_task.get("progress", 0),
@@ -398,18 +396,18 @@ async def stream_task_progress(task_id: str):
 
 @video_router.post("")
 async def create_video_task(
-    file: UploadFile = File(None),
-    url: str = Form(None),
-    name: str = Form(None),
-    language: str = Form("zh"),
-    model: str = Form("whisper"),
-    model_size: str = Form("small"),
-    output_types: str = Form("transcript,summary"),
-    ai_output_types: str = Form(""),
-    force_sync: bool = Form(False),
-    ai_correction: bool = Form(False),
-    content_role: str = Form("auto"),
-    ai_enhancement: bool = Form(False),
+        file: UploadFile = File(None),
+        url: str = Form(None),
+        name: str = Form(None),
+        language: str = Form("zh"),
+        model: str = Form("whisper"),
+        model_size: str = Form("small"),
+        output_types: str = Form("transcript,summary"),
+        ai_output_types: str = Form(""),
+        force_sync: bool = Form(False),
+        ai_correction: bool = Form(False),
+        content_role: str = Form("auto"),
+        ai_enhancement: bool = Form(False),
 ) -> Dict[str, Any]:
     """创建视频处理任务"""
     # 验证输入参数
@@ -748,8 +746,8 @@ async def validate_media_file_basic(file_path: str, filename: str) -> None:
     audio_extensions = {".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg", ".wma"}
 
     if (
-        file_extension not in video_extensions
-        and file_extension not in audio_extensions
+            file_extension not in video_extensions
+            and file_extension not in audio_extensions
     ):
         raise HTTPException(
             status_code=400,
@@ -932,6 +930,48 @@ async def download_output_file(task_id: str, file_name: str):
         raise HTTPException(status_code=500, detail=f"下载文件失败: {str(e)}")
 
 
+@video_router.get("/{task_id}/images/{image_path:path}")
+async def serve_task_image(task_id: str, image_path: str):
+    """为任务提供图片流服务"""
+    try:
+        # 获取项目根目录
+        PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+        # 构建图片文件路径
+        image_file_path = PROJECT_ROOT / "data" / "outputs" / task_id / image_path
+
+        # 检查文件是否存在
+        if not image_file_path.exists():
+            raise HTTPException(status_code=404, detail=f"图片不存在: {image_path}")
+
+        # 检查文件是否在允许的目录内（安全检查）
+        outputs_dir = PROJECT_ROOT / "data" / "outputs"
+        try:
+            image_file_path.resolve().relative_to(outputs_dir.resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="访问被拒绝")
+
+        # 确定媒体类型
+        media_type = "image/jpeg"
+        if image_path.lower().endswith(".png"):
+            media_type = "image/png"
+        elif image_path.lower().endswith(".gif"):
+            media_type = "image/gif"
+        elif image_path.lower().endswith(".webp"):
+            media_type = "image/webp"
+
+        # 返回图片文件流
+        return FileResponse(
+            path=str(image_file_path),
+            media_type=media_type,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"加载图片失败: {str(e)}")
+
+
 @video_router.get("/{task_id}/outputs")
 async def list_output_files(task_id: str):
     """列出任务的输出文件"""
@@ -979,7 +1019,7 @@ async def list_output_files(task_id: str):
 
 @video_router.post("/{task_id}/export-word")
 async def export_md_to_word(
-    task_id: str, file_name: str = Body(..., embed=True)
+        task_id: str, file_name: str = Body(..., embed=True)
 ) -> Dict[str, Any]:
     """导出MD文件为word"""
     try:

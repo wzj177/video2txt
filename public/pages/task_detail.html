@@ -420,7 +420,7 @@
             <div v-if="displayFiles && displayFiles.length > 0" class="result-card">
                 <div class="result-header">
                     <div class="result-title">📁 输出文件</div>
-<!--                    <button class="download-btn" @click="downloadAll">下载全部</button>-->
+                    <!--                    <button class="download-btn" @click="downloadAll">下载全部</button>-->
                 </div>
                 <div class="file-list">
                     <!-- 普通文件 -->
@@ -433,7 +433,8 @@
                             <span class="file-name">{{ file.name }}</span>
                             <!-- 悬停操作按钮 -->
                             <div class="file-actions">
-                                <button class="file-action-btn" @click.stop="viewFile(file.name)" title="查看" v-if="file.name !== '原始转录.json'">
+                                <button class="file-action-btn" @click.stop="viewFile(file.name)" title="查看"
+                                        v-if="file.name !== '原始转录.json'">
                                     <i class="layui-icon layui-icon-eye"></i>
                                 </button>
                                 <button class="file-action-btn" @click.stop="exportFileToWord(file.name)"
@@ -942,11 +943,23 @@
 
                 // 使用marked.js渲染Markdown
                 renderMarkdown(text) {
-                    if (!text) return '';
                     try {
-                        // 动态替换模板变量（可选）
-                        let processed = text
-                            .replace('{{videoStats.total}}', this.videoStats?.total || 0)
+                        // 处理Markdown中的图片路径
+                        let processed = text.replace(/\!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+                            // 如果是相对路径，则转换为绝对路径并使用file://协议
+                            if (src && !src.startsWith('http')) {
+                                const absolutePath = `/api/tasks/video/${this.taskId}/images/${src}`
+                                return `![${alt}](${absolutePath})`;
+                            }
+
+                            return match;
+                        });
+                        
+                        // 处理模板变量
+                        processed = processed
+                            .replace('{{taskTitle}}', this.getTaskTitle(this.task) || '')
+                            .replace('{{taskType}}', this.getTaskType(this.task) || '')
+                            .replace('{{createTime}}', this.formatDate(this.task?.created_at) || '')
                             .replace('{{lastUpdate}}', this.lastUpdate || '');
 
                         let html = window.marked ? window.marked.parse(processed) : this.markdownToHtml(processed);
@@ -974,19 +987,15 @@
                         // 显示导出中状态
                         const loadingMsg = layer.msg('正在导出word...', {icon: 16, time: 0});
 
-                        const response = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
+                        const data = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
                             file_name: '内容卡片.md'
                         });
 
                         layer.close(loadingMsg);
 
-                        if (response.success !== false) {
-                            layer.msg('word导出成功', {icon: 1});
-                            // 自动下载word文件
-                            await this.downloadOutputFile(response.data.word_file_name);
-                        } else {
-                            layer.msg('word导出失败: ' + (response.error || '未知错误'), {icon: 2});
-                        }
+                        layer.msg('word导出成功', {icon: 1});
+                        // 自动下载word文件
+                        await this.downloadOutputFile(data.word_file_name);
                     } catch (error) {
                         console.error('word导出失败:', error);
                         layer.msg('word导出失败: ' + error.message, {icon: 2});
@@ -1003,18 +1012,14 @@
                     try {
                         const loadingMsg = layer.msg('正在导出word...', {icon: 16, time: 0});
 
-                        const response = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
+                        const data = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
                             file_name: '处理报告.md'
                         });
 
                         layer.close(loadingMsg);
 
-                        if (response.success !== false) {
-                            layer.msg('word导出成功', {icon: 1});
-                            await this.downloadOutputFile(response.data.word_file_name);
-                        } else {
-                            layer.msg('word导出失败: ' + (response.error || '未知错误'), {icon: 2});
-                        }
+                        layer.msg('word导出成功', {icon: 1});
+                        await this.downloadOutputFile(data.word_file_name);
                     } catch (error) {
                         console.error('word导出失败:', error);
                         layer.msg('word导出失败: ' + error.message, {icon: 2});
@@ -1031,18 +1036,14 @@
                     try {
                         const loadingMsg = layer.msg('正在导出word...', {icon: 16, time: 0});
 
-                        const response = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
+                        const data = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
                             file_name: '内容摘要.md'
                         });
 
                         layer.close(loadingMsg);
 
-                        if (response.success !== false) {
-                            layer.msg('word导出成功', {icon: 1});
-                            await this.downloadOutputFile(response.data.word_file_name);
-                        } else {
-                            layer.msg('word导出失败: ' + (response.error || '未知错误'), {icon: 2});
-                        }
+                        layer.msg('word导出成功', {icon: 1});
+                        await this.downloadOutputFile(data.word_file_name);
                     } catch (error) {
                         console.error('word导出失败:', error);
                         layer.msg('word导出失败: ' + error.message, {icon: 2});
@@ -1059,18 +1060,14 @@
                     try {
                         const loadingMsg = layer.msg('正在导出word...', {icon: 16, time: 0});
 
-                        const response = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
+                        const data = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
                             file_name: '思维导图.md'
                         });
 
                         layer.close(loadingMsg);
 
-                        if (response.success !== false) {
-                            layer.msg('word导出成功', {icon: 1});
-                            await this.downloadOutputFile(response.data.word_file_name);
-                        } else {
-                            layer.msg('word导出失败: ' + (response.error || '未知错误'), {icon: 2});
-                        }
+                        layer.msg('word导出成功', {icon: 1});
+                        await this.downloadOutputFile(data.word_file_name);
                     } catch (error) {
                         console.error('word导出失败:', error);
                         layer.msg('word导出失败: ' + error.message, {icon: 2});
@@ -1087,18 +1084,14 @@
                     try {
                         const loadingMsg = layer.msg('正在导出word...', {icon: 16, time: 0});
 
-                        const response = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
+                        const data = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
                             file_name: 'Anki.md'
                         });
 
                         layer.close(loadingMsg);
 
-                        if (response.success !== false) {
-                            layer.msg('word导出成功', {icon: 1});
-                            await this.downloadOutputFile(response.data.word_file_name);
-                        } else {
-                            layer.msg('word导出失败: ' + (response.error || '未知错误'), {icon: 2});
-                        }
+                        layer.msg('word导出成功', {icon: 1});
+                        await this.downloadOutputFile(data.word_file_name);
                     } catch (error) {
                         console.error('word导出失败:', error);
                         layer.msg('word导出失败: ' + error.message, {icon: 2});
@@ -1474,18 +1467,14 @@
                     try {
                         const loadingMsg = layer.msg('正在导出word...', {icon: 16, time: 0});
 
-                        const response = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
+                        const data = await http.post(`/api/tasks/video/${this.taskId}/export-word`, {
                             file_name: fileName
                         });
 
                         layer.close(loadingMsg);
 
-                        if (response.success !== false) {
-                            layer.msg('word导出成功', {icon: 1});
-                            await this.downloadOutputFile(response.data.word_file_name);
-                        } else {
-                            layer.msg('word导出失败: ' + (response.error || '未知错误'), {icon: 2});
-                        }
+                        layer.msg('word导出成功', {icon: 1});
+                        await this.downloadOutputFile(data.word_file_name);
                     } catch (error) {
                         console.error('word导出失败:', error);
                         layer.msg('word导出失败: ' + error.message, {icon: 2});

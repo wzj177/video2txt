@@ -302,6 +302,11 @@ body {
     background: #a8a8a8;
 }
 
+.fullscreen-content .content-display img {
+    max-width: 100%;
+    height: auto;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
