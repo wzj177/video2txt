@@ -39,7 +39,7 @@ class FasterWhisperEngine(BaseVoiceEngine):
                     self.config, "preferred_chinese_model", "medium"
                 )
 
-            logger.info(f"🚀 初始化FasterWhisper - 模型: {whisper_model}")
+            logger.info(f"初始化FasterWhisper - 模型: {whisper_model}")
 
             # 如果是中文优化，使用更大的模型
             if chinese_optimized:
@@ -56,14 +56,14 @@ class FasterWhisperEngine(BaseVoiceEngine):
             )
 
             self.initialized = True
-            logger.info(f"✅ FasterWhisper初始化成功 (计算类型: {compute_type})")
+            logger.info(f"FasterWhisper初始化成功 (计算类型: {compute_type})")
             return True
 
         except ImportError:
-            logger.warning("⚠️ faster-whisper 未安装")
+            logger.warning("faster-whisper 未安装")
             return False
         except Exception as e:
-            logger.error(f"❌ FasterWhisper初始化失败: {e}")
+            logger.error(f"FasterWhisper初始化失败: {e}")
             return False
 
     def _get_optimal_compute_type(self) -> str:
@@ -80,7 +80,7 @@ class FasterWhisperEngine(BaseVoiceEngine):
 
             # 如果是CPU或者不支持float16，使用int8或float32
             if device == "cpu":
-                logger.info("🔧 CPU设备，使用int8计算类型")
+                logger.info("CPU设备，使用int8计算类型")
                 return "int8"
 
             # 检查CUDA是否支持float16
@@ -94,30 +94,38 @@ class FasterWhisperEngine(BaseVoiceEngine):
                         # 检查GPU计算能力
                         capability = torch.cuda.get_device_capability(device)
                         if capability[0] >= 7:  # Volta架构及以上支持高效的float16
-                            logger.info("🚀 GPU支持高效float16计算")
+                            logger.info("GPU支持高效float16计算")
                             return "float16"
                         else:
-                            logger.info("🔧 GPU不支持高效float16，使用int8")
+                            logger.info("GPU不支持高效float16，使用int8")
                             return "int8"
                     else:
-                        logger.info("🔧 未检测到CUDA，使用int8计算类型")
+                        logger.info("未检测到CUDA，使用int8计算类型")
                         return "int8"
                 except Exception as cuda_e:
-                    logger.warning(f"⚠️ CUDA检查失败: {cuda_e}，使用int8")
+                    logger.warning(f"CUDA检查失败: {cuda_e}，使用int8")
                     return "int8"
 
             # 默认回退到int8
             return "int8"
 
         except ImportError:
-            logger.info("🔧 PyTorch未安装，使用int8计算类型")
+            logger.info("PyTorch未安装，使用int8计算类型")
             return "int8"
         except Exception as e:
-            logger.warning(f"⚠️ 计算类型检测失败: {e}，使用int8")
+            logger.warning(f"计算类型检测失败: {e}，使用int8")
             return "int8"
 
-    def recognize_file(self, audio_path: str, language: str = "auto") -> Dict[str, Any]:
-        """使用FasterWhisper转录"""
+    def recognize_file(
+        self, audio_path: str, language: str = "auto", **kwargs
+    ) -> Dict[str, Any]:
+        """使用FasterWhisper转录
+
+        Args:
+            audio_path: 音频文件路径
+            language: 语言代码
+            **kwargs: 其他参数（为兼容性保留，本引擎暂不使用）
+        """
         if not self.initialized:
             raise RuntimeError("FasterWhisper引擎未初始化")
 
@@ -134,17 +142,34 @@ class FasterWhisperEngine(BaseVoiceEngine):
                 initial_prompt="请使用简体中文输出",
             )
 
-            # 处理结果
+            # 处理结果 - 对齐 WhisperX 格式
             result_segments = []
             full_text = ""
 
             for segment in segments:
                 segment_dict = {
-                    "start": segment.start,
-                    "end": segment.end,
+                    "start": round(segment.start, 2),
+                    "end": round(segment.end, 2),
+                    "duration": round(segment.end - segment.start, 2),
                     "text": segment.text.strip(),
-                    "words": getattr(segment, "words", []),
+                    "speaker": "Speaker_1",  # FasterWhisper 不支持说话人分离，使用默认值
+                    "confidence": 0.85,  # FasterWhisper 不提供置信度，使用估计值
+                    "language": info.language,
+                    "emotion": None,  # 不支持情感分析
                 }
+
+                # 如果有词级时间戳
+                if hasattr(segment, "words") and segment.words:
+                    segment_dict["words"] = [
+                        {
+                            "word": word.word,
+                            "start": round(word.start, 2),
+                            "end": round(word.end, 2),
+                            "score": getattr(word, "probability", 0.9),
+                        }
+                        for word in segment.words
+                    ]
+
                 result_segments.append(segment_dict)
                 full_text += segment.text + " "
 
@@ -162,19 +187,41 @@ class FasterWhisperEngine(BaseVoiceEngine):
                 else getattr(self.config, "device", "auto")
             )
 
+            # 构建默认说话人信息（因为不支持说话人分离）
+            speakers_info = {
+                "Speaker_1": {
+                    "id": "Speaker_1",
+                    "name": "Speaker_1",
+                    "segments_count": len(result_segments),
+                    "total_duration": info.duration,
+                    "words": [seg["text"] for seg in result_segments],
+                }
+            }
+
             return {
                 "text": full_text.strip(),
-                "segments": result_segments,
                 "language": info.language,
-                "language_probability": info.language_probability,
-                "duration": info.duration,
+                "segments": result_segments,
+                "speakers": speakers_info,  # 新增：对齐 WhisperX 格式
                 "processing_time": processing_time,
                 "model": f"faster-whisper-{whisper_model}",
                 "device": device,
+                "confidence": 0.85,  # 新增：对齐 WhisperX 格式
+                "audio_length": info.duration,  # 新增：对齐 WhisperX 格式
+                "features": {  # 新增：对齐 WhisperX 格式
+                    "word_level_timestamps": True,
+                    "speaker_diarization": False,  # FasterWhisper 不支持
+                    "emotion_detection": False,
+                },
+                "statistics": {  # 新增：对齐 WhisperX 格式
+                    "total_segments": len(result_segments),
+                    "total_speakers": 1,
+                    "total_duration": info.duration,
+                },
             }
 
         except Exception as e:
-            logger.error(f"❌ FasterWhisper转录失败: {e}")
+            logger.error(f"FasterWhisper转录失败: {e}")
             raise
 
     def get_engine_info(self) -> Dict[str, Any]:

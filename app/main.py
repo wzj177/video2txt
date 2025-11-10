@@ -281,7 +281,10 @@ if __name__ == "__main__":
     import webbrowser
     import threading
     import time
+    import os
 
+    # os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"  # 关键！使用镜像
+    # os.environ["HF_HUB_DOWNLOAD_TIMEOUT"] = "60"
     # 服务器配置
     host = "127.0.0.1"
     port = 19080

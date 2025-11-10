@@ -39,13 +39,13 @@ class SenseVoiceEngine(BaseVoiceEngine):
         """
         # 检查ModelScope缓存
         modelscope_cache = (
-            Path.home()
-            / ".cache"
-            / "modelscope"
-            / "hub"
-            / "models"
-            / "iic"
-            / "SenseVoiceSmall"
+                Path.home()
+                / ".cache"
+                / "modelscope"
+                / "hub"
+                / "models"
+                / "iic"
+                / "SenseVoiceSmall"
         )
 
         if modelscope_cache.exists():
@@ -59,13 +59,13 @@ class SenseVoiceEngine(BaseVoiceEngine):
 
             existing_files = list(modelscope_cache.glob("*"))
             if len(existing_files) > 0:  # 只要有文件就认为模型存在
-                logger.info(f"📁 发现本地SenseVoice模型: {modelscope_cache}")
+                logger.info(f"发现本地SenseVoice模型: {modelscope_cache}")
                 logger.info(
-                    f"📋 模型文件: {[f.name for f in existing_files[:5]]}..."
+                    f"模型文件: {[f.name for f in existing_files[:5]]}..."
                 )  # 显示前5个文件
                 return True, str(modelscope_cache)
 
-        logger.warning("⚠️ 未找到本地SenseVoice模型")
+        logger.warning("未找到本地SenseVoice模型")
         return False, None
 
     def _setup_offline_environment(self, cache_dir: str) -> None:
@@ -85,12 +85,12 @@ class SenseVoiceEngine(BaseVoiceEngine):
         # 禁用自动更新检查
         os.environ["MODELSCOPE_OFFLINE"] = "1"
 
-        logger.info("🔒 已配置离线模式环境变量")
+        logger.info("已配置离线模式环境变量")
 
     def initialize(self) -> bool:
         """初始化SenseVoice引擎"""
         try:
-            logger.info("🔧 初始化SenseVoice引擎...")
+            logger.info(" 初始化SenseVoice引擎...")
 
             # 检查是否安装了FunASR
             try:
@@ -99,9 +99,9 @@ class SenseVoiceEngine(BaseVoiceEngine):
                     rich_transcription_postprocess,
                 )
 
-                logger.info("✅ FunASR库检测成功")
+                logger.info("FunASR库检测成功")
             except ImportError as e:
-                logger.error(f"❌ FunASR库未安装: {e}")
+                logger.error(f"FunASR库未安装: {e}")
                 logger.info("请安装FunASR: pip install funasr modelscope")
                 return False
 
@@ -111,29 +111,29 @@ class SenseVoiceEngine(BaseVoiceEngine):
 
                 if torch.cuda.is_available():
                     self.device = "cuda:0"
-                    logger.info("🚀 检测到CUDA，将使用GPU加速")
+                    logger.info("检测到CUDA，将使用GPU加速")
                 else:
                     self.device = "cpu"
-                    logger.info("💻 使用CPU进行推理")
+                    logger.info("使用CPU进行推理")
             except ImportError:
                 self.device = "cpu"
-                logger.info("💻 PyTorch未检测到，使用CPU")
+                logger.info("PyTorch未检测到，使用CPU")
 
             # 加载模型
             return self._load_model()
 
         except Exception as e:
-            logger.error(f"❌ SenseVoice初始化失败: {e}")
+            logger.error(f"SenseVoice初始化失败: {e}")
             return False
 
     def _load_model(self) -> bool:
         """加载SenseVoice模型 - 使用官方FunASR方式"""
         try:
-            logger.info("📥 加载SenseVoice模型...")
+            logger.info("加载SenseVoice模型...")
 
             from funasr import AutoModel
 
-            # 🔧 检查本地模型
+            # 检查本地模型
             has_local_model, local_model_path = self._check_local_model()
 
             if has_local_model:
@@ -142,14 +142,14 @@ class SenseVoiceEngine(BaseVoiceEngine):
                 self._setup_offline_environment(cache_dir)
                 model_path_to_use = local_model_path
                 self.offline_mode = True
-                logger.info(f"📂 将使用本地模型: {local_model_path}")
+                logger.info(f"将使用本地模型: {local_model_path}")
             else:
                 # 需要下载模型
                 cache_dir = "./data/models/funasr_cache"
                 Path(cache_dir).mkdir(parents=True, exist_ok=True)
                 model_path_to_use = self.model_name
                 self.offline_mode = False
-                logger.warning("⚠️ 未找到本地模型，将尝试在线下载")
+                logger.warning("未找到本地模型，将尝试在线下载")
 
             # 🔧 构建AutoModel参数
             model_kwargs = {
@@ -162,12 +162,12 @@ class SenseVoiceEngine(BaseVoiceEngine):
             # 如果是离线模式，添加离线参数
             if self.offline_mode:
                 model_kwargs["local_files_only"] = True
-                logger.info("🔒 使用离线模式加载")
+                logger.info("使用离线模式加载")
 
             # 根据音频长度决定是否使用VAD
             if self.use_vad:
                 # 长音频模式：使用VAD进行音频切割
-                logger.info("🎙️ 启用VAD模式 - 适合长音频")
+                logger.info("启用VAD模式 - 适合长音频")
                 model_kwargs.update(
                     {
                         "vad_model": "fsmn-vad",
@@ -178,35 +178,27 @@ class SenseVoiceEngine(BaseVoiceEngine):
                 )
             else:
                 # 短音频批量模式：移除VAD，提高效率
-                logger.info("⚡ 启用批量模式 - 适合短音频(<30s)")
+                logger.info("启用批量模式 - 适合短音频(<30s)")
 
             # 创建模型
             self.model = AutoModel(**model_kwargs)
 
-            logger.info(f"✅ SenseVoice模型加载成功 (设备: {self.device})")
-            logger.info(f"📁 模型路径: {self.model.model_path}")
+            logger.info(f"SenseVoice模型加载成功 (设备: {self.device})")
+            logger.info(f"模型路径: {self.model.model_path}")
             self.initialized = True
             return True
 
         except Exception as e:
-            logger.error(f"❌ SenseVoice模型加载失败: {e}")
+            logger.error(f"SenseVoice模型加载失败: {e}")
 
-            # 🔧 特殊处理网络连接错误
+            # 特殊处理网络连接错误
             error_str = str(e)
-            if any(
-                keyword in error_str
-                for keyword in [
-                    "NameResolutionError",
-                    "modelscope.cn",
-                    "Connection",
-                    "timeout",
-                ]
-            ):
-                logger.error("🌐 检测到网络连接问题")
+            if any(keyword in error_str for keyword in ["NameResolutionError","modelscope.cn","Connection","timeout"]):
+                logger.error("检测到网络连接问题")
 
                 # 如果有本地模型但加载失败，尝试强制离线模式
                 if has_local_model and local_model_path:
-                    logger.info("🔄 尝试强制离线模式...")
+                    logger.info("尝试强制离线模式...")
                     try:
                         # 更激进的离线设置
                         import os
@@ -223,15 +215,15 @@ class SenseVoiceEngine(BaseVoiceEngine):
                             local_files_only=True,
                         )
 
-                        logger.info("✅ 强制离线模式加载成功")
+                        logger.info(" 强制离线模式加载成功")
                         self.initialized = True
                         return True
 
                     except Exception as offline_error:
-                        logger.error(f"❌ 强制离线模式也失败: {offline_error}")
+                        logger.error(f"强制离线模式也失败: {offline_error}")
 
                 # 提供解决方案
-                logger.error("💡 解决方案:")
+                logger.error(" 解决方案:")
                 logger.error("1. 检查网络连接到 www.modelscope.cn")
                 logger.error(
                     "2. 确保模型文件完整下载到 ~/.cache/modelscope/hub/models/iic/SenseVoiceSmall"
@@ -264,10 +256,7 @@ class SenseVoiceEngine(BaseVoiceEngine):
         """
         清理SenseVoice输出中的emoji图标和特殊符号
 
-        SenseVoice会在输出中添加情感和事件标记，如：
-        - 🎼 (音乐符号)
-        - 😊 (情感符号)
-        - 其他emoji表情
+        SenseVoice会在输出中添加情感和事件标记
         """
         import re
 
@@ -275,7 +264,7 @@ class SenseVoiceEngine(BaseVoiceEngine):
             return text
 
         try:
-            logger.debug(f"🧹 清理SenseVoice输出: {text[:100]}...")
+            logger.debug(f"清理SenseVoice输出: {text[:100]}...")
 
             # 移除所有emoji符号
             # Unicode范围包括：
@@ -312,17 +301,17 @@ class SenseVoiceEngine(BaseVoiceEngine):
             clean_text = clean_text.strip()
 
             if clean_text != text:
-                logger.debug(f"✅ 文本清理完成: {clean_text[:100]}...")
+                logger.debug(f"文本清理完成: {clean_text[:100]}...")
 
             return clean_text
 
         except Exception as e:
-            logger.warning(f"⚠️ 文本清理失败: {e}")
+            logger.warning(f"文本清理失败: {e}")
             # 简单的回退清理
             return re.sub(r"[🎼😊🎵🎶🎤🎧🔊🔇📢📣📯🎺🎷🎸🥁🎹]", "", text).strip()
 
     def _smart_text_segmentation(
-        self, text: str, total_duration: float, min_segments: int = 2
+            self, text: str, total_duration: float, min_segments: int = 2
     ) -> List[Dict[str, Any]]:
         """智能文本分割，创建合理的字幕片段"""
         if not text.strip():
@@ -347,12 +336,12 @@ class SenseVoiceEngine(BaseVoiceEngine):
             max_chars_per_segment = len(text) // min_segments
             sentences = []
             for i in range(0, len(text), max_chars_per_segment):
-                segment = text[i : i + max_chars_per_segment].strip()
+                segment = text[i: i + max_chars_per_segment].strip()
                 if segment:
                     sentences.append(segment)
 
         # 确保至少有min_segments个片段
-        if len(sentences) < min_segments and len(sentences) > 0:
+        if min_segments > len(sentences) > 0:
             # 将最长的句子再次分割
             longest_idx = max(range(len(sentences)), key=lambda i: len(sentences[i]))
             longest_sentence = sentences[longest_idx]
@@ -360,16 +349,10 @@ class SenseVoiceEngine(BaseVoiceEngine):
                 mid_point = len(longest_sentence) // 2
                 # 寻找最近的空格或标点
                 for offset in range(5):
-                    if (
-                        mid_point + offset < len(longest_sentence)
-                        and longest_sentence[mid_point + offset] in " ，,"
-                    ):
+                    if mid_point + offset < len(longest_sentence) and longest_sentence[mid_point + offset] in " ，,":
                         mid_point += offset
                         break
-                    elif (
-                        mid_point - offset >= 0
-                        and longest_sentence[mid_point - offset] in " ，,"
-                    ):
+                    elif mid_point - offset >= 0 and longest_sentence[mid_point - offset] in " ，,":
                         mid_point -= offset
                         break
 
@@ -398,8 +381,16 @@ class SenseVoiceEngine(BaseVoiceEngine):
 
         return segments
 
-    def recognize_file(self, audio_path: str, language: str = "auto") -> Dict[str, Any]:
-        """识别音频文件 - 使用官方FunASR方式"""
+    def recognize_file(
+            self, audio_path: str, language: str = "auto", **kwargs
+    ) -> Dict[str, Any]:
+        """识别音频文件 - 使用官方FunASR方式
+
+        Args:
+            audio_path: 音频文件路径
+            language: 语言代码
+            **kwargs: 其他参数（为兼容性保留，本引擎暂不使用）
+        """
         if not self.initialized:
             # 尝试重新初始化
             if not self.initialize():
@@ -407,7 +398,7 @@ class SenseVoiceEngine(BaseVoiceEngine):
 
         try:
             start_time = time.time()
-            logger.info(f"🎤 SenseVoice识别音频: {Path(audio_path).name}")
+            logger.info(f"SenseVoice识别音频: {Path(audio_path).name}")
 
             if not os.path.exists(audio_path):
                 raise FileNotFoundError(f"音频文件不存在: {audio_path}")
@@ -417,7 +408,7 @@ class SenseVoiceEngine(BaseVoiceEngine):
             is_short_audio = self._should_use_batch_mode(audio_path)
 
             logger.info(
-                f"📊 音频时长: {audio_duration:.2f}s, 模式: {'批量' if is_short_audio else 'VAD'}"
+                f"音频时长: {audio_duration:.2f}s, 模式: {'批量' if is_short_audio else 'VAD'}"
             )
 
             # 导入后处理工具
@@ -466,7 +457,7 @@ class SenseVoiceEngine(BaseVoiceEngine):
             # 检查是否有VAD分割的结果
             if isinstance(res, list) and len(res) > 1:
                 # 多个VAD片段，每个都有自己的时间戳
-                logger.info(f"📋 检测到 {len(res)} 个VAD分割片段")
+                logger.info(f"检测到 {len(res)} 个VAD分割片段")
                 for i, segment_result in enumerate(res):
                     if "text" in segment_result:
                         segment_text = rich_transcription_postprocess(
@@ -530,7 +521,7 @@ class SenseVoiceEngine(BaseVoiceEngine):
                     ]
             else:
                 # 没有详细时间戳，使用智能文本分割
-                logger.info("📝 使用智能文本分割创建多个字幕片段")
+                logger.info("使用智能文本分割创建多个字幕片段")
                 segments = self._smart_text_segmentation(processed_text, audio_duration)
 
             # 如果仍然只有一个片段且时长较长，尝试进一步分割
@@ -540,7 +531,24 @@ class SenseVoiceEngine(BaseVoiceEngine):
                     processed_text, audio_duration, min_segments=3
                 )
 
-            logger.info(f"📊 生成了 {len(segments)} 个字幕片段")
+            logger.info(f"生成了 {len(segments)} 个字幕片段")
+
+            # 格式化分段信息，对齐 WhisperX 格式
+            formatted_segments = []
+            for i, segment in enumerate(segments):
+                formatted_segment = {
+                    "start": round(segment.get("start", 0), 2),
+                    "end": round(segment.get("end", 0), 2),
+                    "duration": round(
+                        segment.get("end", 0) - segment.get("start", 0), 2
+                    ),
+                    "text": segment.get("text", "").strip(),
+                    "speaker": "Speaker_1",  # SenseVoice 不支持说话人分离，使用默认值
+                    "confidence": 0.95,
+                    "language": language,
+                    "emotion": segment.get("emotion"),  # SenseVoice 支持情感分析
+                }
+                formatted_segments.append(formatted_segment)
 
             # 检测语言（从结果中提取或使用默认）
             detected_language = language
@@ -553,34 +561,50 @@ class SenseVoiceEngine(BaseVoiceEngine):
                 else:
                     detected_language = "en"
 
-            # 构建返回结果
+            # 构建默认说话人信息（因为不支持说话人分离）
+            speakers_info = {
+                "Speaker_1": {
+                    "id": "Speaker_1",
+                    "name": "Speaker_1",
+                    "segments_count": len(formatted_segments),
+                    "total_duration": audio_duration,
+                    "words": [seg["text"] for seg in formatted_segments],
+                }
+            }
+
+            # 构建返回结果 - 对齐 WhisperX 格式
             processing_time = time.time() - start_time
 
             result = {
                 "text": processed_text,
                 "language": detected_language,
-                "segments": segments,
+                "segments": formatted_segments,  # 使用格式化后的分段
+                "speakers": speakers_info,  # 新增：对齐 WhisperX 格式
                 "processing_time": processing_time,
                 "model": "sensevoice",
                 "device": self.device,
                 "confidence": 0.95,  # SenseVoice通常有很高的识别准确率
                 "audio_length": audio_duration,
-                "features": {
-                    "vad_enabled": self.use_vad,
-                    "batch_mode": is_short_audio,
+                "features": {  # 更新：对齐 WhisperX 格式
+                    "word_level_timestamps": False,  # SenseVoice 不支持词级时间戳
+                    "speaker_diarization": False,  # SenseVoice 不支持说话人分离
                     "emotion_detection": True,  # SenseVoice支持情感识别
-                    "event_detection": True,  # 支持事件检测
+                },
+                "statistics": {  # 新增：对齐 WhisperX 格式
+                    "total_segments": len(formatted_segments),
+                    "total_speakers": 1,
+                    "total_duration": audio_duration,
                 },
                 "raw_result": res[0],  # 保留原始结果用于调试
             }
 
-            logger.info(f"✅ SenseVoice识别完成，耗时: {processing_time:.2f}s")
-            logger.info(f"📝 识别结果: {processed_text[:100]}...")
+            logger.info(f"SenseVoice识别完成，耗时: {processing_time:.2f}s")
+            logger.info(f"识别结果: {processed_text[:100]}...")
 
             return result
 
         except Exception as e:
-            logger.error(f"❌ SenseVoice识别失败: {e}")
+            logger.error(f"SenseVoice识别失败: {e}")
             processing_time = time.time() - start_time
 
             # 返回错误信息但保持结构一致

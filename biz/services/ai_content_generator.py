@@ -90,15 +90,15 @@ class AIContentFactory:
             return Path("data/outputs").resolve()
 
     async def generate(
-        self,
-        output_type: str,
-        transcript: str = "",
-        video_path: str = "",
-        audio_path: str = "",
-        subtitles: List[Dict[str, Any]] = None,
-        frame_info: Dict[str, Any] = None,  # 关键修复：接收帧信息
-        stream_callback=None,
-        **kwargs,
+            self,
+            output_type: str,
+            transcript: str = "",
+            video_path: str = "",
+            audio_path: str = "",
+            subtitles: List[Dict[str, Any]] = None,
+            frame_info: Dict[str, Any] = None,  # 关键修复：接收帧信息
+            stream_callback=None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """
         生成指定类型的内容 - 集成智能分析
@@ -115,7 +115,7 @@ class AIContentFactory:
             生成结果
         """
         try:
-            logger.info(f"🚀 AI工厂generate方法被调用，output_type={output_type}")
+            logger.info(f"AI工厂generate方法被调用，output_type={output_type}")
             logger.info(f"参数检查: subtitles数量={len(subtitles) if subtitles else 0}")
             logger.info(f"kwargs键: {list(kwargs.keys())}")
 
@@ -198,21 +198,21 @@ class AIContentFactory:
                         "纯文本模式或摘要生成：跳过增强版转录文件验证（视频无关键帧或特殊场景）"
                     )
                 elif (
-                    not enhanced_transcript_file
-                    or not Path(enhanced_transcript_file).exists()
+                        not enhanced_transcript_file
+                        or not Path(enhanced_transcript_file).exists()
                 ):
                     error_msg = "视频AI内容生成必须使用增强版转录文件(transcription_format.json)，当前文件不存在或未传递"
                     logger.error(error_msg)
                     raise ValueError(error_msg)
                 else:
                     logger.info(
-                        f"✅ 视频AI内容生成使用增强版转录: {enhanced_transcript_file}"
+                        f"视频AI内容生成使用增强版转录: {enhanced_transcript_file}"
                     )
 
                 # 验证增强版映射的有效性（仅当使用增强版转录时）
                 if enhanced_transcript_file is not None:
                     if not subtitles or not any(
-                        "frame" in segment for segment in subtitles
+                            "frame" in segment for segment in subtitles
                     ):
                         error_msg = "传递的subtitles缺少帧映射信息，无法进行AI内容生成"
                         logger.error(error_msg)
@@ -220,11 +220,11 @@ class AIContentFactory:
 
                     frame_mapping_count = sum(1 for s in subtitles if s.get("frame"))
                     logger.info(
-                        f"✅ 验证通过：{frame_mapping_count} 个时间段包含帧映射信息"
+                        f"验证通过：{frame_mapping_count} 个时间段包含帧映射信息"
                     )
             else:
                 # 音频文件不需要增强版转录和帧映射
-                logger.info(f"✅ 音频文件处理模式，跳过增强版转录验证")
+                logger.info(f"音频文件处理模式，跳过增强版转录验证")
 
             #  关键修复：使用传入的帧信息，而不是重新处理
             if frame_info is None:
@@ -270,12 +270,12 @@ class AIContentFactory:
             return {"error": str(e), "success": False}
 
     async def generate_all(
-        self,
-        transcript: str = "",
-        video_path: str = "",
-        audio_path: str = "",
-        subtitles: List[Dict[str, Any]] = None,
-        **kwargs,
+            self,
+            transcript: str = "",
+            video_path: str = "",
+            audio_path: str = "",
+            subtitles: List[Dict[str, Any]] = None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """
         生成所有类型的内容
@@ -312,15 +312,15 @@ class AIContentFactory:
             return {"error": str(e), "success": False}
 
     async def _process_frames(
-        self,
-        video_path: str,
-        audio_path: str,
-        subtitles: List[Dict[str, Any]],
-        **kwargs,
+            self,
+            video_path: str,
+            audio_path: str,
+            subtitles: List[Dict[str, Any]],
+            **kwargs,
     ) -> Dict[str, Any]:
         """处理帧提取，返回帧信息 - 向后兼容方法"""
         logger.warning(
-            "⚠️ 使用了向后兼容的帧处理方法，建议从video_service传递frame_info"
+            "使用了向后兼容的帧处理方法，建议从video_service传递frame_info"
         )
 
         frame_info = {
@@ -354,7 +354,7 @@ class AIContentFactory:
                     }
                 )
 
-                logger.info(f"✅ 固定间隔提取了 {len(frames)} 个视频关键帧（2秒间隔）")
+                logger.info(f"固定间隔提取了 {len(frames)} 个视频关键帧（2秒间隔）")
 
             elif audio_path:
                 # 音频可视化生成
@@ -375,7 +375,7 @@ class AIContentFactory:
                     }
                 )
 
-                logger.info(f"✅ 生成了 {len(frames)} 个音频可视化图像")
+                logger.info(f"生成了 {len(frames)} 个音频可视化图像")
 
         except Exception as e:
             logger.error(f"帧处理失败: {e}")
@@ -383,12 +383,12 @@ class AIContentFactory:
         return frame_info
 
     async def _generate_content_card(
-        self,
-        config: GenerationConfig,
-        transcript: str,
-        frame_info: Dict[str, Any],
-        stream_callback=None,
-        **kwargs,
+            self,
+            config: GenerationConfig,
+            transcript: str,
+            frame_info: Dict[str, Any],
+            stream_callback=None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """生成内容卡片"""
         return await self.content_card_generator.generate_content_card(
@@ -400,7 +400,7 @@ class AIContentFactory:
         )
 
     def _match_srt_to_frames(
-        self, subtitles: List[Dict[str, Any]], frame_list: List[Dict[str, Any]]
+            self, subtitles: List[Dict[str, Any]], frame_list: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """核心方法：将SRT时间段与帧进行精确匹配"""
         matches = []
@@ -456,12 +456,12 @@ class AIContentFactory:
             return 0.0
 
     async def _generate_mind_map(
-        self,
-        config: GenerationConfig,
-        transcript: str,
-        frame_info: Dict[str, Any],
-        stream_callback=None,
-        **kwargs,
+            self,
+            config: GenerationConfig,
+            transcript: str,
+            frame_info: Dict[str, Any],
+            stream_callback=None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """生成思维导图"""
         try:
@@ -558,7 +558,7 @@ class AIContentFactory:
                 )
                 await stream_callback(
                     "ai_content_complete",
-                    {"type": "mind_map", "message": "✅ 思维导图生成完成"},
+                    {"type": "mind_map", "message": "思维导图生成完成"},
                 )
 
             return {
@@ -572,12 +572,12 @@ class AIContentFactory:
             return {"error": str(e), "success": False}
 
     async def _generate_flashcards(
-        self,
-        config: GenerationConfig,
-        transcript: str,
-        frame_info: Dict[str, Any],
-        stream_callback=None,
-        **kwargs,
+            self,
+            config: GenerationConfig,
+            transcript: str,
+            frame_info: Dict[str, Any],
+            stream_callback=None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """生成闪卡"""
         try:
@@ -697,7 +697,7 @@ class AIContentFactory:
                 )
                 await stream_callback(
                     "ai_content_complete",
-                    {"type": "flashcards", "message": "✅ 学习闪卡生成完成"},
+                    {"type": "flashcards", "message": "学习闪卡生成完成"},
                 )
 
             return {
@@ -711,12 +711,12 @@ class AIContentFactory:
             return {"error": str(e), "success": False}
 
     async def _generate_ai_analysis(
-        self,
-        config: GenerationConfig,
-        transcript: str,
-        frame_info: Dict[str, Any],
-        stream_callback=None,
-        **kwargs,
+            self,
+            config: GenerationConfig,
+            transcript: str,
+            frame_info: Dict[str, Any],
+            stream_callback=None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """生成AI分析"""
         try:
@@ -826,7 +826,7 @@ class AIContentFactory:
                 )
                 await stream_callback(
                     "ai_content_complete",
-                    {"type": "ai_analysis", "message": "✅ AI分析完成"},
+                    {"type": "ai_analysis", "message": "AI分析完成"},
                 )
 
             return {
@@ -841,12 +841,12 @@ class AIContentFactory:
 
     # 🧠 新增：智能生成方法（使用动态提示词）
     async def _generate_content_card_smart(
-        self,
-        config: GenerationConfig,
-        transcript: str,
-        frame_info: Dict[str, Any],
-        stream_callback=None,
-        **kwargs,
+            self,
+            config: GenerationConfig,
+            transcript: str,
+            frame_info: Dict[str, Any],
+            stream_callback=None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """智能生成内容卡片 - 使用动态提示词"""
         try:
@@ -934,7 +934,7 @@ class AIContentFactory:
                     )
                     await stream_callback(
                         "ai_content_complete",
-                        {"type": "content_card", "message": "✅ 智能内容卡片生成完成"},
+                        {"type": "content_card", "message": "智能内容卡片生成完成"},
                     )
 
                 return {
@@ -964,12 +964,12 @@ class AIContentFactory:
             return {"error": str(e), "success": False}
 
     async def _generate_mind_map_smart(
-        self,
-        config: GenerationConfig,
-        transcript: str,
-        frame_info: Dict[str, Any],
-        stream_callback=None,
-        **kwargs,
+            self,
+            config: GenerationConfig,
+            transcript: str,
+            frame_info: Dict[str, Any],
+            stream_callback=None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """智能生成思维导图 - 基于优化版本的完整实现"""
         try:
@@ -1149,7 +1149,7 @@ class AIContentFactory:
                 )
                 await stream_callback(
                     "ai_content_complete",
-                    {"type": "mind_map", "message": "✅ 思维导图生成完成"},
+                    {"type": "mind_map", "message": "思维导图生成完成"},
                 )
 
             return {
@@ -1401,12 +1401,12 @@ class AIContentFactory:
         return []
 
     async def _generate_flashcards_smart(
-        self,
-        config: GenerationConfig,
-        transcript: str,
-        frame_info: Dict[str, Any],
-        stream_callback=None,
-        **kwargs,
+            self,
+            config: GenerationConfig,
+            transcript: str,
+            frame_info: Dict[str, Any],
+            stream_callback=None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """智能生成学习闪卡 - 四段式结构优化版"""
         try:
@@ -1497,7 +1497,7 @@ class AIContentFactory:
                 )
                 await stream_callback(
                     "ai_content_complete",
-                    {"type": "flashcards", "message": "✅ 智能学习闪卡生成完成"},
+                    {"type": "flashcards", "message": "智能学习闪卡生成完成"},
                 )
 
             return {
@@ -1513,12 +1513,12 @@ class AIContentFactory:
             return {"error": str(e), "success": False}
 
     async def _generate_ai_analysis_smart(
-        self,
-        config: GenerationConfig,
-        transcript: str,
-        frame_info: Dict[str, Any],
-        stream_callback=None,
-        **kwargs,
+            self,
+            config: GenerationConfig,
+            transcript: str,
+            frame_info: Dict[str, Any],
+            stream_callback=None,
+            **kwargs,
     ) -> Dict[str, Any]:
         """智能生成AI分析 - 四段式结构优化版"""
         try:
@@ -1623,7 +1623,7 @@ class AIContentFactory:
                 )
                 await stream_callback(
                     "ai_content_complete",
-                    {"type": "ai_analysis", "message": "✅ 智能AI分析完成"},
+                    {"type": "ai_analysis", "message": "智能AI分析完成"},
                 )
 
             return {
@@ -1641,19 +1641,19 @@ class AIContentFactory:
 
 # 便捷函数
 async def create_ai_factory(
-    settings: Dict[str, Any], provider: str = "openai"
+        settings: Dict[str, Any], provider: str = "openai"
 ) -> AIContentFactory:
     """创建AI内容生成工厂"""
     return AIContentFactory(settings, provider)
 
 
 async def generate_content(
-    output_type: str,
-    transcript: str = "",
-    video_path: str = "",
-    audio_path: str = "",
-    subtitles: List[Dict[str, Any]] = None,
-    **kwargs,
+        output_type: str,
+        transcript: str = "",
+        video_path: str = "",
+        audio_path: str = "",
+        subtitles: List[Dict[str, Any]] = None,
+        **kwargs,
 ) -> Dict[str, Any]:
     """生成指定类型内容的便捷函数"""
     # 加载settings.json
@@ -1671,11 +1671,11 @@ async def generate_content(
 
 
 async def generate_all_content(
-    transcript: str = "",
-    video_path: str = "",
-    audio_path: str = "",
-    subtitles: List[Dict[str, Any]] = None,
-    **kwargs,
+        transcript: str = "",
+        video_path: str = "",
+        audio_path: str = "",
+        subtitles: List[Dict[str, Any]] = None,
+        **kwargs,
 ) -> Dict[str, Any]:
     """生成所有类型内容的便捷函数"""
     # 加载settings.json

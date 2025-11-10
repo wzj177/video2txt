@@ -4,7 +4,7 @@
 听语AI - 模型管理API路由
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from typing import Dict, Any, List
 import json
@@ -25,30 +25,90 @@ model_router = APIRouter(prefix="/api/models", tags=["models"])
 
 # 模型配置
 MODEL_CONFIGS = {
+    "whisperx": {
+        "tiny": {
+            "name": "tiny",
+            "size": "39MB",
+            "description": "最小WhisperX模型，集成转录和说话人分离，适合会议快速处理",
+            "features": ["词级时间戳", "说话人分离", "多语言支持"],
+            "performance": "速度快，适合快速预览和实时处理",
+            "install_guide": "需要安装 whisperx: pip install whisperx",
+            "recommended_for": ["meeting"],  # 推荐用于会议场景
+        },
+        "base": {
+            "name": "base",
+            "size": "74MB",
+            "description": "基础WhisperX模型，平衡速度和精度，推荐用于一般会议",
+            "features": ["词级时间戳", "说话人分离", "多语言支持"],
+            "performance": "平衡速度和精度，推荐日常使用",
+            "install_guide": "需要安装 whisperx: pip install whisperx",
+            "recommended_for": ["meeting"],
+        },
+        "small": {
+            "name": "small",
+            "size": "244MB",
+            "description": "小型WhisperX模型，更高精度的说话人分离和转录",
+            "features": ["词级时间戳", "说话人分离", "多语言支持"],
+            "performance": "较高精度，适合重要会议",
+            "install_guide": "需要安装 whisperx: pip install whisperx",
+            "recommended_for": ["meeting"],
+        },
+        "medium": {
+            "name": "medium",
+            "size": "769MB",
+            "description": "中型WhisperX模型，专业级会议转录和说话人识别",
+            "features": ["词级时间戳", "说话人分离", "多语言支持"],
+            "performance": "专业级精度，适合重要商务会议",
+            "install_guide": "需要安装 whisperx: pip install whisperx",
+            "recommended_for": ["meeting"],
+        },
+        "large-v2": {
+            "name": "large-v2",
+            "size": "1550MB",
+            "description": "大型WhisperX模型v2，最高精度的会议转录",
+            "features": ["词级时间戳", "说话人分离", "多语言支持", "最高精度"],
+            "performance": "最高精度，适合专业会议记录",
+            "install_guide": "需要安装 whisperx: pip install whisperx",
+            "recommended_for": ["meeting"],
+        },
+        "large-v3": {
+            "name": "large-v3",
+            "size": "1550MB",
+            "description": "最新WhisperX模型v3，顶级会议转录和说话人分离",
+            "features": ["词级时间戳", "说话人分离", "多语言支持", "最新优化"],
+            "performance": "最新最强，顶级会议记录方案",
+            "install_guide": "需要安装 whisperx: pip install whisperx",
+            "recommended_for": ["meeting"],
+        },
+    },
     "whisper": {
         "tiny": {
             "name": "tiny",
             "size": "39MB",
             "description": "最小模型，速度快但精度较低，适合快速预览",
             "url": "https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f83b26e78e39ff2a90c3a76f8e65c3c3c5/tiny.pt",
+            "recommended_for": ["media"],  # 推荐用于媒体处理
         },
         "small": {
             "name": "small",
             "size": "244MB",
             "description": "小型模型，平衡速度和精度，适合日常使用",
             "url": "https://openaipublic.azureedge.net/main/whisper/models/ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b86c6e6d3c3c5/small.pt",
+            "recommended_for": ["media"],
         },
         "medium": {
             "name": "medium",
             "size": "769MB",
             "description": "中型模型，更高精度，适合重要内容处理",
             "url": "https://openaipublic.azureedge.net/main/whisper/models/345ae4da62f9b3d59415adc60127b97c69d6c6c6e6d3c3c5e6d3c3c5e6d3c3c5/medium.pt",
+            "recommended_for": ["media"],
         },
         "large": {
             "name": "large",
             "size": "1550MB",
             "description": "大型模型，最高精度，适合专业用途",
             "url": "https://openaipublic.azureedge.net/main/whisper/models/e4b87e7e0bf463eb8e6956e646f1e774b7dc2043e4b87e7e0bf463eb8e6956e6/large.pt",
+            "recommended_for": ["media"],
         },
     },
     "faster_whisper": {
@@ -62,6 +122,7 @@ MODEL_CONFIGS = {
             "supported_devices": ["cpu", "cuda"],
             "compute_types": ["int8", "float16", "float32"],
             "install_guide": "需要安装faster-whisper: pip install faster-whisper",
+            "recommended_for": ["media", "meeting"],
         },
         "small": {
             "name": "faster-whisper-small",
@@ -73,6 +134,7 @@ MODEL_CONFIGS = {
             "supported_devices": ["cpu", "cuda"],
             "compute_types": ["int8", "float16", "float32"],
             "install_guide": "需要安装faster-whisper: pip install faster-whisper",
+            "recommended_for": ["media", "meeting"],
         },
         "medium": {
             "name": "faster-whisper-medium",
@@ -84,6 +146,7 @@ MODEL_CONFIGS = {
             "supported_devices": ["cpu", "cuda"],
             "compute_types": ["int8", "float16", "float32"],
             "install_guide": "需要安装faster-whisper: pip install faster-whisper",
+            "recommended_for": ["media", "meeting"],
         },
         "large": {
             "name": "faster-whisper-large",
@@ -95,6 +158,7 @@ MODEL_CONFIGS = {
             "supported_devices": ["cpu", "cuda"],
             "compute_types": ["int8", "float16", "float32"],
             "install_guide": "需要安装faster-whisper: pip install faster-whisper",
+            "recommended_for": ["media", "meeting"],
         },
         "large-v2": {
             "name": "faster-whisper-large-v2",
@@ -106,6 +170,7 @@ MODEL_CONFIGS = {
             "supported_devices": ["cpu", "cuda"],
             "compute_types": ["int8", "float16", "float32"],
             "install_guide": "需要安装faster-whisper: pip install faster-whisper",
+            "recommended_for": ["media", "meeting"],
         },
         "large-v3": {
             "name": "faster-whisper-large-v3",
@@ -117,6 +182,7 @@ MODEL_CONFIGS = {
             "supported_devices": ["cpu", "cuda"],
             "compute_types": ["int8", "float16", "float32"],
             "install_guide": "需要安装faster-whisper: pip install faster-whisper",
+            "recommended_for": ["media", "meeting"],
         },
     },
     "sensevoice": {
@@ -133,6 +199,7 @@ MODEL_CONFIGS = {
             "vad_support": True,  # 支持语音活动检测
             "trust_remote_code": True,  # 需要信任远程代码
             "supported_devices": ["cpu", "cuda:0"],  # 支持的设备
+            "recommended_for": ["media", "meeting"],  # 同时推荐用于媒体和会议
         }
     },
     "dolphin": {
@@ -153,6 +220,7 @@ MODEL_CONFIGS = {
                 "等36种语言",
             ],
             "dialect_support": "支持22个中文方言（四川话、上海话、广东话等）",
+            "recommended_for": ["media"],
         },
         "small": {
             "name": "Dolphin-Small",
@@ -171,6 +239,7 @@ MODEL_CONFIGS = {
                 "等36种语言",
             ],
             "dialect_support": "支持22个中文方言（四川话、上海话、广东话等）",
+            "recommended_for": ["media"],
         },
         "medium": {
             "name": "Dolphin-Medium",
@@ -189,6 +258,7 @@ MODEL_CONFIGS = {
                 "等36种语言",
             ],
             "dialect_support": "支持22个中文方言（四川话、上海话、广东话等）",
+            "recommended_for": ["media"],
         },
         "large": {
             "name": "Dolphin-Large",
@@ -207,6 +277,7 @@ MODEL_CONFIGS = {
                 "等36种语言",
             ],
             "dialect_support": "支持22个中文方言（四川话、上海话、广东话等）",
+            "recommended_for": ["media"],
         },
     },
 }
@@ -237,7 +308,23 @@ def get_model_info(model_type: str, model_name: str) -> Dict[str, Any]:
     # 检查模型是否已安装
     models_path = get_model_storage_path()
 
-    if model_type == "whisper":
+    if model_type == "whisperx":
+        # WhisperX模型检查
+        try:
+            import whisperx
+
+            # WhisperX使用与Whisper相同的模型缓存
+            whisper_cache = Path.home() / ".cache" / "whisper"
+            model_file = whisper_cache / f"{model_name}.pt"
+            model_config["installed"] = model_file.exists()
+            model_config["local_path"] = str(model_file)
+            model_config["can_download"] = True
+        except ImportError:
+            model_config["installed"] = False
+            model_config["can_download"] = False
+            model_config["error"] = "需要安装 whisperx: pip install whisperx"
+
+    elif model_type == "whisper":
         # Whisper模型通常存储在用户目录下的.cache/whisper/
         import os
 
@@ -330,16 +417,37 @@ def get_model_info(model_type: str, model_name: str) -> Dict[str, Any]:
 
 
 @model_router.get("")
-async def list_models() -> Dict[str, Any]:
-    """获取所有模型列表"""
+async def list_models(
+    type: str = Query(
+        "media", description="模型用途类型：meeting(会议) 或 media(媒体处理)"
+    )
+) -> Dict[str, Any]:
+    """获取所有模型列表
+
+    Args:
+        type: 模型用途类型，可选值：
+            - "meeting": 会议场景，包含 WhisperX 等适合会议的模型
+            - "media": 媒体处理场景（默认），包含通用转录模型
+    """
     try:
-        models = {"whisper": [], "faster_whisper": [], "sensevoice": [], "dolphin": []}
+        models = {
+            "whisperx": [],
+            "whisper": [],
+            "faster_whisper": [],
+            "sensevoice": [],
+            "dolphin": [],
+        }
 
         for model_type in MODEL_CONFIGS:
             for model_name in MODEL_CONFIGS[model_type]:
                 model_info = get_model_info(model_type, model_name)
                 if model_info:
-                    models[model_type].append(model_info)
+                    # 根据 type 参数过滤模型
+                    recommended_for = model_info.get("recommended_for", ["media"])
+
+                    # 如果模型推荐用于当前场景，或者同时推荐用于两种场景，则包含该模型
+                    if type in recommended_for:
+                        models[model_type].append(model_info)
 
         return {"success": True, "data": models}
 

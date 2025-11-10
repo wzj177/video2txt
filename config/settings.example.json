@@ -1,20 +1,18 @@
 {
   "openai": {
-    "api_key": "sk-fc0fab8cc8a54b37946f1d65f377a060",
-    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "model": "qwen-max-2025-01-25",
+    "api_key": "",
+    "base_url": "",
+    "model": "",
     "max_tokens": 4096,
     "timeout": 120,
     "temperature": 0.7
   },
   "ollama": {
-    "installed": true,
-    "version": "ollama version is 0.12.6",
-    "running": true,
-    "base_url": "http://localhost:11434",
-    "models": [
-      "qwen3:1.7b"
-    ]
+    "installed": false,
+    "version": "",
+    "running": false,
+    "base_url": "",
+    "models": []
   },
   "system": {
     "default_language": "zh",
@@ -29,8 +27,15 @@
       "api_key": "",
       "token": "",
       "enable_pyannote": true,
-      "pyannote_timeout": 10
+      "pyannote_timeout": 10,
+      "enable_whisperx": true
     }
+  },
+  "whisperx": {
+    "model_size": "base",
+    "device": "auto",
+    "compute_type": "auto",
+    "batch_size": 16
   },
   "roles": {
     "education": {

@@ -22,7 +22,7 @@ class WhisperEngine(BaseVoiceEngine):
             import whisper
             import ssl
 
-            logger.info(f"🎤 初始化Whisper - 模型: {self.config}")
+            logger.info(f"初始化Whisper - 模型: {self.config}")
 
             # 创建不验证SSL证书的上下文
             ssl_context = ssl.create_default_context()
@@ -45,16 +45,16 @@ class WhisperEngine(BaseVoiceEngine):
                 urllib.request.HTTPSHandler = original_https_handler
 
             self.initialized = True
-            logger.info("✅ Whisper初始化成功")
+            logger.info(" Whisper初始化成功")
             return True
 
         except ImportError:
-            logger.warning("⚠️ openai-whisper 未安装")
+            logger.warning("openai-whisper 未安装")
             return False
         except Exception as e:
-            logger.error(f"❌ Whisper初始化失败: {e}")
+            logger.error(f"Whisper初始化失败: {e}")
             # 打印错误的行号
-            logger.error(f"❌ Whisper初始化行: {e.__traceback__.tb_lineno}")
+            logger.error(f"Whisper初始化行: {e.__traceback__.tb_lineno}")
             # 尝试离线模式
             try:
                 import whisper
@@ -68,14 +68,22 @@ class WhisperEngine(BaseVoiceEngine):
                     self.config["model_size"], download_root=os.environ["WHISPER_CACHE"]
                 )
                 self.initialized = True
-                logger.info("✅ Whisper从本地缓存初始化成功")
+                logger.info("Whisper从本地缓存初始化成功")
                 return True
             except Exception as offline_e:
-                logger.error(f"❌ Whisper离线初始化也失败: {offline_e}")
+                logger.error(f"Whisper离线初始化也失败: {offline_e}")
                 return False
 
-    def recognize_file(self, audio_path: str, language: str = "auto") -> Dict[str, Any]:
-        """使用Whisper转录"""
+    def recognize_file(
+        self, audio_path: str, language: str = "auto", **kwargs
+    ) -> Dict[str, Any]:
+        """使用Whisper转录
+
+        Args:
+            audio_path: 音频文件路径
+            language: 语言代码
+            **kwargs: 其他参数（为兼容性保留，本引擎暂不使用）
+        """
         if not self.initialized:
             raise RuntimeError("Whisper引擎未初始化")
 
@@ -102,14 +110,53 @@ class WhisperEngine(BaseVoiceEngine):
 
             processing_time = time.time() - start_time
             model_size = self.config["model_size"]
+            detected_language = result.get("language", "unknown")
+
+            # 格式化分段信息，对齐 WhisperX 格式
+            formatted_segments = []
+            for segment in result.get("segments", []):
+                formatted_segment = {
+                    "start": round(segment.get("start", 0), 2),
+                    "end": round(segment.get("end", 0), 2),
+                    "duration": round(
+                        segment.get("end", 0) - segment.get("start", 0), 2
+                    ),
+                    "text": segment.get("text", "").strip(),
+                    "speaker": "Speaker_1",  # Whisper 不支持说话人分离
+                    "confidence": 0.85,
+                    "language": detected_language,
+                    "emotion": None,
+                }
+                formatted_segments.append(formatted_segment)
+
+            # 计算音频时长
+            audio_duration = (
+                formatted_segments[-1]["end"] if formatted_segments else 0.0
+            )
+
+            # 构建默认说话人信息
+            speakers_info = {}
 
             return {
                 "text": result["text"].strip(),
-                "segments": result.get("segments", []),
-                "language": result.get("language", "unknown"),
+                "language": detected_language,
+                "segments": formatted_segments,  # 使用格式化后的分段
+                "speakers": speakers_info,  # 新增：对齐 WhisperX 格式
                 "processing_time": processing_time,
                 "model": f"whisper-{model_size}",
                 "device": self.config.get("device", "auto"),
+                "confidence": 0.85,  # 新增：对齐 WhisperX 格式
+                "audio_length": audio_duration,  # 新增：对齐 WhisperX 格式
+                "features": {  # 新增：对齐 WhisperX 格式
+                    "word_level_timestamps": False,
+                    "speaker_diarization": False,
+                    "emotion_detection": False,
+                },
+                "statistics": {  # 新增：对齐 WhisperX 格式
+                    "total_segments": len(formatted_segments),
+                    "total_speakers": 1,
+                    "total_duration": audio_duration,
+                },
             }
 
         except Exception as e:

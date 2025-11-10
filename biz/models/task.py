@@ -65,6 +65,7 @@ class TaskQueue(BaseModel):
     task_args = Column(JSON)  # 位置参数
     task_kwargs = Column(JSON)  # 关键字参数
 
+
     # 状态信息
     status = Column(
         String(20), nullable=False, default="pending"
@@ -110,15 +111,18 @@ class MeetingTask(BaseModel):
     capture_mode = Column(String(20), default="system")  # system, microphone
     realtime = Column(Boolean, default=True)
 
+    # 配置信息（完整的任务配置，包括所有参数）
+    config = Column(JSON)  # 处理配置（语言、引擎、说话人分离、AI分析等）
+
     # 会议结果 - 统一使用results字段存储所有结果数据
     results = Column(JSON)  # 处理结果（转录、总结、分析等）
-    
+
     # 会议统计信息（从results中提取的快速查询字段）
     total_duration = Column(Float)  # 会议总时长（秒）
     total_words = Column(Integer)  # 总词数
     speaker_count = Column(Integer)  # 说话人数量
     transcript = Column(Text)  # 完整转录文本（用于快速搜索）
-    
+
     # 兼容性字段（保留旧字段以支持现有数据）
     transcripts = Column(JSON)  # 转录记录列表（已弃用，使用results.segments）
     summary = Column(JSON)  # 会议摘要数据（已弃用，使用results.summary）

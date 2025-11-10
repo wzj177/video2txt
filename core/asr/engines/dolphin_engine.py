@@ -49,7 +49,7 @@ class DolphinEngine(BaseVoiceEngine):
         # 验证模型尺寸
         if self.model_size not in self.supported_sizes:
             logger.warning(
-                f"⚠️ 不支持的Dolphin模型尺寸: {self.model_size}, 使用默认: small"
+                f"不支持的Dolphin模型尺寸: {self.model_size}, 使用默认: small"
             )
             self.model_size = "small"
 
@@ -141,20 +141,20 @@ class DolphinEngine(BaseVoiceEngine):
                             package_name, download_dir=str(nltk_data_path), quiet=False
                         )
                         if success:
-                            logger.info(f"✅ {package_name} 下载成功")
+                            logger.info(f"{package_name} 下载成功")
                         else:
-                            logger.warning(f"⚠️ {package_name} 下载失败")
+                            logger.warning(f"{package_name} 下载失败")
                     except Exception as e:
-                        logger.warning(f"⚠️ NLTK数据包 {package_name} 下载异常: {e}")
+                        logger.warning(f"NLTK数据包 {package_name} 下载异常: {e}")
                         # 继续执行，不阻止模型初始化
                         pass
             else:
-                logger.info("✅ 所有NLTK数据包已就绪")
+                logger.info("所有NLTK数据包已就绪")
 
         except ImportError:
-            logger.info("📝 NLTK未安装，跳过NLTK配置")
+            logger.info("NLTK未安装，跳过NLTK配置")
         except Exception as e:
-            logger.warning(f"⚠️ NLTK配置失败: {e}")
+            logger.warning(f"NLTK配置失败: {e}")
             # 不抛出异常，允许继续初始化
 
     def _parse_dolphin_output(self, raw_text: str) -> Dict[str, Any]:
@@ -255,13 +255,13 @@ class DolphinEngine(BaseVoiceEngine):
             clean_text = clean_text.strip()
 
             logger.info(
-                f"✅ Dolphin输出解析完成: 提取了{len(segments)}个片段，总长度{len(clean_text)}字符"
+                f" Dolphin输出解析完成: 提取了{len(segments)}个片段，总长度{len(clean_text)}字符"
             )
 
             return {"clean_text": clean_text, "segments": segments}
 
         except Exception as e:
-            logger.warning(f"⚠️ Dolphin输出解析失败: {e}")
+            logger.warning(f"Dolphin输出解析失败: {e}")
             # 回退到简单的标签移除
             fallback_text = re.sub(r"<[^>]*>", "", raw_text).strip()
             return {
@@ -276,7 +276,7 @@ class DolphinEngine(BaseVoiceEngine):
     def initialize(self) -> bool:
         """初始化Dolphin"""
         try:
-            logger.info("🐬 初始化Dolphin方言识别模型...")
+            logger.info(" 初始化Dolphin方言识别模型...")
 
             # 配置NLTK使用离线数据，避免网络下载
             self._configure_nltk_offline()
@@ -285,12 +285,12 @@ class DolphinEngine(BaseVoiceEngine):
             try:
                 import dolphin
             except ImportError:
-                logger.warning("⚠️ Dolphin 库未安装")
-                logger.info("💡 请安装Dolphin: pip install dolphin")
+                logger.warning(" Dolphin 库未安装")
+                logger.info("请安装Dolphin: pip install dolphin")
                 return False
 
             # 检查模型路径（路径已通过_get_model_path动态获取并创建）
-            logger.info(f"🔧 使用Dolphin模型路径: {self.model_path}")
+            logger.info(f"使用Dolphin模型路径: {self.model_path}")
 
             # 确保Dolphin所需的缓存目录存在
             self._ensure_dolphin_cache_dirs()
@@ -300,7 +300,7 @@ class DolphinEngine(BaseVoiceEngine):
             for attempt in range(max_retries):
                 try:
                     logger.info(
-                        f"📥 加载Dolphin模型: {self.model_size} (尝试 {attempt + 1}/{max_retries})"
+                        f"加载Dolphin模型: {self.model_size} (尝试 {attempt + 1}/{max_retries})"
                     )
 
                     # 清理可能损坏的缓存并重新创建目录
@@ -313,11 +313,11 @@ class DolphinEngine(BaseVoiceEngine):
                     )
 
                     self.initialized = True
-                    logger.info(f"✅ Dolphin初始化成功 (设备: {self.device})")
+                    logger.info(f" Dolphin初始化成功 (设备: {self.device})")
                     return True
 
                 except Exception as e:
-                    logger.warning(f"⚠️ 第 {attempt + 1} 次加载失败: {e}")
+                    logger.warning(f"第 {attempt + 1} 次加载失败: {e}")
                     if attempt == max_retries - 1:
                         raise e
                     else:
@@ -327,7 +327,7 @@ class DolphinEngine(BaseVoiceEngine):
                         time.sleep(1)
 
         except Exception as e:
-            logger.error(f"❌ Dolphin初始化失败: {e}")
+            logger.error(f"Dolphin初始化失败: {e}")
             return False
 
     def _ensure_dolphin_cache_dirs(self):
@@ -347,17 +347,17 @@ class DolphinEngine(BaseVoiceEngine):
 
             for cache_dir in required_cache_dirs:
                 if not cache_dir.exists():
-                    logger.info(f"📁 创建Dolphin缓存目录: {cache_dir}")
+                    logger.info(f"创建Dolphin缓存目录: {cache_dir}")
                     try:
                         cache_dir.mkdir(parents=True, exist_ok=True)
-                        logger.info(f"✅ 缓存目录创建成功: {cache_dir}")
+                        logger.info(f"缓存目录创建成功: {cache_dir}")
                     except Exception as e:
-                        logger.warning(f"⚠️ 缓存目录创建失败: {cache_dir}, 错误: {e}")
+                        logger.warning(f"缓存目录创建失败: {cache_dir}, 错误: {e}")
                 else:
-                    logger.debug(f"✅ 缓存目录已存在: {cache_dir}")
+                    logger.debug(f" 缓存目录已存在: {cache_dir}")
 
         except Exception as e:
-            logger.warning(f"⚠️ 确保缓存目录时出错: {e}")
+            logger.warning(f"确保缓存目录时出错: {e}")
 
     def _clear_dolphin_cache(self):
         """清理Dolphin缓存"""
@@ -374,18 +374,26 @@ class DolphinEngine(BaseVoiceEngine):
 
             for cache_path in cache_paths:
                 if cache_path and cache_path.exists():
-                    logger.info(f"🧹 清理Dolphin缓存: {cache_path}")
+                    logger.info(f" 清理Dolphin缓存: {cache_path}")
                     try:
                         shutil.rmtree(cache_path)
-                        logger.info(f"✅ 缓存清理成功: {cache_path}")
+                        logger.info(f"缓存清理成功: {cache_path}")
                     except Exception as e:
-                        logger.warning(f"⚠️ 缓存清理失败: {cache_path}, 错误: {e}")
+                        logger.warning(f"缓存清理失败: {cache_path}, 错误: {e}")
 
         except Exception as e:
-            logger.warning(f"⚠️ 清理缓存时出错: {e}")
+            logger.warning(f"清理缓存时出错: {e}")
 
-    def recognize_file(self, audio_path: str, language: str = "auto") -> Dict[str, Any]:
-        """使用Dolphin转录"""
+    def recognize_file(
+        self, audio_path: str, language: str = "auto", **kwargs
+    ) -> Dict[str, Any]:
+        """使用Dolphin转录
+
+        Args:
+            audio_path: 音频文件路径
+            language: 语言代码
+            **kwargs: 其他参数（为兼容性保留，本引擎暂不使用）
+        """
         if not self.initialized or not self.model:
             raise RuntimeError("Dolphin引擎未初始化")
 
@@ -418,7 +426,7 @@ class DolphinEngine(BaseVoiceEngine):
             text = ""
             first_result = results[0] if len(results) > 0 else None
             if first_result is None:
-                logger.error("❌ Dolphin输出为空")
+                logger.error("Dolphin输出为空")
                 return {
                     "text": "",
                     "segments": [],
@@ -445,25 +453,70 @@ class DolphinEngine(BaseVoiceEngine):
             logger.info(f"Dolphin输出: {text}")
             parsed_result = self._parse_dolphin_output(text)
 
-            # 构建返回结果
+            # 格式化分段信息，对齐 WhisperX 格式
+            formatted_segments = []
+            for segment in parsed_result["segments"]:
+                formatted_segment = {
+                    "start": round(segment.get("start", 0), 2),
+                    "end": round(segment.get("end", 0), 2),
+                    "duration": round(
+                        segment.get("end", 0) - segment.get("start", 0), 2
+                    ),
+                    "text": segment.get("text", "").strip(),
+                    "speaker": "Speaker_1",  # Dolphin 不支持说话人分离
+                    "confidence": getattr(first_result, "confidence", 0.9),
+                    "language": getattr(first_result, "language", language),
+                    "emotion": None,
+                }
+                formatted_segments.append(formatted_segment)
+
+            # 计算音频时长
+            audio_duration = (
+                formatted_segments[-1]["end"] if formatted_segments else 0.0
+            )
+
+            # 构建默认说话人信息
+            speakers_info = {
+                "Speaker_1": {
+                    "id": "Speaker_1",
+                    "name": "Speaker_1",
+                    "segments_count": len(formatted_segments),
+                    "total_duration": audio_duration,
+                    "words": [seg["text"] for seg in formatted_segments],
+                }
+            }
+
+            # 构建返回结果 - 对齐 WhisperX 格式
             return {
                 "text": parsed_result["clean_text"],
-                "segments": parsed_result["segments"],
                 "language": getattr(first_result, "language", language),
-                "confidence": getattr(first_result, "confidence", 0.9),
+                "segments": formatted_segments,  # 使用格式化后的分段
+                "speakers": speakers_info,  # 新增：对齐 WhisperX 格式
                 "processing_time": processing_time,
                 "model": "dolphin",
                 "device": self.device,
-                "sample_rate": getattr(first_result, "sample_rate", 16000),
-                "audio_length": getattr(first_result, "audio_length", 0.0),
+                "confidence": getattr(
+                    first_result, "confidence", 0.9
+                ),  # 新增：对齐 WhisperX 格式
+                "audio_length": audio_duration,  # 新增：对齐 WhisperX 格式
+                "features": {  # 新增：对齐 WhisperX 格式
+                    "word_level_timestamps": False,
+                    "speaker_diarization": False,
+                    "emotion_detection": False,
+                },
+                "statistics": {  # 新增：对齐 WhisperX 格式
+                    "total_segments": len(formatted_segments),
+                    "total_speakers": 1,
+                    "total_duration": audio_duration,
+                },
                 "raw_text": text,  # 保留原始输出用于调试
             }
 
         except ImportError:
-            logger.error("❌ Dolphin库未安装")
+            logger.error("Dolphin库未安装")
             raise RuntimeError("Dolphin库未安装")
         except Exception as e:
-            logger.error(f"❌ Dolphin转录失败: {e}")
+            logger.error(f"Dolphin转录失败: {e}")
             raise
 
     def get_engine_info(self) -> Dict[str, Any]:
@@ -554,36 +607,3 @@ class DolphinEngine(BaseVoiceEngine):
         }
 
 
-def test_dolphin_parser():
-    """测试Dolphin输出解析器"""
-    engine = DolphinEngine()
-
-    # 测试用例1: 标准格式
-    test_input1 = "<zh><CN><asr><0.00> 安全帽的佩戴方法戴上安全帽一只手稳定帽檐另一只手旋转脑后的极轮调整至合适的松紧度之后调整下颗带长度到合适位置并拉紧扣号调整安全帽松紧并确保防滑条贴住额头<30.00>"
-
-    result1 = engine._parse_dolphin_output(test_input1)
-    print("🧪 测试用例1:")
-    print(f"  原始文本: {test_input1}")
-    print(f"  解析结果: {result1}")
-    print()
-
-    # 测试用例2: 多个时间段
-    test_input2 = "<zh><CN><asr><0.00> 第一段内容<10.00><10.00> 第二段内容<20.00><20.00> 第三段内容<30.00>"
-
-    result2 = engine._parse_dolphin_output(test_input2)
-    print("🧪 测试用例2:")
-    print(f"  原始文本: {test_input2}")
-    print(f"  解析结果: {result2}")
-    print()
-
-    # 测试用例3: 没有时间戳
-    test_input3 = "<zh><CN><asr> 纯文本内容没有时间戳"
-
-    result3 = engine._parse_dolphin_output(test_input3)
-    print("🧪 测试用例3:")
-    print(f"  原始文本: {test_input3}")
-    print(f"  解析结果: {result3}")
-
-
-if __name__ == "__main__":
-    test_dolphin_parser()

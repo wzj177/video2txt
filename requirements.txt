@@ -16,6 +16,7 @@ wave  # 内置音频格式支持
 # 语音识别
 openai-whisper>=20231117
 faster-whisper>=0.9.0
+whisperx>=3.1.0  # 集成转录和说话人分离
 
 # SenseVoice和FunASR (阿里达摩院)
 funasr>=1.0.0

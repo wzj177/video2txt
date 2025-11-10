@@ -161,23 +161,6 @@
             gap: 8px;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
         .btn-secondary {
             background: rgba(255, 255, 255, 0.8);
             color: #666;
@@ -386,9 +369,6 @@
                 <h1>📤 上传会议录音</h1>
                 <p>上传已录制的会议音频文件进行处理</p>
             </div>
-            <div class="header-right">
-                <button class="btn btn-secondary" @click="closePage">✕ 关闭</button>
-            </div>
         </div>
     </div>
 
@@ -405,12 +385,37 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">转录引擎</label>
-                    <select v-model="uploadConfig.engine" class="form-select">
-                        <option value="sensevoice">SenseVoice (推荐)</option>
-                        <option value="whisper">Whisper</option>
-                        <option value="openai">OpenAI</option>
+                    <label class="form-label">识别模型</label>
+                    <select v-model="uploadConfig.engine" class="form-select" @change="onModelChange">
+                        <template v-if="models.length > 0">
+                            <!-- 按引擎类型分组显示 -->
+                            <optgroup v-for="(engineModels, engineType) in groupedModelsByEngine"
+                                      :key="engineType" :label="getEngineDisplayName(engineType)">
+                                <option v-for="model in engineModels" :key="model.id" :value="model.engineType"
+                                        :selected="model.engineType === uploadConfig.engine"
+                                        :class="{'recommended': model.recommended, 'not-installed': !model.installed}">
+                                    {{ model.displayName || model.name }}{{ model.recommended ? ' (推荐)' : '' }}{{
+                                        !model.installed ? ' (未安装)' : '' }}
+                                </option>
+                            </optgroup>
+                        </template>
+                        <!-- 模型未加载时的备用选项 -->
+                        <template v-else>
+                            <option value="whisperx">WhisperX (推荐 - 精确说话人分离)</option>
+                            <option value="sensevoice">SenseVoice (中文优化)</option>
+                            <option value="whisper">Whisper (OpenAI原版)</option>
+                            <option value="faster_whisper">Faster-Whisper (优化版)</option>
+                            <option value="dolphin">Dolphin (多语言)</option>
+                        </template>
                     </select>
+                    <div class="form-help">
+                        <p><strong>💡 引擎说明：</strong></p>
+                        <p>• <strong>WhisperX</strong>：集成转录和说话人分离，提供词级时间戳，推荐使用</p>
+                        <p>• <strong>SenseVoice</strong>：中文识别准确率高，速度快</p>
+                        <p>• <strong>Whisper</strong>：OpenAI官方模型，多语言支持</p>
+                        <p>• <strong>Faster-Whisper</strong>：优化版Whisper，速度更快，资源占用更低</p>
+                        <p>• <strong>Dolphin</strong>：支持40种东方语言和22种中文方言</p>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -429,7 +434,12 @@
                         <span class="checkmark"></span>
                         启用说话人分离
                     </label>
-                    <div class="form-help">识别并区分不同的说话人</div>
+                    <div class="form-help">
+                        识别并区分不同的说话人<br>
+                        <em style="color: #666; font-size: 13px;">
+                            注：WhisperX 引擎自动包含说话人分离功能，无需额外配置
+                        </em>
+                    </div>
                 </div>
 
                 <div class="form-group form-checkbox-group">
@@ -438,7 +448,12 @@
                         <span class="checkmark"></span>
                         启用AI分析和总结
                     </label>
-                    <div class="form-help">生成会议摘要、要点和关键词</div>
+                    <div class="form-help">
+                        生成会议摘要、要点和关键词<br>
+                        <em style="color: #999; font-size: 13px;">
+                            注：情感分析功能开发中，暂不可用
+                        </em>
+                    </div>
                 </div>
 
                 <!-- 文件上传区域 -->
@@ -543,6 +558,9 @@
         createApp({
             data() {
                 return {
+                    // 模型列表
+                    models: [],
+                    
                     // 上传配置
                     uploadConfig: {
                         title: `会议录音_${new Date().toLocaleString('zh-CN', {
@@ -551,7 +569,7 @@
                             hour: '2-digit',
                             minute: '2-digit'
                         })}`,
-                        engine: 'sensevoice',
+                        engine: 'whisperx',  // 默认使用 WhisperX
                         language: 'auto',
                         contentRole: 'meeting',
                         enableSpeakerDiarization: true,
@@ -576,10 +594,91 @@
             computed: {
                 isFormValid() {
                     return this.uploadConfig.title && this.uploadConfig.title.trim() !== '' && this.selectedFile;
+                },
+
+                groupedModelsByEngine() {
+                    if (this.models.length === 0) return {};
+
+                    const grouped = {};
+                    this.models.forEach(model => {
+                        if (!grouped[model.engineType]) {
+                            grouped[model.engineType] = [];
+                        }
+                        grouped[model.engineType].push({
+                            ...model,
+                            recommended: this.isModelRecommended(model),
+                            displayName: this.getModelDisplayName(model, model.engineType)
+                        });
+                    });
+
+                    // 排序：已安装的在前，未安装的在后
+                    Object.keys(grouped).forEach(engineType => {
+                        grouped[engineType].sort((a, b) => {
+                            if (a.installed !== b.installed) {
+                                return b.installed - a.installed;
+                            }
+                            return a.name.localeCompare(b.name);
+                        });
+                    });
+
+                    return grouped;
                 }
             },
 
+            mounted() {
+                this.loadModels();
+            },
+
             methods: {
+                async loadModels() {
+                    try {
+                        const data = await http.get('/api/models?type=meeting');
+                        this.models = [];
+
+                        Object.entries(data).forEach(([engineType, models]) => {
+                            if (Array.isArray(models)) {
+                                models.forEach((model) => {
+                                    const modelKey = model.config_key || model.name;
+                                    this.models.push({
+                                        ...model,
+                                        id: `${engineType}-${modelKey}`,
+                                        engineType,
+                                        displayName: model.name,
+                                        installed: model.installed || false
+                                    });
+                                });
+                            }
+                        });
+                    } catch (error) {
+                        console.error('加载模型列表失败:', error);
+                    }
+                },
+
+                getEngineDisplayName(engineType) {
+                    const engineMap = {
+                        'whisperx': 'WhisperX (推荐)',
+                        'whisper': 'Whisper (OpenAI)',
+                        'faster_whisper': 'Faster-Whisper (优化版)',
+                        'sensevoice': 'SenseVoice (阿里)',
+                        'dolphin': 'Dolphin (方言)'
+                    };
+                    return engineMap[engineType] || engineType;
+                },
+
+                getModelDisplayName(model, engineType) {
+                    return model.name;
+                },
+
+                isModelRecommended(model) {
+                    // WhisperX 推荐用于会议场景
+                    return model.engineType === 'whisperx';
+                },
+
+                onModelChange(event) {
+                    // 模型变更时的处理
+                    console.log('选择的引擎:', this.uploadConfig.engine);
+                },
+
                 async uploadMeeting() {
                     if (!this.isFormValid) {
                         layer.msg('请填写会议标题并选择音频文件', {icon: 0});

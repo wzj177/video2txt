@@ -165,6 +165,7 @@ class TaskService:
                         capture_mode=config_data.get("capture_mode", "system"),
                         realtime=config_data.get("realtime", True),
                         results=task_data.get("results", {}),  # 添加results字段支持
+                        config = config_data,
                     )
                 else:
                     raise ValueError(f"不支持的任务类型: {task_type}")

@@ -31,24 +31,10 @@ def load_settings() -> Dict[str, Any]:
                 return json.load(f)
         else:
             # 默认配置
-            return {
-                "openai": {
-                    "api_key": "",
-                    "base_url": "https://api.openai.com/v1",
-                    "model": "gpt-3.5-turbo",
-                    "max_tokens": 2000,
-                },
-                "ollama": {
-                    "installed": False,
-                    "base_url": "http://localhost:11434",
-                    "models": [],
-                },
-                "system": {
-                    "default_language": "zh",
-                    "storage_path": str(PROJECT_ROOT / "data" / "outputs"),
-                    "max_concurrent": 3,
-                },
-            }
+            # 读取setting.example.json
+            with open(PROJECT_ROOT / "config" / "settings.example.json", "r", encoding="utf-8") as f:
+                return json.load(f)
+
     except Exception as e:
         logger.error(f"加载设置失败: {e}")
         return {}
@@ -592,11 +578,137 @@ async def get_all_settings() -> Dict[str, Any]:
     try:
         settings = load_settings()
 
-        # 隐藏敏感信息
-        # if settings.get("openai", {}).get("api_key"):
-        #     api_key = settings["openai"]["api_key"]
-        #     settings["openai"]["api_key"] = "sk-" + "*" * 20 + api_key[-8:]
+        # 确保返回所有必需的配置
+        result = {
+            "openai": settings.get("openai", {}),
+            "ollama": settings.get("ollama", {}),
+            "system": settings.get("system", {}),
+            "whisperx": settings.get("whisperx", {}),
+            "role_mapping": settings.get("role_mapping", {}),
+            "roles": settings.get("roles", {}),
+            "prompt_templates": settings.get("prompt_templates", {}),
+        }
 
-        return {"success": True, "data": settings}
+        # 隐藏敏感信息
+        # if result.get("openai", {}).get("api_key"):
+        #     api_key = result["openai"]["api_key"]
+        #     result["openai"]["api_key"] = "sk-" + "*" * 20 + api_key[-8:]
+
+        return result
     except Exception as e:
-        return {"success": False, "error": str(e), "data": {}}
+        logger.error(f"获取所有设置失败: {e}")
+        return {}
+
+
+@settings_router.post("/whisperx")
+async def update_whisperx_settings(config: Dict[str, Any]) -> Dict[str, Any]:
+    """更新WhisperX配置"""
+    try:
+        settings = load_settings()
+
+        # 更新Hugging Face Token
+        if "system" not in settings:
+            settings["system"] = {}
+        if "huggingface" not in settings["system"]:
+            settings["system"]["huggingface"] = {}
+
+        if "hf_token" in config:
+            settings["system"]["huggingface"]["token"] = config["hf_token"]
+            settings["system"]["huggingface"]["enable_whisperx"] = True
+
+        # 更新WhisperX配置
+        if "whisperx" not in settings:
+            settings["whisperx"] = {}
+
+        # 更新提供的字段
+        if "model_size" in config:
+            settings["whisperx"]["model_size"] = config["model_size"]
+        if "device" in config:
+            settings["whisperx"]["device"] = config["device"]
+        if "batch_size" in config:
+            settings["whisperx"]["batch_size"] = config["batch_size"]
+
+        # 保存配置
+        if save_settings(settings):
+            return {"success": True, "message": "WhisperX配置已更新"}
+        else:
+            return {"success": False, "error": "保存配置失败"}
+
+    except Exception as e:
+        logger.error(f"更新WhisperX配置失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.post("/whisperx/test")
+async def test_whisperx_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """测试WhisperX配置"""
+    try:
+        hf_token = config.get("hf_token", "")
+        model_size = config.get("model_size", "base")
+
+        # 测试结果
+        result = {
+            "success": True,
+            "model_size": model_size,
+            "device": "auto",
+            "hf_token_valid": False,
+        }
+
+        # 检测可用设备
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                result["device"] = "cuda"
+            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                result["device"] = "mps"
+            else:
+                result["device"] = "cpu"
+        except ImportError:
+            result["device"] = "cpu"
+
+        # 验证Hugging Face Token
+        if hf_token:
+            try:
+                headers = {"Authorization": f"Bearer {hf_token}"}
+                response = requests.get(
+                    "https://huggingface.co/api/whoami", headers=headers, timeout=10
+                )
+
+                if response.status_code == 200:
+                    result["hf_token_valid"] = True
+                    user_info = response.json()
+                    result["hf_username"] = user_info.get("name", "unknown")
+                else:
+                    result["hf_token_valid"] = False
+                    result["error"] = f"Token验证失败: HTTP {response.status_code}"
+            except requests.exceptions.Timeout:
+                result["error"] = "连接超时，请检查网络"
+            except requests.exceptions.ConnectionError:
+                result["error"] = "无法连接到Hugging Face，请检查网络"
+            except Exception as e:
+                result["error"] = f"Token验证失败: {str(e)}"
+        else:
+            result["message"] = "未配置Hugging Face Token，说话人分离功能将不可用"
+
+        # 检查WhisperX是否已安装
+        try:
+            import whisperx
+
+            result["whisperx_installed"] = True
+            result["whisperx_version"] = (
+                whisperx.__version__ if hasattr(whisperx, "__version__") else "unknown"
+            )
+        except ImportError:
+            result["success"] = False
+            result["error"] = "WhisperX未安装，请运行: pip install whisperx"
+            result["whisperx_installed"] = False
+
+        return result
+
+    except Exception as e:
+        logger.error(f"测试WhisperX配置失败: {e}")
+        return {
+            "success": False,
+            "error": f"测试失败: {str(e)}",
+        }

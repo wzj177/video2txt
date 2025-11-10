@@ -9,5 +9,12 @@ from .whisper_engine import WhisperEngine
 from .faster_whisper_engine import FasterWhisperEngine
 from .sensevoice_engine import SenseVoiceEngine
 from .dolphin_engine import DolphinEngine
+from .whisperx_engine import WhisperXEngine
 
-__all__ = ["WhisperEngine", "FasterWhisperEngine", "SenseVoiceEngine", "DolphinEngine"]
+__all__ = [
+    "WhisperEngine",
+    "FasterWhisperEngine",
+    "SenseVoiceEngine",
+    "DolphinEngine",
+    "WhisperXEngine",
+]

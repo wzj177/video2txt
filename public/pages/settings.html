@@ -966,27 +966,27 @@
                         <!--                                    <option value="dialect">方言</option>-->
                         <!--                                </select>-->
                         <!--                            </div>-->
-                        <div class="form-group">
+                        <!-- <div class="form-group">
                             <label class="form-label">存储路径</label>
                             <input type="text"
                                    v-model="systemConfig.storagePath"
                                    class="form-input"
                                    placeholder="请输入存储路径，如：/path/to/storage">
-                            <!-- <button class="btn btn-secondary" style="margin-top: 8px;" @click="chooseStoragePath">
+                            <button class="btn btn-secondary" style="margin-top: 8px;" @click="chooseStoragePath">
                                 选择路径
-                            </button> -->
-                        </div>
+                            </button>
+                        </div> -->
 
-                        <div class="form-group">
-                            <label class="form-label">并发处理数</label>
-                            <input type="number"
-                                   v-model="systemConfig.maxConcurrent"
-                                   class="form-input"
-                                   min="1"
-                                   max="10">
-                        </div>
+<!--                        <div class="form-group">-->
+<!--                            <label class="form-label">并发处理数</label>-->
+<!--                            <input type="number"-->
+<!--                                   v-model="systemConfig.maxConcurrent"-->
+<!--                                   class="form-input"-->
+<!--                                   min="1"-->
+<!--                                   max="10">-->
+<!--                        </div>-->
                     </div>
-                    <div class="form-group">
+                    <!-- <div class="form-group">
                         <button class="btn btn-primary" @click="saveSystemConfig" :disabled="isSaving">
                             <svg v-if="isSaving" class="icon icon-sm icon-spin" viewBox="0 0 24 24">
                                 <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
@@ -995,6 +995,148 @@
                                 <path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
                             </svg>
                             保存设置
+                        </button>
+                    </div> -->
+                </div>
+
+                <!-- WhisperX 配置 -->
+                <div class="setting-section">
+                    <div class="section-title">
+                        <svg class="icon icon-md" viewBox="0 0 24 24">
+                            <path d="M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                        </svg>
+                        WhisperX 配置
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Hugging Face Token
+                            <span style="color: var(--error-color); font-size: 12px; margin-left: 8px;">* 必填（用于说话人分离）</span>
+                        </label>
+                        <input type="password"
+                               v-model="whisperxConfig.hf_token"
+                               class="form-input"
+                               placeholder="hf_xxxxxxxxxxxxxxxxxxxxx">
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-top: 8px; line-height: 1.6;">
+                            <p>• 用于 WhisperX 的说话人分离功能（基于 PyAnnote.audio）</p>
+                            <p style="margin-top: 4px;">
+                                • <strong>获取方法：</strong>访问 
+                                <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--primary-color);">
+                                    Hugging Face Token 页面
+                                </a> 
+                                → 创建新 Token → 选择 "Read" 权限
+                            </p>
+                            <p style="margin-top: 4px; color: var(--warning-color);">
+                                ⚠️ 如不配置 Token，WhisperX 仍可进行语音转录，但说话人分离功能不可用
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">
+                                WhisperX 模型尺寸
+                                <span style="color: var(--info-color); font-size: 12px; margin-left: 8px;">推荐: base / small</span>
+                            </label>
+                            <select v-model="whisperxConfig.model_size" class="form-select">
+                                <option value="tiny">Tiny (39M) - 最快，准确率较低</option>
+                                <option value="base">Base (74M) - 推荐，平衡性能</option>
+                                <option value="small">Small (244M) - 推荐，高准确率</option>
+                                <option value="medium">Medium (769M) - 更高准确率</option>
+                                <option value="large">Large (1550M) - 最高准确率，需GPU</option>
+                                <option value="large-v2">Large-v2 (1550M) - 改进版</option>
+                                <option value="large-v3">Large-v3 (1550M) - 最新版，最佳</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">计算设备</label>
+                            <select v-model="whisperxConfig.device" class="form-select">
+                                <option value="auto">自动检测 (推荐)</option>
+                                <option value="cuda">CUDA (NVIDIA GPU)</option>
+                                <option value="cpu">CPU</option>
+                            </select>
+                            <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px;">
+                                自动模式会检测可用的GPU，如没有则使用CPU
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 模型性能对比表格 -->
+                    <div style="margin: 16px 0; padding: 16px; background: var(--bg-color); border-radius: var(--radius-medium);">
+                        <div style="font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">
+                            📊 模型性能对比：
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead>
+                                <tr style="background: var(--card-bg); border-bottom: 2px solid var(--border-light);">
+                                    <th style="padding: 8px; text-align: left;">模型</th>
+                                    <th style="padding: 8px; text-align: center;">大小</th>
+                                    <th style="padding: 8px; text-align: center;">速度</th>
+                                    <th style="padding: 8px; text-align: center;">准确率</th>
+                                    <th style="padding: 8px; text-align: center;">显存需求</th>
+                                    <th style="padding: 8px; text-align: left;">推荐场景</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid var(--border-light);">
+                                    <td style="padding: 8px;"><strong>Tiny</strong></td>
+                                    <td style="padding: 8px; text-align: center;">39M</td>
+                                    <td style="padding: 8px; text-align: center;">⚡⚡⚡⚡⚡</td>
+                                    <td style="padding: 8px; text-align: center;">⭐⭐</td>
+                                    <td style="padding: 8px; text-align: center;">~1GB</td>
+                                    <td style="padding: 8px;">快速预览、实时处理</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-light); background: rgba(0, 178, 106, 0.05);">
+                                    <td style="padding: 8px;"><strong>Base ✅</strong></td>
+                                    <td style="padding: 8px; text-align: center;">74M</td>
+                                    <td style="padding: 8px; text-align: center;">⚡⚡⚡⚡</td>
+                                    <td style="padding: 8px; text-align: center;">⭐⭐⭐</td>
+                                    <td style="padding: 8px; text-align: center;">~1GB</td>
+                                    <td style="padding: 8px;">日常使用、平衡性能</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-light); background: rgba(0, 178, 106, 0.05);">
+                                    <td style="padding: 8px;"><strong>Small ✅</strong></td>
+                                    <td style="padding: 8px; text-align: center;">244M</td>
+                                    <td style="padding: 8px; text-align: center;">⚡⚡⚡</td>
+                                    <td style="padding: 8px; text-align: center;">⭐⭐⭐⭐</td>
+                                    <td style="padding: 8px; text-align: center;">~2GB</td>
+                                    <td style="padding: 8px;">高质量转录、会议记录</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-light);">
+                                    <td style="padding: 8px;"><strong>Medium</strong></td>
+                                    <td style="padding: 8px; text-align: center;">769M</td>
+                                    <td style="padding: 8px; text-align: center;">⚡⚡</td>
+                                    <td style="padding: 8px; text-align: center;">⭐⭐⭐⭐</td>
+                                    <td style="padding: 8px; text-align: center;">~5GB</td>
+                                    <td style="padding: 8px;">专业转录、多语言</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-light);">
+                                    <td style="padding: 8px;"><strong>Large-v3</strong></td>
+                                    <td style="padding: 8px; text-align: center;">1550M</td>
+                                    <td style="padding: 8px; text-align: center;">⚡</td>
+                                    <td style="padding: 8px; text-align: center;">⭐⭐⭐⭐⭐</td>
+                                    <td style="padding: 8px; text-align: center;">~10GB</td>
+                                    <td style="padding: 8px;">最高质量、专业场景</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="form-group">
+                        <button class="btn btn-primary" @click="saveWhisperXConfig" :disabled="isSaving">
+                            <svg v-if="isSaving" class="icon icon-sm icon-spin" viewBox="0 0 24 24">
+                                <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                            </svg>
+                            <svg v-else class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                            </svg>
+                            保存 WhisperX 配置
+                        </button>
+                        <button class="btn btn-secondary" @click="testWhisperXConfig" style="margin-left: 12px;">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            测试配置
                         </button>
                     </div>
                 </div>
@@ -1021,6 +1163,12 @@
                     base_url: 'https://api.openai.com/v1',
                     model: 'gpt-3.5-turbo',
                     max_tokens: 2000
+                },
+                whisperxConfig: {
+                    hf_token: '',
+                    model_size: 'base',
+                    device: 'auto',
+                    batch_size: 16
                 },
                 systemConfig: {
                     defaultLanguage: 'auto',
@@ -1076,6 +1224,18 @@
                     // 加载所有设置
                     const data = await http.get('/api/settings/all');
                     Object.assign(this.openaiConfig, data.openai);
+
+                    // 加载WhisperX配置
+                    if (data.whisperx) {
+                        Object.assign(this.whisperxConfig, data.whisperx);
+                    } else if (data.system?.whisperx) {
+                        Object.assign(this.whisperxConfig, data.system.whisperx);
+                    }
+
+                    // 加载Hugging Face Token
+                    if (data.system?.huggingface?.token) {
+                        this.whisperxConfig.hf_token = data.system.huggingface.token;
+                    }
 
                     // 映射系统配置字段（API使用下划线，前端使用驼峰）
                     if (data.system) {
@@ -1214,6 +1374,53 @@
                     alert('OpenAI连接测试成功');
                 } catch (error) {
                     alert('OpenAI连接测试失败: ' + error.message);
+                }
+            },
+
+            async saveWhisperXConfig() {
+                this.isSaving = true;
+                try {
+                    const whisperxData = {
+                        hf_token: this.whisperxConfig.hf_token,
+                        model_size: this.whisperxConfig.model_size,
+                        device: this.whisperxConfig.device,
+                        batch_size: this.whisperxConfig.batch_size
+                    };
+
+                    await http.post('/api/settings/whisperx', whisperxData);
+                    alert('WhisperX配置保存成功');
+                } catch (error) {
+                    console.error('保存WhisperX配置失败:', error);
+                    alert('保存WhisperX配置失败: ' + error.message);
+                } finally {
+                    this.isSaving = false;
+                }
+            },
+
+            async testWhisperXConfig() {
+                try {
+                    const result = await http.post('/api/settings/whisperx/test', {
+                        hf_token: this.whisperxConfig.hf_token,
+                        model_size: this.whisperxConfig.model_size
+                    });
+                    
+                    if (result.success) {
+                        let message = '✅ WhisperX配置测试成功!\n\n';
+                        message += `设备: ${result.device}\n`;
+                        message += `模型: ${result.model_size}\n`;
+                        
+                        if (result.hf_token_valid) {
+                            message += '🎉 Hugging Face Token有效，说话人分离功能可用';
+                        } else {
+                            message += '⚠️ Hugging Face Token无效或未配置，说话人分离功能不可用';
+                        }
+                        
+                        alert(message);
+                    } else {
+                        alert('❌ WhisperX配置测试失败: ' + (result.message || '未知错误'));
+                    }
+                } catch (error) {
+                    alert('WhisperX配置测试失败: ' + error.message);
                 }
             },
 

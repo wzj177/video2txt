@@ -73,7 +73,7 @@ class VideoProcessor:
         return self._frame_extractor
 
     async def process_file_complete(
-        self, task_id: str, file_data: Dict[str, Any], config: Dict[str, Any]
+            self, task_id: str, file_data: Dict[str, Any], config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         完整的文件处理流程 - 统一函数
@@ -328,7 +328,7 @@ class VideoProcessor:
             return {"success": False, "error": str(e)}
 
     async def process_url_complete(
-        self, task_id: str, url: str, config: Dict[str, Any]
+            self, task_id: str, url: str, config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         完整的URL处理流程 - 统一函数
@@ -466,7 +466,7 @@ class VideoProcessor:
             raise Exception(f"音频提取失败: {str(e)}")
 
     async def _extract_embedded_subtitles(
-        self, video_path: str, task_id: str
+            self, video_path: str, task_id: str
     ) -> Optional[str]:
         """从视频中提取内嵌字幕"""
         try:
@@ -547,7 +547,7 @@ class VideoProcessor:
             return None
 
     async def _transcribe_audio(
-        self, audio_path: str, config: Dict[str, Any]
+            self, audio_path: str, config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """转录音频文件"""
         try:
@@ -664,7 +664,7 @@ class VideoProcessor:
         return result
 
     def _correct_whisper_errors(
-        self, text: str, domain_keywords: List[str] = None
+            self, text: str, domain_keywords: List[str] = None
     ) -> tuple[str, List[str]]:
         """智能修正Whisper语音识别错误"""
         # 通用纠错词典
@@ -673,9 +673,7 @@ class VideoProcessor:
             "的話": "的话",
             "德话": "的话",
             "地话": "的话",
-            "这样": "这样",
             "这养": "这样",
-            "怎样": "怎样",
             "怎养": "怎样",
             "可以": "可以",
             "克以": "可以",
@@ -683,11 +681,9 @@ class VideoProcessor:
             "能狗": "能够",
             "應該": "应该",
             "英该": "应该",
-            "因为": "因为",
             "音为": "因为",
             "所以": "所以",
             "索以": "所以",
-            "然后": "然后",
             "燃后": "然后",
             # ... 更多纠错规则
         }
@@ -710,12 +706,12 @@ class VideoProcessor:
         return corrected_text, corrections_made
 
     async def _ai_correct_subtitles(
-        self,
-        subtitles: List[Any],
-        embedded_subtitle_content: str = None,
-        ai_client=None,
-        model: str = None,
-        rounds: int = 2,
+            self,
+            subtitles: List[Any],
+            embedded_subtitle_content: str = None,
+            ai_client=None,
+            model: str = None,
+            rounds: int = 2,
     ) -> tuple[List[Any], List[str]]:
         """使用AI进行字幕纠错"""
         if not ai_client or not model:
@@ -739,12 +735,12 @@ class VideoProcessor:
             batch_size = 8  # 每次处理8条字幕
 
             for i in range(0, len(corrected_subtitles), batch_size):
-                batch = corrected_subtitles[i : i + batch_size]
+                batch = corrected_subtitles[i: i + batch_size]
 
                 # 构建批处理文本
                 batch_text = ""
                 for j, subtitle in enumerate(batch):
-                    batch_text += f"{i+j+1}. [{subtitle.start}] {subtitle.content}\n"
+                    batch_text += f"{i + j + 1}. [{subtitle.start}] {subtitle.content}\n"
 
                 # 构建纠错提示词
                 correction_prompt = f"""# 任务
@@ -780,7 +776,7 @@ class VideoProcessor:
                         corrected_lines = corrected_response.strip().split("\n")
 
                         for line_idx, line in enumerate(corrected_lines):
-                            if line.strip() and f"{i+line_idx+1}." in line:
+                            if line.strip() and f"{i + line_idx + 1}." in line:
                                 try:
                                     # 解析格式: "序号. [时间戳] 内容 | 修改说明"
                                     parts = line.split("] ", 1)
@@ -833,7 +829,7 @@ class VideoProcessor:
         return corrected_subtitles, all_corrections
 
     async def _generate_summary(
-        self, transcript: Dict[str, Any], config: Dict[str, Any]
+            self, transcript: Dict[str, Any], config: Dict[str, Any]
     ) -> str:
         """生成内容摘要"""
         try:
@@ -906,14 +902,14 @@ class VideoProcessor:
             return f"摘要生成失败: {str(e)}"
 
     async def _generate_output_files(
-        self,
-        task_id: str,
-        transcript: Dict[str, Any],
-        summary: str,
-        config: Dict[str, Any],
-        video_path: str = None,
-        audio_path: str = None,
-        file_type: str = "video",
+            self,
+            task_id: str,
+            transcript: Dict[str, Any],
+            summary: str,
+            config: Dict[str, Any],
+            video_path: str = None,
+            audio_path: str = None,
+            file_type: str = "video",
     ) -> List[Dict[str, str]]:
         """生成输出文件
         task_id: 任务ID
@@ -1135,12 +1131,12 @@ class VideoProcessor:
             raise Exception(f"文件生成失败: {str(e)}")
 
     async def _process_frames(
-        self,
-        video_path: str,
-        audio_path: str,
-        subtitles: List[Dict[str, Any]],
-        output_dir: Path,
-        task_id: str,
+            self,
+            video_path: str,
+            audio_path: str,
+            subtitles: List[Dict[str, Any]],
+            output_dir: Path,
+            task_id: str,
     ) -> Dict[str, Any]:
         """处理帧提取"""
         frame_info = {
@@ -1233,7 +1229,7 @@ class VideoProcessor:
         return frame_info
 
     def _format_subtitles_for_frames(
-        self, segments: List[Dict[str, Any]]
+            self, segments: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """将segments格式转换为帧提取器需要的格式"""
         formatted_subtitles = []
@@ -1263,12 +1259,12 @@ class VideoProcessor:
         return formatted_subtitles
 
     async def _generate_basic_files(
-        self,
-        output_dir: Path,
-        transcript_text: str,
-        summary: str,
-        subtitles: List[Dict[str, Any]],
-        frame_info: Dict[str, Any] = None,
+            self,
+            output_dir: Path,
+            transcript_text: str,
+            summary: str,
+            subtitles: List[Dict[str, Any]],
+            frame_info: Dict[str, Any] = None,
     ) -> List[Dict[str, str]]:
         """生成基础文件"""
         files = []
@@ -1345,14 +1341,14 @@ class VideoProcessor:
         return files
 
     async def _generate_ai_content_files(
-        self,
-        output_dir: Path,
-        transcript_text: str,
-        frame_info: Dict[str, Any],
-        ai_output_types: List[str],
-        config: Dict[str, Any],
-        task_id: str,
-        subtitles: List[Dict[str, Any]] = None,
+            self,
+            output_dir: Path,
+            transcript_text: str,
+            frame_info: Dict[str, Any],
+            ai_output_types: List[str],
+            config: Dict[str, Any],
+            task_id: str,
+            subtitles: List[Dict[str, Any]] = None,
     ) -> tuple[List[Dict[str, str]], Dict[str, Dict[str, str]]]:
         """生成AI内容文件 - 返回文件列表和提示词信息"""
         files = []
@@ -1402,7 +1398,7 @@ class VideoProcessor:
 
                         # 验证增强版转录是否包含帧映射信息
                         if not subtitles or not any(
-                            "frame" in segment for segment in subtitles
+                                "frame" in segment for segment in subtitles
                         ):
                             error_msg = "增强版转录文件存在但缺少帧映射信息，无法进行AI内容生成。"
                             logger.error(error_msg)
@@ -1459,8 +1455,8 @@ class VideoProcessor:
                         "enhanced_transcript_file": (
                             str(enhanced_transcript_file)
                             if is_video
-                            and has_frames
-                            and enhanced_transcript_file.exists()
+                               and has_frames
+                               and enhanced_transcript_file.exists()
                             else None
                         ),
                         "ai_enhancement": config.get(
@@ -1536,12 +1532,12 @@ class VideoProcessor:
         return files, ai_prompts
 
     async def _save_ai_content(
-        self,
-        output_dir: Path,
-        output_type: str,
-        result: Dict[str, Any],
-        frame_info: Dict[str, Any],
-        ai_factory,
+            self,
+            output_dir: Path,
+            output_type: str,
+            result: Dict[str, Any],
+            frame_info: Dict[str, Any],
+            ai_factory,
     ) -> Optional[Dict[str, str]]:
         """保存AI生成的内容到文件"""
         try:
@@ -1685,7 +1681,7 @@ class VideoProcessor:
                 text = line.lstrip("#").strip()
                 if text:
                     freemind_content += (
-                        "    " * (level + 1) + f'<node TEXT="{text}"/>\n'
+                            "    " * (level + 1) + f'<node TEXT="{text}"/>\n'
                     )
 
         freemind_content += "  </node>\n"
@@ -1785,8 +1781,8 @@ class VideoProcessor:
                 for i, line in enumerate(content_lines[:5]):  # 最多5张卡片
                     flashcards.append(
                         {
-                            "id": f"card_{i+1}",
-                            "question": f"关于第{i+1}个要点的问题",
+                            "id": f"card_{i + 1}",
+                            "question": f"关于第{i + 1}个要点的问题",
                             "answer": line,
                             "category": "主要内容",
                         }
@@ -1795,7 +1791,7 @@ class VideoProcessor:
         return json.dumps(flashcards, ensure_ascii=False, indent=2)
 
     def _generate_subtitle_from_segments(
-        self, segments: List[Dict[str, Any]], transcript_text: str
+            self, segments: List[Dict[str, Any]], transcript_text: str
     ) -> str:
         """从segments生成字幕文件"""
         if not segments or len(segments) == 0:
@@ -1809,7 +1805,7 @@ class VideoProcessor:
             text = segment.get("text", "").strip()
 
             if text:
-                subtitle_content += f"{i+1}\n{start_time} --> {end_time}\n{text}\n\n"
+                subtitle_content += f"{i + 1}\n{start_time} --> {end_time}\n{text}\n\n"
 
         return subtitle_content
 
@@ -1820,10 +1816,10 @@ class VideoProcessor:
 
         for i, line in enumerate(lines):
             if line.strip():
-                start_time = f"00:00:{i*3:02d},000"
-                end_time = f"00:00:{(i+1)*3:02d},000"
+                start_time = f"00:00:{i * 3:02d},000"
+                end_time = f"00:00:{(i + 1) * 3:02d},000"
                 subtitle_content += (
-                    f"{i+1}\n{start_time} --> {end_time}\n{line.strip()}\n\n"
+                    f"{i + 1}\n{start_time} --> {end_time}\n{line.strip()}\n\n"
                 )
 
         return subtitle_content
@@ -1838,14 +1834,14 @@ class VideoProcessor:
         return f"{hours:02d}:{minutes:02d}:{secs:02d},{millisecs:03d}"
 
     def _generate_processing_report(
-        self,
-        transcript_text: str,
-        segments: List[Dict[str, Any]],
-        content_role: str = None,
-        analysis_result: Dict[str, Any] = None,
-        ai_output_types: List[str] = None,
-        ai_prompts: Dict[str, Dict[str, str]] = None,  # AI提示词信息
-        config: Dict[str, Any] = None,  # 新增：配置信息
+            self,
+            transcript_text: str,
+            segments: List[Dict[str, Any]],
+            content_role: str = None,
+            analysis_result: Dict[str, Any] = None,
+            ai_output_types: List[str] = None,
+            ai_prompts: Dict[str, Dict[str, str]] = None,  # AI提示词信息
+            config: Dict[str, Any] = None,  # 新增：配置信息
     ) -> str:
         """生成处理报告"""
         word_count = len(transcript_text) if transcript_text else 0
