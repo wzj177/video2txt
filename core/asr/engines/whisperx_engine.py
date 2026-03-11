@@ -81,17 +81,16 @@ class WhisperXEngine(BaseVoiceEngine):
 
             return False
 
-
     def recognize_file(
-            self, audio_path: str, language: str = "auto", enable_digitization: bool = True
+        self, audio_path: str, language: str = "auto", **kwargs
     ) -> Dict[str, Any]:
         """
-        识别音频文件 - WhisperX一体化处理
+        识别音频文件 - WhisperX转录
 
         Args:
             audio_path: 音频文件路径
             language: 语言代码 (auto/zh/en等)
-            enable_digitization: 是否启用说话人分离
+            **kwargs: 额外参数（enable_diarization: 是否启用说话人分离）
 
         Returns:
             包含转录文本、分段、说话人信息的字典
@@ -100,10 +99,11 @@ class WhisperXEngine(BaseVoiceEngine):
             if not self.initialize():
                 raise RuntimeError("WhisperX引擎未初始化")
 
-        full_text = ""
+        enable_diarization = kwargs.get("enable_diarization", True)
         start_time = time.time()
+
         try:
-            logger.info(f"WhisperX识别音频: {Path(audio_path).name}")
+            logger.info(f"🎤 WhisperX识别音频: {Path(audio_path).name}")
 
             if not os.path.exists(audio_path):
                 raise FileNotFoundError(f"音频文件不存在: {audio_path}")
@@ -111,7 +111,7 @@ class WhisperXEngine(BaseVoiceEngine):
             import whisperx
 
             # ====== 步骤1: 音频转录 ======
-            logger.info("步骤1/4: 执行语音转录...")
+            logger.info("步骤1: 执行语音转录...")
             audio = whisperx.load_audio(audio_path)
 
             result = self.model.transcribe(
@@ -123,101 +123,48 @@ class WhisperXEngine(BaseVoiceEngine):
             if not result or not result.get("segments"):
                 raise RuntimeError("转录结果为空")
 
+            # 繁体转简体
             result = self.fanti_zh_to_jianti_zh(result)
 
-            full_text = result.get("text", "")
             detected_language = result.get("language", language)
-
-            logger.info(f"转录完成: {len(result['segments'])} 个片段")
-            logger.info(f"检测到语言: {detected_language}")
-
-            # ====== 步骤2: 对齐（词级时间戳）======
-            logger.info("步骤2/4: 执行词级时间戳对齐...")
-
-            result = self.align_timestamps(detected_language, whisperx, result, audio)
-
-            # ====== 步骤3: 说话人分离 ======
-            speakers_info = {}
-
-            if enable_digitization:
-                logger.info("步骤3/4: 执行说话人分离...")
-                speakers_info = self.speak_digitization(whisperx, result, audio_path)
-            else:
-                logger.info("跳过说话人分离（未启用）")
-
-            # ====== 步骤4: 格式化输出 ======
-            logger.info("步骤4/4: 格式化输出结果...")
-
-            # 格式化分段信息
-            formatted_segments = []
-            for segment in result.get("segments", []):
-                formatted_segment = {
-                    "start": round(segment.get("start", 0), 2),
-                    "end": round(segment.get("end", 0), 2),
-                    "duration": round(
-                        segment.get("end", 0) - segment.get("start", 0), 2
-                    ),
-                    "text": segment.get("text", "").strip(),
-                    "speaker": segment.get("speaker", "Speaker_1"),
-                    "confidence": 0.9,  # WhisperX通常有较高准确率
-                    "language": detected_language,
-                    # 情感分析未实现
-                    "emotion": None,  # 标记为未实现
-                }
-
-                # 如果有词级信息，保存
-                if "words" in segment:
-                    formatted_segment["words"] = segment["words"]
-
-                formatted_segments.append(formatted_segment)
-
-            # 计算总时长
-            audio_duration = (
-                formatted_segments[-1]["end"] if formatted_segments else 0.0
-            )
-
-            # 构建返回结果
-            processing_time = time.time() - start_time
-
-            result_dict = {
-                "text": full_text,
-                "language": detected_language,
-                "segments": formatted_segments,
-                "speakers": speakers_info,
-                "processing_time": processing_time,
-                "model": f"whisperx-{self.model_size}",
-                "device": self.device,
-                "confidence": 0.9,
-                "audio_length": audio_duration,
-                "features": {
-                    "word_level_timestamps": self.align_model is not None,
-                    "speaker_diarization": len(speakers_info) > 0,
-                    "emotion_detection": False,  # WhisperX不支持情感分析
-                },
-                "statistics": {
-                    "total_segments": len(formatted_segments),
-                    "total_speakers": len(speakers_info),
-                    "total_duration": audio_duration,
-                },
-            }
-
-            logger.info(f"WhisperX识别完成，耗时: {processing_time:.2f}s")
             logger.info(
-                f" 结果统计: {len(formatted_segments)} 个片段, {len(speakers_info)} 个说话人"
+                f"转录完成: {len(result['segments'])} 个片段, 语言: {detected_language}"
             )
 
-            return result_dict
+            # ====== 步骤2: 说话人分离（可选）======
+            speakers_info = {}
+            if enable_diarization:
+                # 对齐词级时间戳
+                # result = self.align_timestamps(
+                #     detected_language, whisperx, result, audio
+                # )
+                logger.info("步骤2: 执行说话人分离...")
+                speakers_info = self.speak_digitization(whisperx, result, audio_path)
+                logger.info(f"说话人分离完成: {len(speakers_info)} 个说话人")
+            else:
+                logger.info(" 跳过说话人分离（未启用）")
+
+            # ====== 步骤3: 格式化输出 ======
+            result["processing_time"] = time.time() - start_time
+            result["model"] = f"whisperx-{self.model_size}"
+            result["device"] = self.device
+            result["speakers"] = speakers_info
+
+            formatted_result = self.format_result(result, audio_path)
+
+            logger.info(
+                f"WhisperX识别完成，耗时: {formatted_result['processing_time']:.2f}s"
+            )
+            return formatted_result
 
         except Exception as e:
-            logger.error(f" WhisperX识别失败: {e}")
-            processing_time = time.time() - start_time
-
+            logger.error(f"WhisperX识别失败: {e}")
             return {
-                "text": full_text,
+                "text": "",
                 "language": language if language != "auto" else "zh",
                 "segments": [],
                 "speakers": {},
-                "processing_time": processing_time,
+                "processing_time": time.time() - start_time,
                 "model": f"whisperx-{self.model_size}",
                 "device": self.device,
                 "confidence": 0.0,
@@ -233,7 +180,7 @@ class WhisperXEngine(BaseVoiceEngine):
         """将繁体字转为简体字"""
         import opencc
 
-        converter = opencc.OpenCC('t2s')
+        converter = opencc.OpenCC("t2s")
         for seg in transcribeResult["segments"]:
             seg["text"] = converter.convert(seg["text"])
 

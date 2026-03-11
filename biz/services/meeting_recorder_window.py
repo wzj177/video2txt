@@ -274,7 +274,7 @@ class MeetingRecorderWindow:
             # 确认对话框
             result = messagebox.askyesno(
                 "确认操作",
-                "是否要结束会议记录，并开始总结（总结完成通知你）？",
+                "是否要结束会议记录，保存音频并生成说话人日志？",
                 icon="question",
             )
 
@@ -283,7 +283,7 @@ class MeetingRecorderWindow:
                 if not self._check_audio_recorded():
                     messagebox.showwarning(
                         "警告",
-                        "没有录制到任何音频，无法生成会议记录和总结。\n\n请检查音频设备设置。",
+                        "没有录制到任何音频，无法生成会议记录和说话人日志。\n\n请检查音频设备设置。",
                     )
                     return
 

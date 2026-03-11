@@ -11,6 +11,7 @@ import time
 import json
 import tempfile
 import os
+import subprocess
 import numpy as np
 from typing import Dict, Any, Optional, Callable, List
 from pathlib import Path
@@ -24,10 +25,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from .task_service import task_service
 from .meeting_recorder_window import show_recorder_window_in_thread
 from .notification_service import notification_service
-from .voice_analysis_service import voice_analysis_service
 from core.audio.audio_capture import AudioCapture, AudioBuffer
-from core.asr import initialize_voice_recognition, transcribe_audio
-from .video_service import video_service
+from core.asr import (
+    initialize_voice_recognition,
+    transcribe_audio,
+    get_voice_core,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +103,7 @@ class RealtimeMeetingProcessor:
 
             # 初始化语音识别
             engine = self.config.get("engine", "sensevoice")
+            self._apply_engine_overrides(engine)
             initialize_voice_recognition(engine)
 
             # 更新状态为等待开始
@@ -384,6 +388,7 @@ class RealtimeMeetingProcessor:
             if not voice_core.current_engine or current_engine_name != engine:
                 from core.asr import initialize_voice_recognition
 
+                self._apply_engine_overrides(engine)
                 initialize_voice_recognition(engine)
                 # 确保引擎已加载
                 voice_core._ensure_engine_loaded(engine)
@@ -532,7 +537,7 @@ class RealtimeMeetingProcessor:
                 {
                     "status": "processing",
                     "progress": 70,
-                    "current_step": "正在生成会议总结...",
+                    "current_step": "正在整理会议转录与说话人日志...",
                 },
             )
 
@@ -595,99 +600,58 @@ class RealtimeMeetingProcessor:
                 )
                 return
 
-            # 保存音频文件到项目data目录并进行完整分析
-            audio_file_path = None
-            detailed_analysis = None
+            transcript_payload = self._compose_transcript()
+            full_transcript = transcript_payload["text"]
 
-            if self.audio_buffer and self.audio_buffer.get_duration() > 0:
-                try:
-                    # 确保data目录存在
-                    from pathlib import Path
-
-                    data_dir = (
-                        Path(__file__).parent.parent.parent / "data" / "temp_audio"
-                    )
-                    data_dir.mkdir(parents=True, exist_ok=True)
-
-                    # 创建最终音频文件路径
-                    final_audio_path = data_dir / f"meeting_{self.task_id}_final.wav"
-
-                    # 保存音频缓冲区到文件
-                    if self.audio_buffer.save_to_file(str(final_audio_path)):
-                        audio_file_path = str(final_audio_path)
-                        logger.info(f"✅ 音频文件已保存: {audio_file_path}")
-
-                        # 进行完整的语音分析（说话人分离 + 情感分析）
-                        logger.info("开始进行完整的语音分析...")
-                        detailed_analysis = await self._perform_detailed_analysis(
-                            audio_file_path
-                        )
-
-                    else:
-                        logger.error("音频缓冲区保存失败")
-
-                except Exception as e:
-                    logger.error(f"保存音频文件失败: {e}")
-
-            # 使用video_service生成AI内容
-            if self.config.get("enable_realtime_summary", False):
+            if not full_transcript.strip():
                 await task_service.update_task(
                     "meeting",
                     self.task_id,
                     {
-                        "status": "processing",
-                        "progress": 80,
-                        "current_step": "正在生成AI内容...",
+                        "status": "error",
+                        "progress": 100,
+                        "current_step": "未检测到有效的语音内容",
+                        "error": "会议过程中未捕获到可用的转录文字",
                     },
                 )
+                return
 
-                # 生成AI内容
-                ai_results = await self._generate_ai_content(
-                    full_transcript, audio_file_path
-                )
-            else:
-                ai_results = {}
+            audio_file_path = self._persist_final_audio()
+            mp3_path = self._convert_audio_to_mp3(audio_file_path) if audio_file_path else None
 
-            # 准备完整的转录文本
-            full_transcript = (
-                "\n".join(self.accumulated_text) if self.accumulated_text else ""
+            diarization_data = await self._run_offline_diarization(
+                str(mp3_path or audio_file_path) if (mp3_path or audio_file_path) else None
             )
 
-            # 整合详细分析结果到最终数据
-            final_results = ai_results.copy() if ai_results else {}
+            final_results = {
+                "segments": diarization_data.get("segments", []),
+                "speakers": diarization_data.get("speakers", {}),
+                "speaker_log": diarization_data.get("speaker_log", []),
+                "audio_file": str(mp3_path or audio_file_path)
+                if (mp3_path or audio_file_path)
+                else None,
+                "fallback": diarization_data.get("fallback", False),
+            }
 
-            if detailed_analysis and detailed_analysis.get("success"):
-                # 添加详细的语音分析结果
-                final_results.update(
-                    {
-                        "segments": detailed_analysis.get("segments", []),
-                        "speakers": detailed_analysis.get("speakers", {}),
-                        "analysis_summary": detailed_analysis.get(
-                            "analysis_summary", {}
-                        ),
-                        "keywords": detailed_analysis.get("keywords", []),
-                    }
-                )
-                logger.info(
-                    f"✅ 集成详细分析结果: {len(detailed_analysis.get('segments', []))} 个分段, {len(detailed_analysis.get('speakers', {}))} 个说话人"
-                )
+            if mp3_path or audio_file_path:
+                self.config["audio_file_path"] = str(mp3_path or audio_file_path)
 
-            # 更新最终结果
             await task_service.update_task(
                 "meeting",
                 self.task_id,
                 {
-                    "status": "finished",  # 修改为 finished
+                    "status": "finished",
                     "progress": 100,
                     "current_step": "会议记录完成",
-                    "results": final_results,  # 使用整合后的结果
-                    "transcript": full_transcript,  # 添加完整转录文本
-                    "transcript_segments": len(self.accumulated_text),  # 转录段数
-                    "duration": (
-                        len(self.accumulated_text) * self.transcribe_interval
-                        if self.accumulated_text
-                        else 0
-                    ),
+                    "results": final_results,
+                    "transcript": full_transcript,
+                    "transcript_segments": transcript_payload["segments_count"],
+                    "duration": diarization_data.get("total_duration")
+                    or self.audio_buffer.get_duration()
+                    if self.audio_buffer
+                    else 0,
+                    "speaker_count": diarization_data.get("speaker_count", 0),
+                    "config": self.config,
                 },
             )
 
@@ -706,9 +670,9 @@ class RealtimeMeetingProcessor:
 
             notification_service.notify_meeting_status(
                 meeting_title=meeting_title,
-                status="finished",  # 使用 finished 状态
+                status="finished",
                 duration=duration_text,
-                message_extra=f"已生成转录文本和{'AI内容' if self.config.get('enable_realtime_summary') else '基础总结'}",
+                message_extra="已生成会议转录与说话人日志",
             )
 
         except Exception as e:
@@ -732,286 +696,241 @@ class RealtimeMeetingProcessor:
                 message_extra=f"处理失败: {str(e)[:100]}",
             )
 
-    async def _generate_ai_content(
-        self, transcript: str, audio_path: Optional[str] = None
-    ):
-        """生成AI内容 - 会议专用，传入meeting role"""
+    def _compose_transcript(self) -> Dict[str, Any]:
+        """将实时转录内容整理为文本"""
+        lines = []
+        for entry in self.accumulated_text:
+            if not isinstance(entry, dict):
+                continue
+            text = entry.get("text", "").strip()
+            if not text:
+                continue
+            speaker = entry.get("speaker") or "Speaker"
+            timestamp = entry.get("timestamp")
+            if timestamp:
+                lines.append(f"[{timestamp}] {speaker}: {text}")
+            else:
+                lines.append(f"[{speaker}]: {text}")
+
+        return {
+            "text": "\n".join(lines),
+            "segments_count": len(lines),
+        }
+
+    def _persist_final_audio(self) -> Optional[Path]:
+        """将音频缓冲区保存到持久化目录"""
+        if not self.audio_buffer or self.audio_buffer.get_duration() <= 0:
+            return None
+
         try:
-            ai_results = {}
-
-            # 会议专用：传入meeting role
-            meeting_kwargs = {
-                "content_role": "meeting",  # 强制指定为会议角色
-                "transcript": transcript,
-                "audio_path": audio_path,
-            }
-
-            # 使用video_service生成内容
-            # 内容卡片 (会议纪要)
-            content_card_result = await video_service.generate_ai_content(
-                "content_card", **meeting_kwargs
+            records_dir = (
+                Path(__file__).parent.parent.parent
+                / "data"
+                / "meeting_records"
+                / self.task_id
             )
+            records_dir.mkdir(parents=True, exist_ok=True)
+            wav_path = records_dir / "meeting_audio.wav"
 
-            if content_card_result.get("success"):
-                ai_results["meeting_notes"] = content_card_result.get("content", "")
-
-            # AI分析
-            summary_result = await video_service.generate_ai_content(
-                "ai_analysis", **meeting_kwargs
-            )
-
-            if summary_result.get("success"):
-                ai_results["summary"] = summary_result.get("content", "")
-
-            # 思维导图
-            mindmap_result = await video_service.generate_ai_content(
-                "mind_map", **meeting_kwargs
-            )
-
-            if mindmap_result.get("success"):
-                ai_results["mindmap"] = mindmap_result.get("content", "")
-
-            # 学习闪卡 (会议要点)
-            flashcards_result = await video_service.generate_ai_content(
-                "flashcards", **meeting_kwargs
-            )
-
-            if flashcards_result.get("success"):
-                ai_results["flashcards"] = flashcards_result.get("content", "")
-
-            logger.info(f"✅ 会议AI内容生成完成，使用meeting角色")
-            return ai_results
-
+            if self.audio_buffer.save_to_file(str(wav_path)):
+                logger.info(f"✅ 会议音频已保存: {wav_path}")
+                return wav_path
+            else:
+                logger.error("音频缓冲区保存失败")
+                return None
         except Exception as e:
-            logger.error(f"生成AI内容失败: {e}")
-            return {}
+            logger.error(f"保存会议音频失败: {e}")
+            return None
 
-    async def _perform_detailed_analysis(self, audio_file_path: str) -> Dict[str, Any]:
-        """执行详细的语音分析（说话人分离 + 情感分析）"""
+    def _convert_audio_to_mp3(self, wav_path: Optional[Path]) -> Optional[Path]:
+        """将WAV音频转换为MP3"""
+        if wav_path is None:
+            return None
+
+        mp3_path = wav_path.with_suffix(".mp3")
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(wav_path),
+            "-vn",
+            "-ar",
+            "16000",
+            "-ac",
+            "1",
+            "-b:a",
+            "192k",
+            str(mp3_path),
+        ]
+
         try:
-            from .voice_analysis_service import voice_analysis_service
-
-            # 检查配置是否启用高级分析
-            enable_diarization = self.config.get("enable_speaker_diarization", True)
-            enable_emotion = self.config.get("enable_ai_analysis", True)
-
-            logger.info(
-                f"语音分析配置: 说话人分离={enable_diarization}, 情感分析={enable_emotion}"
+            result = subprocess.run(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
             )
-
-            # 执行完整的语音分析
-            analysis_result = await voice_analysis_service.analyze_audio_file(
-                audio_path=audio_file_path,
-                enable_diarization=enable_diarization,
-                enable_emotion=enable_emotion,
-                language=self.config.get("language", "auto"),
-            )
-
-            if not analysis_result or not analysis_result.get("success"):
-                logger.warning("语音分析失败，使用基础转录结果")
-                return self._create_fallback_analysis()
-
-            # 提取分析结果
-            segments = analysis_result.get("segments", [])
-            speakers_info = analysis_result.get("speakers", {})
-
-            logger.info(
-                f"✅ 语音分析完成: {len(segments)} 个分段, {len(speakers_info)} 个说话人"
-            )
-
-            # 生成分析摘要
-            analysis_summary = self._generate_analysis_summary(segments, speakers_info)
-
-            # 提取关键词
-            keywords = self._extract_keywords_from_segments(segments)
-
-            return {
-                "success": True,
-                "segments": segments,
-                "speakers": speakers_info,
-                "analysis_summary": analysis_summary,
-                "keywords": keywords,
-                "processing_info": {
-                    "total_segments": len(segments),
-                    "total_speakers": len(speakers_info),
-                    "analysis_duration": analysis_result.get("processing_time", 0),
-                    "diarization_enabled": enable_diarization,
-                    "emotion_enabled": enable_emotion,
-                },
-            }
-
+            if result.returncode == 0 and mp3_path.exists():
+                logger.info(f"✅ 音频已转换为MP3: {mp3_path}")
+                return mp3_path
+            else:
+                logger.warning(
+                    f"MP3转换失败，继续使用原始WAV: {result.stderr.decode('utf-8', 'ignore')}"
+                )
+                return wav_path
+        except FileNotFoundError:
+            logger.warning("⚠️ 未找到ffmpeg，使用WAV文件")
+            return wav_path
         except Exception as e:
-            logger.error(f"详细语音分析失败: {e}")
-            return self._create_fallback_analysis()
+            logger.error(f"音频转换失败，使用WAV文件: {e}")
+            return wav_path
 
-    def _create_fallback_analysis(self) -> Dict[str, Any]:
-        """创建回退分析结果（当高级分析失败时使用）"""
-        try:
-            # 基于已有的转录文本创建基础分段
-            segments = []
-            current_time = 0.0
-
-            for i, text in enumerate(self.accumulated_text):
-                if text.strip():
-                    segment = {
-                        "text": text.strip(),
-                        "speaker": "Speaker_1",  # 默认说话人
-                        "emotion": "neutral",  # 默认情感
-                        "confidence": 0.8,
-                        "start": current_time,
-                        "end": current_time + self.transcribe_interval,
-                        "duration": self.transcribe_interval,
-                        "language": "zh",
-                    }
-                    segments.append(segment)
-                    current_time += self.transcribe_interval
-
-            speakers_info = {
-                "Speaker_1": {
-                    "name": "Speaker_1",
-                    "segments": len(segments),
-                    "total_duration": current_time,
-                    "emotions": {"neutral": len(segments)},
-                }
-            }
-
-            return {
-                "success": True,
-                "segments": segments,
-                "speakers": speakers_info,
-                "analysis_summary": {
-                    "total_speakers": 1,
-                    "dominant_emotion": "neutral",
-                    "meeting_tone": "neutral",
-                },
-                "keywords": [],
-                "fallback": True,
-            }
-
-        except Exception as e:
-            logger.error(f"创建回退分析失败: {e}")
-            return {"success": False, "error": str(e)}
-
-    def _generate_analysis_summary(
-        self, segments: List[Dict], speakers_info: Dict
+    async def _run_offline_diarization(
+        self, audio_path: Optional[str]
     ) -> Dict[str, Any]:
-        """生成分析摘要"""
+        """使用完整音频执行说话人分离"""
+        if not audio_path:
+            return self._build_fallback_diarization()
+
         try:
-            # 统计情感分布
-            emotion_counts = {}
-            total_segments = len(segments)
+            language = self.config.get("language", "auto")
+            engine = self.config.get("engine", "sensevoice")
 
-            for segment in segments:
-                emotion = segment.get("emotion", "neutral")
-                emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
+            voice_core = get_voice_core()
+            if voice_core is None or not getattr(voice_core, "initialized", False):
+                self._apply_engine_overrides(engine)
+                initialize_voice_recognition(engine)
+                voice_core = get_voice_core()
 
-            # 找出主导情感
-            dominant_emotion = (
-                max(emotion_counts.items(), key=lambda x: x[1])[0]
-                if emotion_counts
-                else "neutral"
+            logger.info(f"🎧 使用 {engine} 引擎对录制文件执行说话人分离...")
+            result = voice_core.recognize_file(
+                audio_path,
+                language=language,
+                enable_diarization=self.config.get("enable_speaker_diarization", True),
             )
 
-            # 计算说话时间分布
-            speaker_durations = {}
-            for speaker_id, info in speakers_info.items():
-                speaker_durations[speaker_id] = info.get("total_duration", 0)
+            segments = result.get("segments", [])
+            speakers_info = result.get("speakers", {})
+
+            if not segments:
+                logger.warning("离线说话人分离未生成分段，使用回退方案")
+                return self._build_fallback_diarization()
+
+            speaker_log = self._build_speaker_log(segments)
+            speaker_summary = speakers_info or self._summarize_speakers(segments)
 
             return {
-                "total_speakers": len(speakers_info),
-                "total_segments": total_segments,
-                "dominant_emotion": dominant_emotion,
-                "emotion_distribution": emotion_counts,
-                "speaker_durations": speaker_durations,
-                "meeting_tone": self._determine_meeting_tone(emotion_counts),
-                "interaction_level": (
-                    "high"
-                    if len(speakers_info) > 2
-                    else "medium" if len(speakers_info) == 2 else "low"
-                ),
+                "segments": segments,
+                "speakers": speaker_summary,
+                "speaker_log": speaker_log,
+                "speaker_count": len(speaker_summary),
+                "total_duration": segments[-1]["end"] if segments else 0,
+                "fallback": False,
             }
 
         except Exception as e:
-            logger.error(f"生成分析摘要失败: {e}")
-            return {}
+            logger.error(f"离线说话人分离失败: {e}")
+            return self._build_fallback_diarization()
 
-    def _determine_meeting_tone(self, emotion_counts: Dict[str, int]) -> str:
-        """确定会议整体氛围"""
-        if not emotion_counts:
-            return "neutral"
-
-        total = sum(emotion_counts.values())
-        positive_emotions = ["happy", "excited", "positive"]
-        negative_emotions = ["angry", "sad", "frustrated", "negative"]
-
-        positive_ratio = (
-            sum(emotion_counts.get(e, 0) for e in positive_emotions) / total
+    def _apply_engine_overrides(self, engine: str) -> None:
+        if engine != "qwen3_asr":
+            return
+        model_name = self.config.get("model_name")
+        base_http_api_url = self.config.get("base_http_api_url")
+        logger.info(
+            "实时会议使用 Qwen3-ASR: model_name=%s base_http_api_url=%s",
+            model_name or "(default)",
+            base_http_api_url or "(default)",
         )
-        negative_ratio = (
-            sum(emotion_counts.get(e, 0) for e in negative_emotions) / total
-        )
+        overrides = {}
+        if model_name:
+            overrides["model_name"] = model_name
+        if base_http_api_url:
+            overrides["base_http_api_url"] = base_http_api_url
+        if overrides:
+            voice_core = get_voice_core()
+            voice_core.set_engine_override("qwen3_asr", overrides, reset=True)
 
-        if positive_ratio > 0.4:
-            return "positive"
-        elif negative_ratio > 0.3:
-            return "tense"
-        else:
-            return "neutral"
+    def _build_fallback_diarization(self) -> Dict[str, Any]:
+        """当无法执行离线分析时基于实时片段构造日志"""
+        segments = self._build_fallback_segments()
+        speaker_log = self._build_speaker_log(segments)
+        speaker_summary = self._summarize_speakers(segments)
 
-    def _extract_keywords_from_segments(self, segments: List[Dict]) -> List[str]:
-        """从分段中提取关键词"""
-        try:
-            # 合并所有文本
-            all_text = " ".join([seg.get("text", "") for seg in segments])
+        return {
+            "segments": segments,
+            "speakers": speaker_summary,
+            "speaker_log": speaker_log,
+            "speaker_count": len(speaker_summary),
+            "total_duration": segments[-1]["end"] if segments else 0,
+            "fallback": True,
+        }
 
-            if not all_text.strip():
-                return []
+    def _build_fallback_segments(self) -> List[Dict[str, Any]]:
+        """将实时记录的文本转换为简易分段"""
+        segments = []
+        current_time = 0.0
 
-            # 简单的关键词提取（可以后续优化为更高级的NLP）
-            import re
-            from collections import Counter
-
-            # 移除标点符号，分词
-            words = re.findall(r"\b\w+\b", all_text.lower())
-
-            # 过滤停用词（简化版）
-            stop_words = {
-                "的",
-                "了",
-                "在",
-                "是",
-                "我",
-                "你",
-                "他",
-                "她",
-                "它",
-                "我们",
-                "你们",
-                "他们",
-                "这",
-                "那",
-                "这个",
-                "那个",
-                "一个",
-                "和",
-                "与",
-                "或",
-                "但是",
-                "然后",
-                "所以",
+        for entry in self.accumulated_text:
+            if not isinstance(entry, dict):
+                continue
+            text = entry.get("text", "").strip()
+            if not text:
+                continue
+            duration = self.transcribe_interval
+            segment = {
+                "text": text,
+                "speaker": entry.get("speaker") or "Speaker",
+                "start": round(current_time, 2),
+                "end": round(current_time + duration, 2),
+                "duration": round(duration, 2),
+                "language": entry.get("language", "zh"),
             }
+            segments.append(segment)
+            current_time += duration
 
-            filtered_words = [w for w in words if len(w) > 1 and w not in stop_words]
+        return segments
 
-            # 统计词频，返回前10个关键词
-            word_counts = Counter(filtered_words)
-            keywords = [word for word, count in word_counts.most_common(10)]
+    def _build_speaker_log(self, segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """构造说话人日志"""
+        log_entries = []
+        for segment in segments:
+            start = segment.get("start", 0)
+            end = segment.get("end", start)
+            log_entries.append(
+                {
+                    "speaker": segment.get("speaker", "Speaker"),
+                    "start": start,
+                    "end": end,
+                    "duration": round(end - start, 2),
+                    "text": segment.get("text", "").strip(),
+                    "time_label": self._format_timestamp(start),
+                }
+            )
+        return log_entries
 
-            return keywords
+    def _summarize_speakers(self, segments: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """统计每个说话人的时长和段数"""
+        summary: Dict[str, Dict[str, Any]] = {}
+        for segment in segments:
+            speaker = segment.get("speaker", "Speaker")
+            duration = segment.get("duration") or (
+                segment.get("end", 0) - segment.get("start", 0)
+            )
+            data = summary.setdefault(
+                speaker, {"name": speaker, "segments": 0, "total_duration": 0.0}
+            )
+            data["segments"] += 1
+            data["total_duration"] += max(duration, 0)
 
-        except Exception as e:
-            logger.error(f"提取关键词失败: {e}")
-            return []
+        for speaker in summary.values():
+            speaker["total_duration"] = round(speaker["total_duration"], 2)
+
+        return summary
+
+    def _format_timestamp(self, seconds_value: float) -> str:
+        """将秒转换为 mm:ss 格式"""
+        total_seconds = int(max(seconds_value, 0))
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        return f"{minutes:02d}:{seconds:02d}"
 
     async def _cleanup(self):
         """清理资源"""
@@ -1106,7 +1025,8 @@ class RealtimeMeetingService:
             if task_id in self.processors:
                 del self.processors[task_id]
             return success
-        return False
+        logger.info(f"会议处理器不存在或已停止: {task_id}")
+        return True
 
     async def cleanup_all(self):
         """清理所有处理器"""

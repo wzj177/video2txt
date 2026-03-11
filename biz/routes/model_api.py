@@ -17,6 +17,7 @@ import hashlib
 from datetime import datetime
 
 from ..services.download_manager import download_manager
+from .settings_api import load_settings, ensure_asr_settings, save_settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,232 @@ model_router = APIRouter(prefix="/api/models", tags=["models"])
 
 # 模型配置
 MODEL_CONFIGS = {
+    "parakeet": {
+        "tdt-0.6b-v2": {
+            "name": "Parakeet-TDT 0.6B v2",
+            "size": "600M 参数",
+            "description": "NVIDIA 最新发布的多语言流式 ASR 模型，支持端到端说话人分离与实时标点。",
+            "features": [
+                "端到端 streaming",
+                "自动标点与数字化",
+                "可扩展说话人分离",
+                "NeMo 微调工作流"
+            ],
+            "performance": "针对会议与客服场景做了 20+ 种语言优化，延迟低于 300ms。",
+            "install_guide": "pip install nemo_toolkit nemo-asr && nemo_asr_install_models parakeet-tdt-0.6b",
+            "recommended_for": ["meeting", "media"],
+            "supported_devices": ["cuda"],
+            "config_key": "parakeet_tdt_0_6b_v2",
+            "nemo_name": "parakeet-tdt-0.6b",
+            "install_command": ["nemo_asr_install_models", "parakeet-tdt-0.6b"],
+            "requires_gpu": True
+        },
+        "ctc-1.1b": {
+            "name": "Parakeet-CTC 1.1B",
+            "size": "1.1B 参数",
+            "description": "面向离线批处理的高精度模型，兼容 NeMo Guardrails 与 Riva。",
+            "features": [
+                "CTC 架构",
+                "批处理吞吐优化",
+                "字级时间戳",
+                "可选量化部署"
+            ],
+            "performance": "在英/中/西语公开集上 WER 低于 Whisper large-v3。",
+            "install_guide": "使用 nemo_asr 示例脚本或 Riva ASR 微服务部署",
+            "recommended_for": ["media", "meeting"],
+            "supported_devices": ["cuda"],
+            "config_key": "parakeet_ctc_1_1b",
+            "nemo_name": "parakeet-ctc-1.1b",
+            "install_command": ["nemo_asr_install_models", "parakeet-ctc-1.1b"],
+            "requires_gpu": True
+        },
+    },
+    "remote_api": {
+        "default": {
+            "name": "远程API (Cloud ASR)",
+            "size": "云端",
+            "description": "通过 HTTP/HTTPS 将音频转发到自研或第三方 ASR 服务，零本地算力。",
+            "features": [
+                "云端可扩展",
+                "自定义提示词与参数",
+                "支持多租户/多区域",
+                "兼容 JSON/Multipart"
+            ],
+            "install_guide": "在设置页配置 base_url、API Key 以及认证方式即可启用",
+            "recommended_for": ["meeting", "media"],
+            "cloud": True,
+            "config_key": "remote_api"
+        }
+    },
+    "qwen3_asr": {
+        "flash_filetrans": {
+            "name": "Qwen3-ASR Flash FileTrans",
+            "size": "DashScope 云端",
+            "description": "长音频异步识别（最长约 12 小时），支持情感识别与句/字级时间戳，适合会议归档和索引。",
+            "features": [
+                "超长录音异步识别",
+                "情感识别",
+                "句/字级时间戳",
+                "标点预测"
+            ],
+            "use_cases": [
+                "长音频会议记录",
+                "新闻/访谈节目字幕生成",
+                "多语种视频本地化",
+                "歌唱类音频分析",
+                "客服质检（长音频）"
+            ],
+            "constraints": [
+                "音频文件 ≤ 2GB",
+                "时长 ≤ 12 小时"
+            ],
+            "pricing": "按 DashScope 实际计费",
+            "install_guide": "在设置页填写 DashScope API Key，并配置 OSS 以生成公网 file_url",
+            "recommended_for": ["meeting"],
+            "cloud": True,
+            "config_key": "flash_filetrans",
+            "model_name": "qwen3-asr-flash-filetrans",
+            "input_specs": {
+                "format": "音频文件或 URL",
+                "sample_rate": "自动处理（建议 8k/16kHz）",
+                "channels": "单声道/双声道自动处理",
+                "input": "file_url（仅支持 http/https 公网可访问地址，推荐 OSS/CDN）"
+            }
+        },
+        "flash": {
+            "name": "Qwen3-ASR Flash",
+            "size": "DashScope 云端",
+            "description": "短音频低延迟识别，适合快速会议片段/短视频。",
+            "features": [
+                "低延迟",
+                "短音频优化",
+                "标点预测"
+            ],
+            "use_cases": [
+                "短音频会议速记",
+                "客服质检（短音频）",
+                "多语种视频本地化（短片段）",
+                "歌唱类音频分析（短片段）"
+            ],
+            "constraints": [
+                "音频文件 ≤ 10MB",
+                "时长 ≤ 5 分钟"
+            ],
+            "install_guide": "在设置页填写 DashScope API Key、线程数和 VAD 参数即可使用",
+            "recommended_for": ["meeting", "media"],
+            "cloud": True,
+            "config_key": "flash",
+            "model_name": "qwen3-asr-flash",
+            "input_specs": {
+                "format": "常见音频文件（wav/mp3/m4a/ogg）或 URL",
+                "sample_rate": "自动转码为 16kHz",
+                "channels": "单/双声道自动处理",
+                "input": "文件/URL 上传"
+            },
+            "pricing": "云端计费（按 DashScope 实际计费）"
+        },
+        "flash_us": {
+            "name": "Qwen3-ASR Flash (US)",
+            "size": "DashScope 云端",
+            "description": "短音频低延迟识别（美国地域），适合快速会议片段/短视频。",
+            "features": [
+                "低延迟",
+                "短音频优化",
+                "标点预测"
+            ],
+            "use_cases": [
+                "短音频会议速记",
+                "客服质检（短音频）",
+                "多语种视频本地化（短片段）",
+                "歌唱类音频分析（短片段）"
+            ],
+            "constraints": [
+                "音频文件 ≤ 10MB",
+                "时长 ≤ 5 分钟"
+            ],
+            "pricing": "按 DashScope 实际计费",
+            "install_guide": "使用美国地域 API Key，并设置 DashScope API URL 为 https://dashscope-us.aliyuncs.com/api/v1",
+            "recommended_for": ["meeting", "media"],
+            "cloud": True,
+            "config_key": "flash_us",
+            "model_name": "qwen3-asr-flash-us",
+            "input_specs": {
+                "format": "常见音频文件（wav/mp3/m4a/ogg）或 URL",
+                "sample_rate": "自动转码为 16kHz",
+                "channels": "单/双声道自动处理",
+                "input": "文件/URL 上传"
+            }
+        },
+        "flash_realtime": {
+            "name": "Qwen3-ASR Flash Realtime",
+            "size": "DashScope 云端",
+            "description": "实时流式识别（WebSocket），适合会议/直播场景。",
+            "features": [
+                "WebSocket 实时流式",
+                "内置 VAD",
+                "标点符号预测",
+                "情感识别"
+            ],
+            "pricing": "￥0.00033/秒（中国内地）",
+            "install_guide": "在设置页填写 DashScope API Key 与 realtime 参数即可使用",
+            "recommended_for": ["meeting"],
+            "cloud": True,
+            "config_key": "flash_realtime",
+            "model_name": "qwen3-asr-flash-realtime",
+            "input_specs": {
+                "format": "pcm/opus",
+                "sample_rate": "8kHz / 16kHz",
+                "channels": "单声道",
+                "input": "二进制音频流（WebSocket）"
+            }
+        },
+        "flash_realtime_2026_02_10": {
+            "name": "Qwen3-ASR Flash Realtime (2026-02-10)",
+            "size": "DashScope 云端",
+            "description": "实时流式识别（WebSocket），指定 2026-02-10 版本。",
+            "features": [
+                "WebSocket 实时流式",
+                "内置 VAD",
+                "标点符号预测",
+                "情感识别"
+            ],
+            "pricing": "￥0.00033/秒（中国内地）",
+            "install_guide": "在设置页填写 DashScope API Key 与 realtime 参数即可使用",
+            "recommended_for": ["meeting"],
+            "cloud": True,
+            "config_key": "flash_realtime_2026_02_10",
+            "model_name": "qwen3-asr-flash-realtime-2026-02-10",
+            "input_specs": {
+                "format": "pcm/opus",
+                "sample_rate": "8kHz / 16kHz",
+                "channels": "单声道",
+                "input": "二进制音频流（WebSocket）"
+            }
+        },
+        "flash_realtime_2025_10_27": {
+            "name": "Qwen3-ASR Flash Realtime (2025-10-27)",
+            "size": "DashScope 云端",
+            "description": "实时流式识别（WebSocket），指定 2025-10-27 版本。",
+            "features": [
+                "WebSocket 实时流式",
+                "内置 VAD",
+                "标点符号预测",
+                "情感识别"
+            ],
+            "pricing": "￥0.00033/秒（中国内地）",
+            "install_guide": "在设置页填写 DashScope API Key 与 realtime 参数即可使用",
+            "recommended_for": ["meeting"],
+            "cloud": True,
+            "config_key": "flash_realtime_2025_10_27",
+            "model_name": "qwen3-asr-flash-realtime-2025-10-27",
+            "input_specs": {
+                "format": "pcm/opus",
+                "sample_rate": "8kHz / 16kHz",
+                "channels": "单声道",
+                "input": "二进制音频流（WebSocket）"
+            }
+        }
+    },
     "whisperx": {
         "tiny": {
             "name": "tiny",
@@ -185,6 +412,35 @@ MODEL_CONFIGS = {
             "recommended_for": ["media", "meeting"],
         },
     },
+    "lite_whisper": {
+        "distil-large-v3": {
+            "name": "Lite-Whisper Distil Large-v3",
+            "size": "780MB",
+            "description": "对 Whisper large-v3 进行蒸馏与稀疏化后得到的轻量版，推理速度最高可提升 2.3 倍。",
+            "features": [
+                "结构化稀疏",
+                "INT4/INT8 量化",
+                "与原版兼容的时间戳输出"
+            ],
+            "performance": "在 20+ 公共数据集上保持 98% 的 large-v3 准确度。",
+            "install_guide": "pip install litewhisper && litewhisper.download distil-large-v3",
+            "supported_devices": ["cpu", "cuda"],
+            "recommended_for": ["meeting", "media"]
+        },
+        "tiny-rnnt": {
+            "name": "Lite-Whisper Tiny-RNNT",
+            "size": "95MB",
+            "description": "针对嵌入式与本地部署优化的 RNNT 版本，延迟低于 120ms。",
+            "features": [
+                "端侧友好",
+                "事件触发式推理",
+                "可通过 ONNX Runtime 部署"
+            ],
+            "install_guide": "pip install litewhisper && litewhisper.download tiny-rnnt",
+            "supported_devices": ["cpu", "arm64"],
+            "recommended_for": ["meeting"]
+        },
+    },
     "sensevoice": {
         "small": {
             "name": "SenseVoice-Small",
@@ -200,6 +456,24 @@ MODEL_CONFIGS = {
             "trust_remote_code": True,  # 需要信任远程代码
             "supported_devices": ["cpu", "cuda:0"],  # 支持的设备
             "recommended_for": ["media", "meeting"],  # 同时推荐用于媒体和会议
+        },
+        "medium-2.1": {
+            "name": "SenseVoice Medium 2.1",
+            "size": "2.4GB",
+            "description": "2025 版 FunASR 离线模型，新增会议分轨、自监督热词，并覆盖 30+ 种中文方言。",
+            "repo": "FunAudioLLM/SenseVoice-medium-2.1",
+            "model_type": "funasr",
+            "languages": ["中文", "粤语", "闽南语", "英语", "日语"],
+            "features": [
+                "热词注入",
+                "会议 diarization",
+                "情感与场景标签",
+                "端点检测"
+            ],
+            "performance": "与 Whisper large-v3 相近的 CER，同时保持 2 倍速度。",
+            "install_guide": "pip install funasr==1.1.0 && funasr-cli download sensevoice-medium-2.1",
+            "supported_devices": ["cpu", "cuda"],
+            "recommended_for": ["meeting"],
         }
     },
     "dolphin": {
@@ -301,6 +575,8 @@ def get_model_info(model_type: str, model_name: str) -> Dict[str, Any]:
         return None
 
     model_config = MODEL_CONFIGS[model_type][model_name].copy()
+    settings = load_settings()
+    asr_settings = ensure_asr_settings(settings)
 
     # 添加配置键名，供前端API调用使用
     model_config["config_key"] = model_name
@@ -326,8 +602,6 @@ def get_model_info(model_type: str, model_name: str) -> Dict[str, Any]:
 
     elif model_type == "whisper":
         # Whisper模型通常存储在用户目录下的.cache/whisper/
-        import os
-
         whisper_cache = Path.home() / ".cache" / "whisper"
         model_file = whisper_cache / f"{model_name}.pt"
         model_config["installed"] = model_file.exists()
@@ -413,6 +687,100 @@ def get_model_info(model_type: str, model_name: str) -> Dict[str, Any]:
         model_config["installed"] = model_file.exists()
         model_config["local_path"] = str(model_file)
 
+    elif model_type == "parakeet":
+        marker_dir = models_path / "parakeet"
+        marker_dir.mkdir(parents=True, exist_ok=True)
+        marker_file = marker_dir / f"{model_name}.installed"
+        model_config["installed"] = marker_file.exists()
+        model_config["local_path"] = str(marker_dir)
+        selected = asr_settings.get("parakeet", {}).get("selected_model")
+        model_config["active"] = selected == model_name
+        model_config["can_download"] = True
+
+    elif model_type == "remote_api":
+        remote_cfg = asr_settings.get("remote_api", {})
+        model_config["installed"] = bool(remote_cfg.get("enabled"))
+        model_config["enabled"] = bool(remote_cfg.get("enabled"))
+        model_config["cloud"] = True
+        model_config["base_url"] = remote_cfg.get("base_url", "")
+        model_config["notes"] = remote_cfg.get("notes", "")
+        model_config["can_download"] = False
+    elif model_type == "qwen3_asr":
+        qwen_cfg = asr_settings.get("qwen3_asr", {})
+        model_config["installed"] = bool(qwen_cfg.get("enabled"))
+        model_config["enabled"] = bool(qwen_cfg.get("enabled"))
+        model_config["cloud"] = True
+        model_config["manual"] = False
+        model_config["can_download"] = False
+        model_config["notes"] = "需要 DashScope API Key"
+        model_config["api_key_configured"] = bool(
+            qwen_cfg.get("dashscope_api_key") or os.getenv("DASHSCOPE_API_KEY")
+        )
+        model_config["active"] = (
+            qwen_cfg.get("model_name") == model_config.get("model_name")
+        )
+
+    # 统一补充输入规格与价格信息（若未配置）
+    if "input_specs" not in model_config:
+        default_specs = {
+            "whisper": {
+                "format": "wav/mp3/m4a/ogg",
+                "sample_rate": "自动重采样",
+                "channels": "单/双声道自动处理",
+                "input": "文件/URL 上传",
+            },
+            "faster_whisper": {
+                "format": "wav/mp3/m4a/ogg",
+                "sample_rate": "自动重采样",
+                "channels": "单/双声道自动处理",
+                "input": "文件/URL 上传",
+            },
+            "sensevoice": {
+                "format": "wav/mp3/m4a/ogg",
+                "sample_rate": "自动重采样",
+                "channels": "单/双声道自动处理",
+                "input": "文件/URL 上传",
+            },
+            "dolphin": {
+                "format": "wav/mp3/m4a/ogg",
+                "sample_rate": "自动重采样",
+                "channels": "单/双声道自动处理",
+                "input": "文件/URL 上传",
+            },
+            "whisperx": {
+                "format": "wav/mp3/m4a/ogg",
+                "sample_rate": "自动重采样",
+                "channels": "单/双声道自动处理",
+                "input": "文件/URL 上传",
+            },
+            "parakeet": {
+                "format": "wav/pcm",
+                "sample_rate": "16kHz 推荐",
+                "channels": "单声道推荐",
+                "input": "文件上传",
+            },
+            "remote_api": {
+                "format": "由远程 API 决定",
+                "sample_rate": "由远程 API 决定",
+                "channels": "由远程 API 决定",
+                "input": "文件/URL 上传",
+            },
+            "qwen3_asr": {
+                "format": "常见音频文件或 URL",
+                "sample_rate": "自动转码",
+                "channels": "单/双声道自动处理",
+                "input": "文件/URL 上传",
+            },
+        }
+        if model_type in default_specs:
+            model_config["input_specs"] = default_specs[model_type]
+
+    if "pricing" not in model_config:
+        if model_type in {"remote_api", "qwen3_asr"}:
+            model_config["pricing"] = "云端计费（按配置的服务商计费）"
+        else:
+            model_config["pricing"] = "本地推理（无按量计费）"
+
     return model_config
 
 
@@ -434,8 +802,12 @@ async def list_models(
             "whisperx": [],
             "whisper": [],
             "faster_whisper": [],
+            "lite_whisper": [],
             "sensevoice": [],
             "dolphin": [],
+            "parakeet": [],
+            "remote_api": [],
+            "qwen3_asr": [],
         }
 
         for model_type in MODEL_CONFIGS:
@@ -586,6 +958,25 @@ async def delete_model(model_type: str, model_name: str) -> Dict[str, Any]:
             if not deleted_any:
                 logger.warning(f"未找到FasterWhisper模型缓存: {model_name}")
 
+        elif model_type == "parakeet":
+            marker = get_model_storage_path() / "parakeet" / f"{model_name}.installed"
+            if marker.exists():
+                marker.unlink()
+                logger.info(f"已删除Parakeet安装标记: {marker}")
+        elif model_type == "remote_api":
+            settings = load_settings()
+            asr_settings = ensure_asr_settings(settings)
+            asr_settings["remote_api"]["enabled"] = False
+            settings["asr"] = asr_settings
+            save_settings(settings)
+            return {"success": True, "message": "已禁用远程API"}
+        elif model_type == "qwen3_asr":
+            settings = load_settings()
+            asr_settings = ensure_asr_settings(settings)
+            asr_settings["qwen3_asr"]["enabled"] = False
+            settings["asr"] = asr_settings
+            save_settings(settings)
+            return {"success": True, "message": "Qwen3-ASR 已禁用"}
         elif "local_path" in model_info and model_info["local_path"]:
             # 其他模型的删除逻辑
             local_path = Path(model_info["local_path"])
@@ -685,6 +1076,8 @@ async def download_model_task(
         elif model_type == "dolphin":
             # Dolphin模型下载
             await download_dolphin_model(task_id, model_name, model_info)
+        elif model_type == "parakeet":
+            await download_parakeet_model(task_id, model_name, model_info)
 
         # 更新任务为完成状态
         download_manager.update_task(
@@ -1003,3 +1396,50 @@ async def download_dolphin_model(
 
     except Exception as e:
         raise RuntimeError(f"Dolphin模型下载失败: {e}")
+
+
+async def download_parakeet_model(
+    task_id: str, model_name: str, model_info: Dict[str, Any]
+):
+    """通过 NeMo CLI 下载 Parakeet 模型"""
+    try:
+        install_command = model_info.get("install_command")
+        if not install_command:
+            raise RuntimeError("当前模型未提供安装命令")
+
+        download_manager.update_task(
+            task_id, {"progress": 5, "current_step": "正在准备 NeMo 命令..."}
+        )
+
+        process = await asyncio.create_subprocess_exec(
+            *install_command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+
+        progress = 10
+        while True:
+            line = await process.stdout.readline()
+            if not line:
+                break
+            message = line.decode("utf-8", errors="ignore").strip()
+            if message:
+                progress = min(95, progress + 1)
+                download_manager.update_task(
+                    task_id,
+                    {"current_step": message[:120], "progress": progress},
+                )
+
+        return_code = await process.wait()
+        if return_code != 0:
+            raise RuntimeError(
+                f"nemo_asr_install_models 执行失败，返回码 {return_code}"
+            )
+
+        marker_dir = get_model_storage_path() / "parakeet"
+        marker_dir.mkdir(parents=True, exist_ok=True)
+        marker_file = marker_dir / f"{model_name}.installed"
+        marker_file.write_text(datetime.now().isoformat(), encoding="utf-8")
+
+    except Exception as e:
+        raise RuntimeError(f"Parakeet模型下载失败: {e}")

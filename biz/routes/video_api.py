@@ -167,8 +167,11 @@ async def browse_local_files(
 async def get_available_engines() -> Dict[str, Any]:
     """获取可用的语音识别引擎"""
     from core.asr import get_available_engines
+    from biz.routes.settings_api import load_settings
 
     engines = get_available_engines()
+    settings = load_settings()
+    asr_settings = settings.get("asr", {})
 
     # 获取引擎详细信息
     engine_info = {}
@@ -192,6 +195,34 @@ async def get_available_engines() -> Dict[str, Any]:
                 from core.asr.engines.dolphin_engine import DolphinEngine
 
                 engine = DolphinEngine({})
+            elif engine_name == "qwen3_asr":
+                qwen_cfg = asr_settings.get("qwen3_asr", {})
+                api_key = qwen_cfg.get("dashscope_api_key")
+                api_key_configured = bool(api_key)
+                engine_info[engine_name] = {
+                    "name": "Qwen3-ASR (DashScope)",
+                    "available": bool(qwen_cfg.get("enabled")) and api_key_configured,
+                    "enabled": bool(qwen_cfg.get("enabled")),
+                    "api_key_configured": api_key_configured,
+                }
+                continue
+            elif engine_name == "remote_api":
+                remote_cfg = asr_settings.get("remote_api", {})
+                engine_info[engine_name] = {
+                    "name": "Remote API",
+                    "available": bool(remote_cfg.get("enabled")),
+                    "enabled": bool(remote_cfg.get("enabled")),
+                    "base_url": remote_cfg.get("base_url", ""),
+                }
+                continue
+            elif engine_name == "parakeet":
+                parakeet_cfg = asr_settings.get("parakeet", {})
+                engine_info[engine_name] = {
+                    "name": "Parakeet",
+                    "available": bool(parakeet_cfg.get("enabled")),
+                    "enabled": bool(parakeet_cfg.get("enabled")),
+                }
+                continue
             else:
                 continue
 
@@ -406,7 +437,7 @@ async def create_video_task(
         ai_output_types: str = Form(""),
         force_sync: bool = Form(False),
         ai_correction: bool = Form(False),
-        content_role: str = Form("auto"),
+        content_role: str = Form("general"),
         ai_enhancement: bool = Form(False),
 ) -> Dict[str, Any]:
     """创建视频处理任务"""
@@ -456,6 +487,9 @@ async def create_video_task(
         "content_role": content_role,
         "ai_enhancement": ai_enhancement,
     }
+
+    from biz.services.task_config import finalize_video_task_config
+    config = finalize_video_task_config(config)
 
     # debug config to log
     logger.debug(f"视频处理配置: {config}")

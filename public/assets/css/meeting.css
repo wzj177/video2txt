@@ -537,6 +537,37 @@
     font-size: 12px;
 }
 
+.speaker-log-panel {
+    padding: 16px;
+    max-height: 100%;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.speaker-log-entry {
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 0;
+}
+
+.speaker-log-entry:last-child {
+    border-bottom: none;
+}
+
+.speaker-log-meta {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.speaker-log-text {
+    margin-top: 6px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+
 .empty-meetings {
     text-align: center;
     padding: 40px 20px;

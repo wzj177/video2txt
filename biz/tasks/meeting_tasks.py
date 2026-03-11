@@ -51,6 +51,21 @@ def sync_process_uploaded_audio(
         return {"success": False, "error": str(e)}
 
 
+def sync_process_speaker_log(task_id: str) -> Dict[str, Any]:
+    """同步方式执行说话人日志生成任务"""
+    try:
+        logger.info(f"🚀 开始生成说话人日志任务: {task_id}")
+        result = _run_async_task(meeting_service.generate_speaker_log(task_id))
+        if result:
+            logger.info(f"✅ 说话人日志生成完成: {task_id}")
+        else:
+            logger.warning(f"⚠️ 说话人日志生成失败: {task_id}")
+        return result
+    except Exception as e:
+        logger.error(f"说话人日志生成失败: {task_id}, 错误: {e}")
+        return {"success": False, "error": str(e)}
+
+
 def _run_async_task(coro):
     """
     在同步环境中运行异步任务
@@ -61,37 +76,34 @@ def _run_async_task(coro):
     Returns:
         协程执行结果
     """
+    def _run_in_loop(target_loop):
+        asyncio.set_event_loop(target_loop)
+        try:
+            result = target_loop.run_until_complete(coro)
+            pending = [t for t in asyncio.all_tasks(target_loop) if not t.done()]
+            if pending:
+                for task in pending:
+                    task.cancel()
+                target_loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+            target_loop.run_until_complete(target_loop.shutdown_asyncgens())
+            return result
+        finally:
+            target_loop.close()
+
     try:
-        # 尝试获取当前事件循环
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            # 如果事件循环正在运行，创建新的事件循环
-            import threading
             import concurrent.futures
 
-            def run_in_new_loop():
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    return new_loop.run_until_complete(coro)
-                finally:
-                    new_loop.close()
-
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(run_in_new_loop)
-                return future.result(timeout=3600)  # 1小时超时
-        else:
-            # 直接运行异步任务
-            return loop.run_until_complete(coro)
+                future = executor.submit(_run_in_loop, asyncio.new_event_loop())
+                return future.result(timeout=3600)
+        return _run_in_loop(loop)
 
     except RuntimeError:
-        # 没有事件循环，创建新的
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(coro)
-        finally:
-            loop.close()
+        return _run_in_loop(asyncio.new_event_loop())
 
 
 # =============================================================================
@@ -106,6 +118,11 @@ try:
     ):
         """SQLite队列版本的上传音频处理任务"""
         return sync_process_uploaded_audio(task_id, audio_file_path)
+
+    @task("process_meeting_speaker_log", queue_name="meeting_processing")
+    def process_meeting_speaker_log_task(task_id: str):
+        """SQLite队列版本的说话人日志生成任务"""
+        return sync_process_speaker_log(task_id)
 
     logger.info("✅ SQLite队列任务已注册")
 

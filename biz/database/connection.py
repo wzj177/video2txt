@@ -57,6 +57,15 @@ class DatabaseManager:
         try:
             async with self.engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                if self.engine.url.get_backend_name() == "sqlite":
+                    result = await conn.exec_driver_sql(
+                        "PRAGMA table_info(media_tasks)"
+                    )
+                    columns = {row[1] for row in result}
+                    if "cover" not in columns:
+                        await conn.exec_driver_sql(
+                            "ALTER TABLE media_tasks ADD COLUMN cover VARCHAR(500)"
+                        )
             logger.info("数据库表创建成功")
         except Exception as e:
             logger.error(f"创建数据库表失败: {e}")

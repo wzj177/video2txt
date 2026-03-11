@@ -7,8 +7,10 @@
     <link rel="icon" href="/favicon.ico">
     <style>
         :root {
-            --primary-color: #6C5CE7;
-            --secondary-color: #A29BFE;
+            --primary-color: #00B26A;
+            --secondary-color: #00A1D6;
+            --primary-light: #26d17c;
+            --secondary-light: #40c7f0;
             --background-color: #F8F9FA;
             --text-color: #343A40;
             --border-color: #E9ECEF;
@@ -54,8 +56,12 @@
         }
 
         @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* 页面头部 */
@@ -78,6 +84,75 @@
             font-size: 14px;
             color: #6C757D;
             margin-top: 5px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .subtitle span {
+            display: inline-block;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .diarization-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .diarization-pill.is-ready {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .diarization-pill.is-processing {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .diarization-pill.is-pending {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+
+        .diarization-pill.is-fallback {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-pending {
+            background-color: #FFF3CD;
+            color: #856404;
+        }
+
+        .status-running {
+            background-color: #D1ECF1;
+            color: #0C5460;
+        }
+
+        .status-completed {
+            background-color: #D4EDDA;
+            color: #155724;
+        }
+
+        .status-failed {
+            background-color: #F8D7DA;
+            color: #721C24;
+        }
+
+        .status-stopped {
+            background-color: #E2E3E5;
+            color: #383D41;
         }
 
         .toolbar {
@@ -143,6 +218,33 @@
             gap: 8px;
         }
 
+        /* 统计网格 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6C757D;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
         .keywords {
             display: flex;
             flex-wrap: wrap;
@@ -168,7 +270,7 @@
             background-color: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             margin-bottom: 20px;
             line-height: 1.8;
             white-space: pre-wrap;
@@ -176,11 +278,12 @@
 
         /* 音频播放器样式 */
         .audio-player {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            padding: 20px;
-            margin-top: 20px;
+            background: linear-gradient(135deg, #00B26A 0%, #00A1D6 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 178, 106, 0.3);
+            padding: 20px 25px;
+            margin: 20px 0;
+            color: white;
         }
 
         .player-header {
@@ -191,7 +294,16 @@
         }
 
         .player-title {
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .player-title::before {
+            content: '🎵';
+            font-size: 20px;
         }
 
         .player-controls {
@@ -201,78 +313,98 @@
         }
 
         .play-button {
-            background-color: var(--primary-color);
+            background-color: rgba(255, 255, 255, 0.2);
             color: white;
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: transform 0.2s;
-            border: none;
+            transition: all 0.3s;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            font-size: 18px;
         }
 
         .play-button:hover {
-            transform: scale(1.1);
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .play-button:active {
+            transform: scale(0.95);
         }
 
         .progress-container {
             flex: 1;
             position: relative;
-            height: 6px;
-            background-color: var(--border-color);
-            border-radius: 3px;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
             cursor: pointer;
+            overflow: hidden;
+        }
+
+        .progress-container:hover {
+            height: 10px;
         }
 
         .progress-bar {
             height: 100%;
-            background-color: var(--primary-color);
-            border-radius: 3px;
+            background: linear-gradient(90deg, #fff 0%, rgba(255, 255, 255, 0.8) 100%);
+            border-radius: 4px;
             position: relative;
             transition: width 0.1s linear;
         }
 
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background-color: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .progress-container:hover .progress-bar::after {
+            opacity: 1;
+        }
+
         .progress-time {
             position: absolute;
-            top: -25px;
-            background-color: #343A40;
+            top: -30px;
+            background-color: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
             font-size: 12px;
             z-index: 10;
             display: none;
+            white-space: nowrap;
         }
 
         .time-display {
             display: flex;
             justify-content: space-between;
-            font-size: 12px;
-            color: #6C757D;
-            margin-top: 5px;
-        }
-
-        .speed-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .speed-select {
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 14px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 8px;
+            font-weight: 500;
         }
 
         /* 转录内容样式 */
         .transcript-section {
             background-color: white;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             padding: 20px;
         }
 
@@ -304,11 +436,41 @@
             color: var(--text-color);
         }
 
+        .speaker-log-panel {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+        }
+
+        .speaker-log-entry {
+            border-bottom: 1px solid var(--chat-border);
+            padding: 12px 0;
+        }
+
+        .speaker-log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .speaker-log-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+            color: #6C757D;
+            margin-bottom: 6px;
+        }
+
+        .speaker-log-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
         /* 发言总结样式 */
         .speaker-summary-container {
             background-color: white;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             padding: 20px;
         }
 
@@ -384,11 +546,98 @@
             color: var(--text-color);
         }
 
+        .speaker-segments {
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .speaker-segment-item {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .speaker-segment-time {
+            font-size: 11px;
+            color: #6C757D;
+            margin-bottom: 4px;
+        }
+
+        .speaker-segment-text {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .toggle-button {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px 8px;
+            margin-top: 5px;
+        }
+
+        .toggle-button:hover {
+            text-decoration: underline;
+        }
+
+        /* 下载按钮 */
+        .download-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 178, 106, 0.3);
+        }
+
+        /* 倍速选择器 */
+        .speed-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .speed-selector select {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .speed-selector select:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .speed-selector label {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
         /* 问答回顾样式 */
         .qa-container {
             background-color: white;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             padding: 20px;
         }
 
@@ -440,6 +689,24 @@
                 padding: 10px;
             }
 
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .subtitle {
+                flex-wrap: wrap;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
             .player-controls {
                 flex-direction: column;
                 align-items: stretch;
@@ -449,412 +716,717 @@
                 margin: 10px 0;
             }
         }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-    <div id="app" class="container">
-        <!-- 加载中 -->
-        <div v-if="loading" class="loading">
-            <i>🔄</i>
-            <p>加载会议详情中...</p>
-        </div>
+<div id="app" class="container">
+    <!-- 加载中 -->
+    <div v-if="loading" class="loading">
+        <i>🔄</i>
+        <p>加载会议详情中...</p>
+    </div>
 
-        <!-- 错误状态 -->
-        <div v-else-if="error" class="error">
-            <i>😢</i>
-            <h3>加载失败</h3>
-            <p>{{ error }}</p>
-            <button @click="loadMeetingDetail">重试</button>
-        </div>
+    <!-- 错误状态 -->
+    <div v-else-if="error" class="error">
+        <i>😢</i>
+        <h3>加载失败</h3>
+        <p>{{ error }}</p>
+        <button @click="loadMeetingDetail">重试</button>
+    </div>
 
-        <!-- 会议详情内容 -->
-        <div v-else-if="meeting">
-            <!-- 页面头部 -->
-            <div class="header">
-                <div>
-                    <div class="title">{{ meeting.name || '会议记录' }}</div>
-                    <div class="subtitle">{{ formatDate(meeting.created_at) }}</div>
+    <!-- 会议详情内容 -->
+    <div v-else-if="meeting">
+        <!-- 页面头部 -->
+        <div class="header">
+            <div>
+                <div class="title">{{ meeting.name || '会议记录' }}</div>
+                <div class="subtitle">
+                    <span>{{ formatDate(meeting.created_at) }}</span>
+                    <span v-if="meeting.engine"> · 引擎: {{ meeting.engine }}</span>
+                    <span v-if="meeting.model_name"> · 模型: {{ meeting.model_name }}</span>
+                    <span v-if="meeting.source_language"> · 语言: {{ meeting.source_language }}</span>
+                    <span v-if="meeting.total_duration"> · 时长: {{ formatDuration(meeting.total_duration) }}</span>
+                    <span v-if="meeting.speaker_count"> · 说话人数: {{ meeting.speaker_count }}</span>
+                </div>
+            </div>
+            <div class="toolbar">
+                <span class="status-badge" :class="'status-' + meeting.status">
+                    {{ getStatusText(meeting.status) }}
+                </span>
+                <span v-if="meeting.diarization"
+                      class="diarization-pill"
+                      :class="getDiarizationClass(meeting.diarization.status)">
+                    {{ getDiarizationStatusText(meeting.diarization.status) }}
+                </span>
+                <button v-if="meeting.links && meeting.links.audio"
+                        @click="downloadMeetingAudio"
+                        title="下载音频">
+                    🎧
+                </button>
+                <button v-if="meeting.links && meeting.links.bundle"
+                        @click="downloadMeetingBundle"
+                        title="下载结果包">
+                    📦
+                </button>
+                <button v-if="meeting.hasSpeakerLog && meeting.links && meeting.links.speakerLog"
+                        @click="openSpeakerLogModal"
+                        title="查看说话人日志">
+                    🗒
+                </button>
+                <button v-else
+                        @click="generateSpeakerLog"
+                        title="生成说话人日志">
+                    🧑‍🤝‍🧑
+                </button>
+            </div>
+        </div>
+        <!-- 音频播放器 - 全局可见 -->
+        <div class="audio-player" v-if="audioPath">
+            <div class="player-header">
+                <div class="player-title">会议录音</div>
+            </div>
+
+            <div class="player-controls">
+                <button class="play-button" @click="togglePlay">
+                    {{ isPlaying ? '⏸️' : '▶️' }}
+                </button>
+
+                <div class="progress-container" @click="seekAudio" @mousemove="showTime" @mouseleave="hideTime">
+                    <div class="progress-bar" :style="{width: progress + '%'}">
+                        <div class="progress-time" ref="progressTime" :style="{left: hoverProgress + '%'}">
+                            {{ formatTime(hoverTime) }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="speed-selector">
+                    <label>倍速</label>
+                    <select v-model="playbackRate" @change="changeSpeed">
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1.0">1.0x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2.0">2.0x</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Tab 导航 -->
-            <div class="tabs">
-                <div class="tab" :class="{active: activeTab === 'overview'}" @click="activeTab = 'overview'">
-                    智能速览
-                </div>
-                <div class="tab" :class="{active: activeTab === 'transcript'}" @click="activeTab = 'transcript'">
-                    会议转录
-                </div>
-                <div class="tab" :class="{active: activeTab === 'speakers'}" @click="activeTab = 'speakers'">
-                    发言总结
-                </div>
-                <div class="tab" :class="{active: activeTab === 'qa'}" @click="activeTab = 'qa'">
-                    问答回顾
-                </div>
+            <div class="time-display">
+                <span>{{ formatTime(currentTime) }}</span>
+                <span>{{ formatTime(duration) }}</span>
             </div>
 
-            <!-- 智能速览 Tab -->
-            <div class="tab-content" :class="{active: activeTab === 'overview'}">
-                <div class="section">
-                    <div class="section-title">
-                        <i>🤖</i>智能速览
-                    </div>
+            <audio ref="audio" @timeupdate="updateProgress" @loadedmetadata="onAudioLoaded" @ended="onAudioEnded">
+                <source :src="audioPath" type="audio/mpeg">
+            </audio>
+        </div>
+        <!-- Tab 导航 -->
+        <div class="tabs">
+            <div class="tab" :class="{active: activeTab === 'log'}" @click="activeTab = 'log'">
+                说话人日志
+            </div>
+            <div class="tab" :class="{active: activeTab === 'transcript'}" @click="activeTab = 'transcript'">
+                会议转录
+            </div>
+            <div class="tab" :class="{active: activeTab === 'speakers'}" @click="activeTab = 'speakers'">
+                说话人统计
+            </div>
+        </div>
 
-                    <!-- 关键词 -->
-                    <div class="keywords" v-if="keywords && keywords.length > 0">
-                        <span class="keyword" v-for="keyword in keywords" :key="keyword">{{ keyword }}</span>
-                    </div>
-
-                    <!-- 内容摘要 -->
-                    <div class="summary-box" v-if="summary">
-                        {{ summary }}
-                    </div>
-                    <div class="empty-state" v-else>
-                        <i>📝</i>
-                        <p>暂无内容摘要</p>
-                    </div>
+        <!-- 说话人日志 Tab -->
+        <div class="tab-content" :class="{active: activeTab === 'log'}">
+            <div class="section">
+                <div class="section-title">
+                    <i>🗒️</i>说话人日志
                 </div>
 
-                <!-- 音频播放器 -->
-                <div class="audio-player" v-if="audioPath">
-                    <div class="player-header">
-                        <div class="player-title">会议录音</div>
+                <div class="speaker-log-panel" v-if="speakerLog.length" ref="speakerLogPanel">
+                    <div class="speaker-log-entry" v-for="(entry, index) in speakerLog" :key="index">
+                        <div class="speaker-log-meta">
+                            <strong>{{ getSpeakerDisplayName(entry.speaker) }}</strong>
+                            <span>{{ entry.time_label || formatTime(entry.start) }}</span>
+                            <span v-if="entry.duration">持续 {{ formatSeconds(entry.duration) }}s</span>
+                        </div>
+                        <div class="speaker-log-text">{{ entry.text }}</div>
                     </div>
+                </div>
+                <div class="empty-state" v-else>
+                    <i>🗒️</i>
+                    <p>暂无说话人日志</p>
+                </div>
+            </div>
+        </div>
 
-                    <div class="player-controls">
-                        <button class="play-button" @click="togglePlay">
-                            {{ isPlaying ? '⏸️' : '▶️' }}
+        <!-- 会议转录 Tab -->
+        <div class="tab-content" :class="{active: activeTab === 'transcript'}">
+            <div class="transcript-section" v-if="segments && segments.length > 0">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                    <button class="download-btn" @click="downloadTranscriptAsWord">
+                        📄 下载为 Word
+                    </button>
+                </div>
+                <div class="transcript-item" v-for="(segment, index) in segments" :key="index">
+                    <div class="transcript-header">
+                        <span class="transcript-time">{{ formatTime(segment.start) }}</span>
+                        <span v-if="segment.speaker" style="margin-left: 10px; font-weight: bold; color: var(--primary-color);">
+                            {{ getSpeakerDisplayName(segment.speaker) }}
+                        </span>
+                    </div>
+                    <div class="transcript-content">{{ segment.text }}</div>
+                </div>
+            </div>
+            <div class="empty-state" v-else>
+                <i>📜</i>
+                <p>暂无转录内容</p>
+            </div>
+        </div>
+
+        <!-- 说话人统计 Tab -->
+        <div class="tab-content" :class="{active: activeTab === 'speakers'}">
+            <div class="speaker-summary-container" v-if="speakers && Object.keys(speakers).length > 0">
+                <div class="speaker-item" v-for="(speaker, speakerId) in speakers" :key="speakerId">
+                    <div class="speaker-header">
+                        <div class="speaker-info">
+                            <div class="speaker-avatar">{{ getSpeakerInitial(speaker.name || speakerId) }}</div>
+                            <div>
+                                <div class="speaker-name" v-if="!speaker.editing">
+                                    {{ speaker.name || speakerId }}
+                                </div>
+                                <input v-else
+                                       class="speaker-name-editable"
+                                       v-model="speaker.editName"
+                                       @blur="saveSpeakerName(speakerId)"
+                                       @keyup.enter="saveSpeakerName(speakerId)">
+                            </div>
+                        </div>
+                        <button class="edit-button" @click="editSpeaker(speakerId)">
+                            {{ speaker.editing ? '保存' : '编辑' }}
                         </button>
-
-                        <div class="progress-container" @click="seekAudio" @mousemove="showTime" @mouseleave="hideTime">
-                            <div class="progress-bar" :style="{width: progress + '%'}">
-                                <div class="progress-time" ref="progressTime" :style="{left: hoverProgress + '%'}">
-                                    {{ formatTime(hoverTime) }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="speed-control">
-                            <span>倍速</span>
-                            <select class="speed-select" v-model="playbackRate" @change="changeSpeed">
-                                <option value="0.5">0.5x</option>
-                                <option value="0.75">0.75x</option>
-                                <option value="1.0">1.0x</option>
-                                <option value="1.25">1.25x</option>
-                                <option value="1.5">1.5x</option>
-                                <option value="2.0">2.0x</option>
-                            </select>
+                    </div>
+                    <div class="speaker-stats" v-if="speaker.segments_count || speaker.total_duration">
+                        <span v-if="speaker.segments_count">发言 {{ speaker.segments_count }} 次</span>
+                        <span v-if="speaker.segments_count && speaker.total_duration"> · </span>
+                        <span v-if="speaker.total_duration">时长 {{ formatDuration(speaker.total_duration) }}</span>
+                    </div>
+                    
+                    <!-- 发言记录展开/收起 -->
+                    <button class="toggle-button" @click="toggleSpeakerSegments(speakerId)">
+                        {{ speaker.showSegments ? '收起发言记录 ▲' : '展开发言记录 ▼' }}
+                    </button>
+                    
+                    <!-- 发言记录列表 -->
+                    <div class="speaker-segments" v-if="speaker.showSegments && speaker.segments">
+                        <div class="speaker-segment-item" v-for="(seg, idx) in speaker.segments" :key="idx">
+                            <div class="speaker-segment-time">{{ formatTime(seg.start) }} - {{ formatTime(seg.end) }}</div>
+                            <div class="speaker-segment-text">{{ seg.text }}</div>
                         </div>
                     </div>
-
-                    <div class="time-display">
-                        <span>{{ formatTime(currentTime) }}</span>
-                        <span>{{ formatTime(duration) }}</span>
-                    </div>
-
-                    <audio ref="audio" @timeupdate="updateProgress" @loadedmetadata="onAudioLoaded" @ended="onAudioEnded">
-                        <source :src="audioPath" type="audio/mpeg">
-                    </audio>
                 </div>
             </div>
-
-            <!-- 会议转录 Tab -->
-            <div class="tab-content" :class="{active: activeTab === 'transcript'}">
-                <div class="transcript-section" v-if="segments && segments.length > 0">
-                    <div class="transcript-item" v-for="(segment, index) in segments" :key="index">
-                        <div class="transcript-header">
-                            <span class="transcript-time">{{ formatTime(segment.start) }}</span>
-                        </div>
-                        <div class="transcript-content">{{ segment.text }}</div>
-                    </div>
-                </div>
-                <div class="empty-state" v-else>
-                    <i>📜</i>
-                    <p>暂无转录内容</p>
-                </div>
-            </div>
-
-            <!-- 发言总结 Tab -->
-            <div class="tab-content" :class="{active: activeTab === 'speakers'}">
-                <div class="speaker-summary-container" v-if="speakers && Object.keys(speakers).length > 0">
-                    <div class="speaker-item" v-for="(speaker, speakerId) in speakers" :key="speakerId">
-                        <div class="speaker-header">
-                            <div class="speaker-info">
-                                <div class="speaker-avatar">{{ getSpeakerInitial(speaker.name || speakerId) }}</div>
-                                <div>
-                                    <div class="speaker-name" v-if="!speaker.editing">
-                                        {{ speaker.name || speakerId }}
-                                    </div>
-                                    <input v-else 
-                                           class="speaker-name-editable" 
-                                           v-model="speaker.editName"
-                                           @blur="saveSpeakerName(speakerId)"
-                                           @keyup.enter="saveSpeakerName(speakerId)">
-                                </div>
-                            </div>
-                            <button class="edit-button" @click="editSpeaker(speakerId)">
-                                {{ speaker.editing ? '保存' : '编辑' }}
-                            </button>
-                        </div>
-                        <div class="speaker-stats" v-if="speaker.segments_count">
-                            发言 {{ speaker.segments_count }} 次 · 时长 {{ formatDuration(speaker.total_duration) }}
-                        </div>
-                        <div class="speaker-content" v-if="speaker.words && speaker.words.length > 0">
-                            {{ speaker.words.join(' ') }}
-                        </div>
-                    </div>
-                </div>
-                <div class="empty-state" v-else>
-                    <i>👥</i>
-                    <p>暂无发言人信息</p>
-                </div>
-            </div>
-
-            <!-- 问答回顾 Tab -->
-            <div class="tab-content" :class="{active: activeTab === 'qa'}">
-                <div class="qa-container" v-if="flashcards && flashcards.length > 0">
-                    <div class="qa-item" v-for="(card, index) in flashcards" :key="index">
-                        <div class="qa-question">
-                            <span class="qa-icon">Q</span>
-                            <span>{{ card.question }}</span>
-                        </div>
-                        <div class="qa-answer">{{ card.answer }}</div>
-                    </div>
-                </div>
-                <div class="empty-state" v-else>
-                    <i>💡</i>
-                    <p>暂无问答内容</p>
-                </div>
+            <div class="empty-state" v-else>
+                <i>👥</i>
+                <p>暂无发言人信息</p>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="/assets/js/vue.global.js"></script>
-    <script src="/assets/js/axios/axios.min.js"></script>
-    <script src="/assets/js/http.js"></script>
-    <script>
-        const { createApp } = Vue;
+<script src="/assets/js/vue.global.js"></script>
+<script src="/assets/js/axios/axios.min.js"></script>
+<script src="/assets/js/http.js"></script>
+<script>
+    const {createApp} = Vue;
 
-        createApp({
-            data() {
-                return {
-                    loading: true,
-                    error: null,
-                    meeting: null,
-                    activeTab: 'overview',
-                    
-                    // 音频播放器
-                    audioPath: null,
-                    isPlaying: false,
-                    currentTime: 0,
-                    duration: 0,
-                    progress: 0,
-                    playbackRate: 1.0,
-                    hoverProgress: 0,
-                    hoverTime: 0,
-                    
-                    // 数据
-                    summary: '',
-                    keywords: [],
-                    segments: [],
-                    speakers: {},
-                    flashcards: []
-                };
-            },
+    createApp({
+        data() {
+            return {
+                loading: true,
+                error: null,
+                meeting: null,
+                activeTab: 'log',
 
-            computed: {
-                taskId() {
-                    const params = new URLSearchParams(window.location.search);
-                    return params.get('id');
-                }
-            },
+                // 音频播放器
+                audioPath: null,
+                isPlaying: false,
+                currentTime: 0,
+                duration: 0,
+                progress: 0,
+                playbackRate: '1.0',
+                hoverProgress: 0,
+                hoverTime: 0,
 
-            methods: {
-                async loadMeetingDetail() {
-                    if (!this.taskId) {
-                        this.error = '任务ID不存在';
-                        this.loading = false;
-                        return;
-                    }
+                // 数据
+                transcriptText: '',
+                segments: [],
+                speakers: {},
+                speakerLog: []
+            };
+        },
 
-                    try {
-                        this.loading = true;
-                        this.error = null;
-
-                        // 获取会议任务信息
-                        const response = await http.get(`/api/tasks/meeting/${this.taskId}`);
-                        this.meeting = response;
-
-                        // 解析结果数据
-                        const results = response.results || {};
-                        
-                        // 内容摘要（从 AI 分析结果获取）
-                        this.summary = results.summary || results.content_summary || '';
-                        
-                        // 关键词
-                        this.keywords = results.keywords || [];
-                        
-                        // 转录分段
-                        this.segments = results.segments || [];
-                        
-                        // 说话人信息
-                        this.speakers = results.speakers || {};
-                        // 为每个说话人添加编辑状态
-                        Object.keys(this.speakers).forEach(speakerId => {
-                            this.$set(this.speakers[speakerId], 'editing', false);
-                            this.$set(this.speakers[speakerId], 'editName', this.speakers[speakerId].name || speakerId);
-                        });
-                        
-                        // 闪卡（问答）
-                        this.flashcards = results.flashcards || [];
-                        
-                        // 音频文件路径
-                        if (response.output_path) {
-                            this.audioPath = `/data/outputs/${response.output_path}`;
-                        }
-
-                        this.loading = false;
-
-                    } catch (error) {
-                        console.error('加载会议详情失败:', error);
-                        this.error = error.message || '加载失败，请重试';
-                        this.loading = false;
-                    }
-                },
-
-                // 音频播放器方法
-                togglePlay() {
-                    const audio = this.$refs.audio;
-                    if (this.isPlaying) {
-                        audio.pause();
-                    } else {
-                        audio.play();
-                    }
-                    this.isPlaying = !this.isPlaying;
-                },
-
-                updateProgress() {
-                    const audio = this.$refs.audio;
-                    this.currentTime = audio.currentTime;
-                    this.progress = (audio.currentTime / audio.duration) * 100;
-                },
-
-                onAudioLoaded() {
-                    const audio = this.$refs.audio;
-                    this.duration = audio.duration;
-                },
-
-                onAudioEnded() {
-                    this.isPlaying = false;
-                },
-
-                seekAudio(event) {
-                    const audio = this.$refs.audio;
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    const percent = (event.clientX - rect.left) / rect.width;
-                    audio.currentTime = percent * audio.duration;
-                },
-
-                showTime(event) {
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    const percent = (event.clientX - rect.left) / rect.width;
-                    this.hoverProgress = percent * 100;
-                    this.hoverTime = percent * this.duration;
-                    this.$refs.progressTime.style.display = 'block';
-                },
-
-                hideTime() {
-                    this.$refs.progressTime.style.display = 'none';
-                },
-
-                changeSpeed() {
-                    const audio = this.$refs.audio;
-                    audio.playbackRate = parseFloat(this.playbackRate);
-                },
-
-                // 发言人编辑方法
-                editSpeaker(speakerId) {
-                    const speaker = this.speakers[speakerId];
-                    if (speaker.editing) {
-                        this.saveSpeakerName(speakerId);
-                    } else {
-                        speaker.editing = true;
-                    }
-                },
-
-                async saveSpeakerName(speakerId) {
-                    const speaker = this.speakers[speakerId];
-                    speaker.editing = false;
-                    
-                    if (speaker.editName && speaker.editName !== speaker.name) {
-                        // 更新说话人名称
-                        speaker.name = speaker.editName;
-                        
-                        // TODO: 调用 API 保存到后端
-                        try {
-                            await http.put(`/api/tasks/meeting/${this.taskId}/speaker/${speakerId}`, {
-                                name: speaker.name
-                            });
-                        } catch (error) {
-                            console.error('保存发言人名称失败:', error);
-                        }
-                    }
-                },
-
-                getSpeakerInitial(name) {
-                    if (!name) return '?';
-                    return name.charAt(0).toUpperCase();
-                },
-
-                // 工具方法
-                formatTime(seconds) {
-                    if (!seconds || isNaN(seconds)) return '00:00';
-                    const mins = Math.floor(seconds / 60);
-                    const secs = Math.floor(seconds % 60);
-                    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                },
-
-                formatDuration(seconds) {
-                    if (!seconds) return '0秒';
-                    const mins = Math.floor(seconds / 60);
-                    const secs = Math.floor(seconds % 60);
-                    if (mins > 0) {
-                        return `${mins}分${secs}秒`;
-                    }
-                    return `${secs}秒`;
-                },
-
-                formatDate(dateString) {
-                    if (!dateString) return '';
-                    const date = new Date(dateString);
-                    return date.toLocaleString('zh-CN', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                },
-
-                exportMeeting() {
-                    // TODO: 实现导出功能
-                    alert('导出功能开发中...');
-                },
-
-                shareMeeting() {
-                    // TODO: 实现分享功能
-                    alert('分享功能开发中...');
-                },
-
-                closePage() {
-                    window.close();
-                }
-            },
-
-            mounted() {
-                this.loadMeetingDetail();
+        computed: {
+            taskId() {
+                const params = new URLSearchParams(window.location.search);
+                return params.get('id');
             }
-        }).mount('#app');
-    </script>
+        },
+
+        methods: {
+            async loadMeetingDetail() {
+                if (!this.taskId) {
+                    this.error = '任务ID不存在';
+                    this.loading = false;
+                    return;
+                }
+
+                try {
+                    this.loading = true;
+                    this.error = null;
+
+                    // 获取会议任务信息
+                    const response = await http.get(`/api/tasks/meeting/${this.taskId}`);
+                    this.meeting = response;
+
+                    // 解析结果数据 - 优先使用 results，兼容旧字段
+                    const results = response.results || {};
+
+                    this.segments = results.segments || response.transcripts || [];
+                    this.transcriptText = response.transcript || results.transcript || this.segments.map(seg => {
+                        const speakerName = seg.speaker ? `${seg.speaker}: ` : '';
+                        return `${speakerName}${seg.text || ''}`;
+                    }).join('\n');
+
+                    // 说话人日志与统计
+                    if (response.hasSpeakerLog) {
+                        this.speakerLog = results.speaker_log || this.buildSpeakerLogFromSegments(this.segments);
+                        this.speakers = this.prepareSpeakerSummary(results.speakers || {}, this.segments);
+                    } else {
+                        this.speakerLog = [];
+                        this.speakers = {};
+                    }
+
+                    // 音频流接口 - 优先使用链接中的音频流
+                    const links = response.links || {};
+                    this.audioPath = links.audioStream || links.audio || `/api/tasks/meeting/${this.taskId}/audio`;
+
+                    this.loading = false;
+
+                } catch (error) {
+                    console.error('加载会议详情失败:', error);
+                    this.error = error.message || '加载失败，请重试';
+                    this.loading = false;
+                }
+            },
+
+            async downloadMeetingAudio() {
+                if (!this.meeting || !this.meeting.links || !this.meeting.links.audio) {
+                    alert('暂无可下载的音频文件');
+                    return;
+                }
+                const filename = (this.meeting.name || `meeting_${this.taskId}`).replace(/\s+/g, "_");
+                try {
+                    await this.downloadBinary(this.meeting.links.audio, `${filename}.wav`);
+                } catch (error) {
+                    alert(`下载失败：${error.message}`);
+                }
+            },
+
+            async downloadMeetingBundle() {
+                if (!this.meeting || !this.meeting.links || !this.meeting.links.bundle) {
+                    alert('暂无可导出的结果包');
+                    return;
+                }
+                const filename = (this.meeting.name || `meeting_${this.taskId}`).replace(/\s+/g, "_");
+                try {
+                    await this.downloadBinary(this.meeting.links.bundle, `${filename}.zip`);
+                } catch (error) {
+                    alert(`导出失败：${error.message}`);
+                }
+            },
+
+            async generateSpeakerLog() {
+                if (!this.taskId) return;
+                try {
+                    await http.post(`/api/tasks/meeting/${this.taskId}/speaker-log`, {});
+                    this.notifyMessage('已开始生成说话人日志', 1);
+                    setTimeout(() => {
+                        this.loadMeetingDetail();
+                    }, 3000);
+                } catch (error) {
+                    this.notifyMessage(`生成失败: ${error.message}`, 2);
+                }
+            },
+
+            openSpeakerLogModal() {
+                if (!this.speakerLog || this.speakerLog.length === 0) {
+                    alert('暂无说话人日志');
+                    return;
+                }
+                this.activeTab = 'log';
+                this.$nextTick(() => {
+                    if (this.$refs.speakerLogPanel) {
+                        this.$refs.speakerLogPanel.scrollIntoView({behavior: 'smooth', block: 'start'});
+                    }
+                });
+            },
+
+            buildSpeakerLogFromSegments(segments) {
+                if (!segments || !Array.isArray(segments)) return [];
+                return segments.map(seg => {
+                    const start = seg.start || 0;
+                    const end = seg.end !== undefined ? seg.end : start;
+                    const duration = seg.duration || (end - start);
+                    return {
+                        speaker: seg.speaker || 'Speaker',
+                        start,
+                        end,
+                        duration: Number(duration || 0),
+                        time_label: this.formatTime(start),
+                        text: seg.text || ''
+                    };
+                });
+            },
+
+            prepareSpeakerSummary(rawSpeakers, segments) {
+                const summary = {};
+                const sourceSpeakers = rawSpeakers && Object.keys(rawSpeakers).length ? rawSpeakers : {};
+
+                Object.keys(sourceSpeakers).forEach(id => {
+                    const base = sourceSpeakers[id] || {};
+                    summary[id] = {
+                        name: base.name || id,
+                        segments_count: base.segments_count || base.segments || 0,
+                        total_duration: Number(base.total_duration || 0),
+                        editing: false,
+                        editName: base.name || id,
+                        showSegments: false,
+                        segments: (segments || []).filter(seg => seg.speaker === id)
+                    };
+                });
+
+                if (!Object.keys(summary).length) {
+                    (segments || []).forEach(seg => {
+                        const id = seg.speaker || 'Speaker';
+                        if (!summary[id]) {
+                            summary[id] = {
+                                name: id,
+                                segments_count: 0,
+                                total_duration: 0,
+                                editing: false,
+                                editName: id,
+                                showSegments: false,
+                                segments: []
+                            };
+                        }
+                        summary[id].segments.push(seg);
+                        summary[id].segments_count += 1;
+                        summary[id].total_duration += seg.duration || (seg.end - seg.start) || 0;
+                    });
+                }
+
+                Object.values(summary).forEach(item => {
+                    item.total_duration = Number(item.total_duration || 0);
+                });
+
+                return summary;
+            },
+
+            // 音频播放器方法
+            togglePlay() {
+                const audio = this.$refs.audio;
+                if (this.isPlaying) {
+                    audio.pause();
+                } else {
+                    audio.play();
+                }
+                this.isPlaying = !this.isPlaying;
+            },
+
+            updateProgress() {
+                const audio = this.$refs.audio;
+                this.currentTime = audio.currentTime;
+                this.progress = (audio.currentTime / audio.duration) * 100;
+            },
+
+            onAudioLoaded() {
+                const audio = this.$refs.audio;
+                this.duration = audio.duration;
+            },
+
+            onAudioEnded() {
+                this.isPlaying = false;
+            },
+
+            seekAudio(event) {
+                const audio = this.$refs.audio;
+                const rect = event.currentTarget.getBoundingClientRect();
+                const percent = (event.clientX - rect.left) / rect.width;
+                audio.currentTime = percent * audio.duration;
+            },
+
+            showTime(event) {
+                const rect = event.currentTarget.getBoundingClientRect();
+                const percent = (event.clientX - rect.left) / rect.width;
+                this.hoverProgress = percent * 100;
+                this.hoverTime = percent * this.duration;
+                this.$refs.progressTime.style.display = 'block';
+            },
+
+            hideTime() {
+                this.$refs.progressTime.style.display = 'none';
+            },
+
+            changeSpeed() {
+                const audio = this.$refs.audio;
+                audio.playbackRate = parseFloat(this.playbackRate);
+            },
+
+            // 下载转录为Word
+            async downloadTranscriptAsWord() {
+                if (!this.segments || this.segments.length === 0) {
+                    alert('暂无转录内容可下载');
+                    return;
+                }
+
+                try {
+                    // 调用后端接口生成Word
+                    const response = await fetch(`/api/tasks/meeting/${this.taskId}/export-transcript-word`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('导出失败');
+                    }
+
+                    // 获取文件blob
+                    const blob = await response.blob();
+                    
+                    // 创建下载链接
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `会议转录_${this.meeting.name || this.taskId}_${new Date().getTime()}.docx`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('下载失败:', error);
+                    alert('下载失败，请重试');
+                }
+            },
+
+            // 发言人编辑方法
+            editSpeaker(speakerId) {
+                const speaker = this.speakers[speakerId];
+                if (speaker.editing) {
+                    this.saveSpeakerName(speakerId);
+                } else {
+                    this.speakers[speakerId]['editing'] = true;
+                    this.speakers[speakerId]['editName'] = speaker.name || speakerId;
+                }
+            },
+
+            async saveSpeakerName(speakerId) {
+                const speaker = this.speakers[speakerId];
+                const newName = speaker.editName;
+                
+                if (!newName || newName.trim() === '') {
+                    this.notifyMessage('发言人名称不能为空', 0);
+                    return;
+                }
+                
+                try {
+                    // 调用API保存到数据库
+                    await http.put(`/api/tasks/meeting/${this.taskId}`, {
+                        update_speaker: {
+                            speaker_id: speakerId,
+                            name: newName.trim()
+                        }
+                    });
+                    
+                    this.speakers[speakerId]['name'] = newName.trim();
+                    this.speakers[speakerId]['editing'] = false;
+                    this.notifyMessage('发言人名称修改成功', 1);
+                } catch (error) {
+                    console.error('保存发言人名称失败:', error);
+                    this.notifyMessage('保存失败，请重试', 2);
+                }
+            },
+
+            notifyMessage(message, icon = 0) {
+                if (window.layer && typeof window.layer.msg === 'function') {
+                    window.layer.msg(message, { icon, time: 2000 });
+                    return;
+                }
+                alert(message);
+            },
+            
+            // 展开/收起发言记录
+            toggleSpeakerSegments(speakerId) {
+                this.speakers[speakerId]['showSegments'] = !this.speakers[speakerId]['showSegments'];
+            },
+            
+            // 获取发言人显示名称
+            getSpeakerDisplayName(speakerId) {
+                if (!this.speakers || !this.speakers[speakerId]) {
+                    return speakerId;
+                }
+                return this.speakers[speakerId].name || speakerId;
+            },
+
+            getSpeakerInitial(name) {
+                if (!name) return '?';
+                return name.charAt(0).toUpperCase();
+            },
+
+            async downloadBinary(url, filename) {
+                const response = await fetch(url, {credentials: 'include'});
+                if (!response.ok) {
+                    throw new Error('下载失败');
+                }
+                const blob = await response.blob();
+                const objectUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = objectUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(objectUrl);
+            },
+
+            // 工具方法
+            formatTime(seconds) {
+                if (!seconds || isNaN(seconds)) return '00:00';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            },
+
+            formatDuration(seconds) {
+                if (!seconds) return '0秒';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                if (mins > 0) {
+                    return `${mins}分${secs}秒`;
+                }
+                return `${secs}秒`;
+            },
+
+            formatSeconds(value) {
+                const num = Number(value || 0);
+                return num.toFixed(2);
+            },
+
+            formatDate(dateString) {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            },
+
+            getStatusText(status) {
+                const statusMap = {
+                    'pending': '等待中',
+                    'running': '处理中',
+                    'completed': '已完成',
+                    'finished': '已完成',
+                    'failed': '失败',
+                    'stopped': '已停止'
+                };
+                return statusMap[status] || status;
+            },
+
+            getLanguageName(code) {
+                if (!code) return '-';
+                const languageMap = {
+                    'auto': '自动检测',
+                    'zh': '中文',
+                    'en': '英语',
+                    'ja': '日语',
+                    'ko': '韩语',
+                    'fr': '法语',
+                    'de': '德语',
+                    'es': '西班牙语',
+                    'ru': '俄语',
+                    'none': '无'
+                };
+                return languageMap[code] || code.toUpperCase();
+            },
+
+            getDiarizationStatusText(status) {
+                const mapping = {
+                    ready: '说话人就绪',
+                    fallback_ready: '回退结果',
+                    processing: '分离中',
+                    fallback_processing: '回退中',
+                    pending: '待处理',
+                    not_generated: '未生成'
+                };
+                return mapping[status] || '待处理';
+            },
+
+            getDiarizationClass(status) {
+                switch (status) {
+                    case 'ready':
+                        return 'is-ready';
+                    case 'fallback_ready':
+                        return 'is-fallback';
+                    case 'processing':
+                        return 'is-processing';
+                    case 'fallback_processing':
+                        return 'is-fallback';
+                    case 'not_generated':
+                        return 'is-pending';
+                    default:
+                        return 'is-pending';
+                }
+            },
+
+                getCaptureModeName(mode) {
+                    if (!mode) return '-';
+                    const modeMap = {
+                        'system': '系统音频',
+                        'microphone': '麦克风',
+                        'both': '系统+麦克风'
+                    };
+                    return modeMap[mode] || mode;
+                },
+
+exportMeeting() {
+                // TODO: 实现导出功能
+                alert('导出功能开发中...');
+            },
+
+            shareMeeting() {
+                // TODO: 实现分享功能
+                alert('分享功能开发中...');
+            },
+
+            closePage() {
+                window.close();
+            }
+        },
+
+        mounted() {
+            this.loadMeetingDetail();
+        }
+    }).mount('#app');
+</script>
 </body>
 </html>

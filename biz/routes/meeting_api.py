@@ -71,22 +71,82 @@ async def get_active_meetings():
         return []
 
 
+def _parse_json_field(value: Any) -> Dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except Exception:
+            return {}
+    return {}
+
+
+def _build_meeting_metadata(task: Dict[str, Any]) -> Dict[str, Any]:
+    task_id = task.get("id")
+    results = _parse_json_field(task.get("results"))
+    config = _parse_json_field(task.get("config"))
+    model_name = config.get("model_name") or ""
+
+    speaker_log = results.get("speaker_log") or []
+    segments = results.get("segments") or []
+    has_speaker_log = len(speaker_log) > 0
+
+    status = task.get("status") or "pending"
+    if has_speaker_log:
+        diarization_status = "ready"
+    elif status in ["processing", "recording", "starting_audio", "monitoring"]:
+        diarization_status = "processing"
+    elif status in ["stopped", "cancelled"]:
+        diarization_status = "stopped"
+    elif status in ["finished", "completed"]:
+        diarization_status = "not_generated"
+    else:
+        diarization_status = "pending"
+
+    fallback = results.get("fallback", False)
+    if fallback and diarization_status == "ready":
+        diarization_status = "fallback_ready"
+    elif fallback and diarization_status == "processing":
+        diarization_status = "fallback_processing"
+
+    audio_available = bool(config.get("audio_file_path"))
+    links = {
+        "speakerLog": f"/api/tasks/meeting/{task_id}/speaker-log" if has_speaker_log else None,
+        "bundle": f"/api/tasks/meeting/{task_id}/download",
+        "audio": f"/api/tasks/meeting/{task_id}/download-audio" if audio_available else None,
+        "audioStream": f"/api/tasks/meeting/{task_id}/audio" if audio_available else None,
+    }
+
+    return {
+        "results": results,
+        "config": config,
+        "model_name": model_name,
+        "hasSpeakerLog": has_speaker_log,
+        "diarization": {
+            "status": diarization_status,
+            "fallback": fallback,
+            "segments": len(segments),
+        },
+        "links": links,
+    }
+
+
 class MeetingCreateRequest(BaseModel):
     title: str
     audioSource: str = "system"
     engine: str = "sensevoice"
+    model_name: Optional[str] = None
     language: str = "auto"
     enableSpeakerDiarization: bool = True
-    enableRealTimeSummary: bool = False
 
 
 class MeetingUploadRequest(BaseModel):
     title: str
     engine: str = "sensevoice"
+    model_name: Optional[str] = None
     language: str = "auto"
-    content_role: str = "meeting"
     enable_speaker_diarization: bool = True
-    enable_ai_analysis: bool = True
 
 
 from ..queue.task_manager import get_task_manager
@@ -188,10 +248,9 @@ async def upload_meeting_recording(
     audio_file: UploadFile = File(...),
     title: str = Form(...),
     engine: str = Form("sensevoice"),
+    model_name: Optional[str] = Form(None),
     language: str = Form("auto"),
-    content_role: str = Form("meeting"),
     enable_speaker_diarization: bool = Form(True),
-    enable_ai_analysis: bool = Form(True),
 ):
     """上传会议录音文件进行处理"""
     try:
@@ -219,10 +278,9 @@ async def upload_meeting_recording(
         config = {
             "title": title,
             "engine": engine,
+            "model_name": model_name,
             "language": language,
-            "content_role": content_role,
             "enable_speaker_diarization": enable_speaker_diarization,
-            "enable_ai_analysis": enable_ai_analysis,
             "audio_file_path": str(saved_file_path),  # 保存音频文件路径
             "created_at": datetime.now().isoformat(),
         }
@@ -399,9 +457,9 @@ async def create_meeting_task(
             "title": request.title,
             "audio_source": request.audioSource,
             "engine": request.engine,
+            "model_name": request.model_name,
             "language": request.language,
             "enable_speaker_diarization": request.enableSpeakerDiarization,
-            "enable_realtime_summary": request.enableRealTimeSummary,
             "created_at": datetime.now().isoformat(),
         }
 
@@ -583,8 +641,26 @@ async def stop_meeting_task(task_id: str):
         if not success:
             logger.warning(f"停止会议处理器失败: {task_id}")
 
-        # 更新任务状态
-        await task_service.update_task("meeting", task_id, {"status": "stopped"})
+        # 对于上传/离线任务，若没有处理器也要标记为已停止
+        if task.get("status") in [
+            "uploaded",
+            "queued",
+            "processing",
+            "recording",
+            "paused",
+            "starting_audio",
+            "monitoring",
+        ]:
+            await task_service.update_task(
+                "meeting",
+                task_id,
+                {
+                    "status": "stopped",
+                    "progress": 100,
+                    "current_step": "用户已停止会议处理",
+                    "error": "用户手动停止任务",
+                },
+            )
 
         return create_success_response(None, "会议监控已停止")
 
@@ -593,44 +669,95 @@ async def stop_meeting_task(task_id: str):
 
 
 @meeting_router.get("/{task_id}/download")
-async def download_meeting_task(task_id: str):
-    """下载会议记录"""
+async def download_meeting_task(task_id: str, background_tasks: BackgroundTasks):
+    """下载会议记录（转录+说话人日志+音频）"""
     try:
         from fastapi.responses import FileResponse
         import zipfile
         import tempfile
         import os
+        from pathlib import Path
+        import shutil
 
         task = await task_service.get_task_by_id("meeting", task_id)
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
 
-        # 创建临时zip文件
+        results = task.get("results") or {}
+        config = task.get("config") or {}
+
+        transcript_content = results.get("transcript") or ""
+        segments = results.get("segments") or []
+        speakers = results.get("speakers") or {}
+        speaker_log = results.get("speaker_log") or []
+        audio_file_path = (
+            results.get("audio_file")
+            or config.get("audio_file_path")
+            or config.get("audioFilePath")
+        )
+
         temp_dir = tempfile.mkdtemp()
         zip_path = os.path.join(temp_dir, f"meeting_{task_id}.zip")
 
         with zipfile.ZipFile(zip_path, "w") as zip_file:
-            # 添加转录文本
-            if task.get("results", {}).get("transcript"):
-                transcript_content = task["results"]["transcript"]
+            if transcript_content:
                 zip_file.writestr("transcript.txt", transcript_content)
 
-            # 添加总结内容
-            if task.get("results", {}).get("summary"):
-                summary_content = task["results"]["summary"]
-                zip_file.writestr("summary.md", summary_content)
+            if segments:
+                zip_file.writestr(
+                    "segments.json",
+                    json.dumps(segments, ensure_ascii=False, indent=2),
+                )
 
-            # 添加其他结果文件
-            for key, value in task.get("results", {}).items():
-                if key not in ["transcript", "summary"] and isinstance(value, str):
-                    zip_file.writestr(f"{key}.txt", value)
+            if speaker_log:
+                zip_file.writestr(
+                    "speaker_log.json",
+                    json.dumps(speaker_log, ensure_ascii=False, indent=2),
+                )
+
+            if speakers:
+                zip_file.writestr(
+                    "speakers.json",
+                    json.dumps(speakers, ensure_ascii=False, indent=2),
+                )
+
+            if audio_file_path and Path(audio_file_path).exists():
+                audio_path = Path(audio_file_path)
+                zip_file.write(audio_file_path, arcname=audio_path.name)
+
+        background_tasks.add_task(shutil.rmtree, temp_dir, ignore_errors=True)
 
         return FileResponse(
             zip_path, filename=f"meeting_{task_id}.zip", media_type="application/zip"
         )
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"下载失败: {str(e)}")
+
+
+@meeting_router.get("/{task_id}/speaker-log")
+async def get_meeting_speaker_log(task_id: str):
+    """获取会议的说话人日志"""
+    try:
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        results = task.get("results") or {}
+        speaker_log = results.get("speaker_log") or []
+
+        if not speaker_log:
+            raise HTTPException(status_code=404, detail="还没有生成说话人日志")
+
+        return create_success_response(
+            {"speaker_log": speaker_log}, "获取说话人日志成功"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取说话人日志失败: {str(e)}")
 
 
 @meeting_router.get("/{task_id}/download-audio")
@@ -656,7 +783,7 @@ async def download_meeting_audio(task_id: str):
                 )
 
         # 兼容性：如果 task_files 中没有记录，尝试从任务配置中获取
-        task = await task_service.get_task(task_id, "meeting")
+        task = await task_service.get_task("meeting", task_id)
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
 
@@ -670,6 +797,63 @@ async def download_meeting_audio(task_id: str):
             )
 
         raise HTTPException(status_code=404, detail="音频文件不存在")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"下载音频失败: {str(e)}")
+
+
+@meeting_router.get("/{task_id}/audio")
+async def stream_meeting_audio(task_id: str):
+    """流式播放会议音频文件"""
+    try:
+        from fastapi.responses import FileResponse
+        from pathlib import Path
+        from biz.database.connection import get_database_manager
+        from biz.database.repositories import TaskFileRepository
+
+        # 首先从 task_files 表中查找音频文件
+        db_manager = get_database_manager()
+        async with db_manager.get_session() as session:
+            file_repo = TaskFileRepository(session)
+            audio_file = await file_repo.get_by_type(task_id, "audio")
+
+            if audio_file and Path(audio_file.file_path).exists():
+                # 使用 FileResponse 支持范围请求（Range header）用于音频流播放
+                return FileResponse(
+                    audio_file.file_path,
+                    media_type=audio_file.mime_type or "audio/mpeg",
+                    headers={
+                        "Accept-Ranges": "bytes",
+                        "Cache-Control": "public, max-age=3600",
+                    },
+                )
+
+        # 兼容性：如果 task_files 中没有记录，尝试从任务配置中获取
+        task = await task_service.get_task("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        config = task.get("config", {})
+        audio_file_path = config.get("audio_file_path")
+
+        if audio_file_path and Path(audio_file_path).exists():
+            return FileResponse(
+                audio_file_path,
+                media_type="audio/mpeg",
+                headers={
+                    "Accept-Ranges": "bytes",
+                    "Cache-Control": "public, max-age=3600",
+                },
+            )
+
+        raise HTTPException(status_code=404, detail="音频文件不存在")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取音频流失败: {str(e)}")
 
         task = await task_service.get_task_by_id("meeting", task_id)
         if not task:
@@ -753,15 +937,12 @@ async def get_meeting_list(
                 if keyword.lower() not in title.lower():
                     continue
 
-            # 转换任务格式 - 支持完整的会议分析数据
-            results = task.get("results") or {}  # 确保 results 不为 None
-
-            # 提取会议统计信息
-            segments = results.get("segments", []) if isinstance(results, dict) else []
-            speakers = results.get("speakers", {}) if isinstance(results, dict) else {}
-            transcript = (
-                results.get("transcript", "") if isinstance(results, dict) else ""
-            )
+            metadata = _build_meeting_metadata(task)
+            results = metadata["results"]
+            segments = results.get("segments", [])
+            speakers = results.get("speakers", {})
+            transcript = results.get("transcript", "")
+            speaker_log = results.get("speaker_log", [])
 
             # 计算情感分布
             emotion_stats = {}
@@ -776,17 +957,15 @@ async def get_meeting_list(
                 "startTime": task.get("created_at"),
                 "status": task.get("status", "unknown"),
                 "duration": task.get("duration"),
+                "model_name": metadata.get("model_name", ""),
                 "stats": {
                     "transcriptLength": len(transcript),
                     "speakers": len(speakers),
                     "segments": len(segments),
                     "emotions": emotion_stats,
                     "hasAnalysis": bool(segments and len(segments) > 0),
-                    "keywords": (
-                        len(results.get("keywords", []))
-                        if isinstance(results, dict)
-                        else 0
-                    ),
+                    "hasSpeakerLog": metadata["hasSpeakerLog"],
+                    "diarizationStatus": metadata["diarization"]["status"],
                 },
                 # 添加预览数据
                 "preview": {
@@ -801,7 +980,13 @@ async def get_meeting_list(
                     "mainSpeakers": (
                         list(speakers.keys())[:3] if speakers else ["Speaker_1"]
                     ),
+                    "speakerLogSample": speaker_log[:3] if speaker_log else [],
                 },
+                "results": results,
+                "config": metadata["config"],
+                "hasSpeakerLog": metadata["hasSpeakerLog"],
+                "diarization": metadata["diarization"],
+                "links": metadata["links"],
             }
             filtered_tasks.append(meeting)
 
@@ -836,10 +1021,244 @@ async def get_meeting_task(task_id: str):
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
 
-        return create_success_response(task, "获取会议任务成功")
+        metadata = _build_meeting_metadata(task)
+        enriched_task = dict(task)
+        enriched_task.update(
+            {
+                "results": metadata["results"],
+                "config": metadata["config"],
+                "model_name": metadata.get("model_name", ""),
+                "hasSpeakerLog": metadata["hasSpeakerLog"],
+                "diarization": metadata["diarization"],
+                "links": metadata["links"],
+            }
+        )
+
+        return create_success_response(enriched_task, "获取会议任务成功")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取任务失败: {str(e)}")
+
+
+@meeting_router.post("/{task_id}/speaker-log")
+async def generate_meeting_speaker_log(task_id: str):
+    """生成说话人日志"""
+    try:
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        results = _parse_json_field(task.get("results"))
+        if results.get("speaker_log"):
+            return create_success_response(None, "说话人日志已存在")
+
+        queue_result = await MeetingTaskManager._try_queue_processing(
+            task_id, "process_meeting_speaker_log", (task_id,)
+        )
+        if queue_result:
+            return create_success_response(None, "已开始生成说话人日志")
+
+        asyncio.create_task(meeting_service.generate_speaker_log(task_id))
+        return create_success_response(None, "已开始生成说话人日志")
+
+    except Exception as e:
+        return create_error_response(f"生成说话人日志失败: {str(e)}", 500)
+
+
+@meeting_router.post("/{task_id}/export-transcript-word")
+async def export_transcript_to_word(task_id: str):
+    """导出会议转录为Word文档"""
+    try:
+        from pathlib import Path
+        import tempfile
+        from fastapi.responses import FileResponse
+
+        # 获取会议任务
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 获取转录数据
+        results = task.get("results", {})
+        segments = results.get("segments", [])
+        speakers = results.get("speakers", {})
+
+        if not segments:
+            raise HTTPException(status_code=400, detail="暂无转录内容")
+
+        # 构建Markdown内容
+        md_content = f"# {task.get('name', '会议记录')}\n\n"
+        md_content += "## 会议信息\n\n"
+        md_content += f"- **日期**: {task.get('created_at', '')}\n"
+
+        if task.get("total_duration"):
+            mins = int(task["total_duration"] // 60)
+            secs = int(task["total_duration"] % 60)
+            md_content += f"- **时长**: {mins}分{secs}秒\n"
+
+        if task.get("speaker_count"):
+            md_content += f"- **说话人数**: {task['speaker_count']}\n"
+
+        md_content += "\n---\n\n## 会议转录\n\n"
+
+        # 添加每条转录
+        for segment in segments:
+            start_time = segment.get("start", 0)
+            mins = int(start_time // 60)
+            secs = int(start_time % 60)
+            time_str = f"{mins:02d}:{secs:02d}"
+
+            speaker_id = segment.get("speaker", "")
+            speaker_name = speaker_id
+            if speaker_id and speakers.get(speaker_id):
+                speaker_name = speakers[speaker_id].get("name", speaker_id)
+
+            if speaker_name:
+                md_content += (
+                    f"**[{time_str}] {speaker_name}**: {segment.get('text', '')}\n\n"
+                )
+            else:
+                md_content += f"**[{time_str}]**: {segment.get('text', '')}\n\n"
+
+        # 创建临时Markdown文件
+        temp_dir = Path(tempfile.gettempdir())
+        md_file = temp_dir / f"meeting_transcript_{task_id}.md"
+        docx_file = temp_dir / f"meeting_transcript_{task_id}.docx"
+
+        # 写入Markdown内容
+        with open(md_file, "w", encoding="utf-8") as f:
+            f.write(md_content)
+
+        # 检查pandoc是否可用
+        try:
+            import subprocess
+
+            result = subprocess.run(
+                ["pandoc", "--version"], capture_output=True, timeout=5
+            )
+            pandoc_available = result.returncode == 0
+        except:
+            pandoc_available = False
+
+        if not pandoc_available:
+            # 如果pandoc不可用，返回HTML格式的Word
+            # 先转换Markdown内容为HTML
+            html_body = (
+                md_content.replace("# ", "<h1>")
+                .replace("## ", "<h2>")
+                .replace("\n\n", "</p><p>")
+                .replace("**", "<strong>", 1)
+                .replace("**", "</strong>", 1)
+            )
+
+            # 构建完整的HTML文档
+            html_content = f"""
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                  xmlns:w='urn:schemas-microsoft-com:office:word' 
+                  xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <title>会议转录</title>
+                <style>
+                    body {{ font-family: 'Microsoft YaHei', 'SimSun', sans-serif; line-height: 1.6; }}
+                    h1 {{ color: #00B26A; border-bottom: 2px solid #00B26A; padding-bottom: 10px; }}
+                    h2 {{ color: #00A1D6; margin-top: 20px; }}
+                    .meta {{ color: #666; margin-bottom: 20px; }}
+                    .segment {{ margin-bottom: 10px; }}
+                    .time {{ color: #00A1D6; font-weight: bold; }}
+                    .speaker {{ color: #00B26A; font-weight: bold; }}
+                </style>
+            </head>
+            <body>
+                {html_body}
+            </body>
+            </html>
+            """
+
+            with open(docx_file.with_suffix(".doc"), "wb") as f:
+                f.write(("\ufeff" + html_content).encode("utf-8"))
+
+            return FileResponse(
+                docx_file.with_suffix(".doc"),
+                filename=f"会议转录_{task.get('name', task_id)}.doc",
+                media_type="application/msword",
+            )
+
+        # 使用pandoc转换
+        import subprocess
+        import asyncio
+
+        process = await asyncio.create_subprocess_exec(
+            "pandoc",
+            str(md_file),
+            "-o",
+            str(docx_file),
+            "--standalone",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        stdout, stderr = await process.communicate()
+
+        if process.returncode != 0 or not docx_file.exists():
+            raise HTTPException(status_code=500, detail="Word文档生成失败")
+
+        # 返回Word文件
+        return FileResponse(
+            docx_file,
+            filename=f"会议转录_{task.get('name', task_id)}.docx",
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"导出会议转录失败: {e}")
+        raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
+
+
+class UpdateSpeakerRequest(BaseModel):
+    update_speaker: Dict[str, Any]
+
+
+@meeting_router.put("/{task_id}")
+async def update_meeting_task(task_id: str, request: UpdateSpeakerRequest):
+    """更新会议任务信息（如发言人名称）"""
+    try:
+        task = await task_service.get_task_by_id("meeting", task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 更新发言人信息
+        if "update_speaker" in request.dict():
+            speaker_update = request.update_speaker
+            speaker_id = speaker_update.get("speaker_id")
+            new_name = speaker_update.get("name")
+
+            if not speaker_id or not new_name:
+                raise HTTPException(status_code=400, detail="缺少必要参数")
+
+            # 获取当前的 results
+            results = task.get("results", {})
+            speakers = results.get("speakers", {})
+
+            # 更新发言人名称
+            if speaker_id in speakers:
+                speakers[speaker_id]["name"] = new_name
+
+                # 更新任务
+                await task_service.update_task("meeting", task_id, {"results": results})
+
+                return create_success_response(None, "发言人信息更新成功")
+            else:
+                raise HTTPException(status_code=404, detail="发言人不存在")
+
+        return create_error_response("未提供更新内容", 400)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新任务失败: {str(e)}")
 
 
 @meeting_router.post("/api/system/audio/test")

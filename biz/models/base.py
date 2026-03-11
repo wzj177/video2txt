@@ -4,7 +4,7 @@
 听语AI - 数据库基类
 """
 
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, String, DateTime, Text, JSON
 from datetime import datetime
 import uuid

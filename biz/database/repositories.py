@@ -14,6 +14,12 @@ from sqlalchemy.orm import selectinload
 
 from ..models.task import MediaTask, MeetingTask, TaskFile, TaskQueue
 from ..models.user_data import UserPreference, ProcessingHistory, SystemMetrics
+from ..models.template import (
+    TemplateSkill,
+    RoleTemplateMapping,
+    TemplateRole,
+    RoleTemplate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -343,6 +349,108 @@ class SystemMetricsRepository(BaseRepository):
             select(SystemMetrics)
             .where(SystemMetrics.created_at >= since_date)
             .order_by(desc(SystemMetrics.created_at))
+        )
+        return result.scalars().all()
+
+
+class TemplateSkillRepository(BaseRepository):
+    """模板技能仓库"""
+
+    def __init__(self, session: AsyncSession):
+        super().__init__(session, TemplateSkill)
+
+    async def get_by_key(self, skill_key: str) -> Optional[TemplateSkill]:
+        result = await self.session.execute(
+            select(TemplateSkill).where(TemplateSkill.skill_key == skill_key)
+        )
+        return result.scalar_one_or_none()
+
+    async def list_by_category(
+        self, category: Optional[str] = None
+    ) -> List[TemplateSkill]:
+        query = select(TemplateSkill).order_by(TemplateSkill.created_at.desc())
+        if category:
+            query = query.where(TemplateSkill.category == category)
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+
+class RoleTemplateMappingRepository(BaseRepository):
+    """角色模板映射仓库"""
+
+    def __init__(self, session: AsyncSession):
+        super().__init__(session, RoleTemplateMapping)
+
+    async def get_by_role_and_category(
+        self, role_key: str, category: str
+    ) -> Optional[RoleTemplateMapping]:
+        result = await self.session.execute(
+            select(RoleTemplateMapping)
+            .where(RoleTemplateMapping.role_key == role_key)
+            .where(RoleTemplateMapping.category == category)
+        )
+        return result.scalar_one_or_none()
+
+    async def upsert(
+        self, role_key: str, category: str, skill_key: str
+    ) -> RoleTemplateMapping:
+        mapping = await self.get_by_role_and_category(role_key, category)
+        if mapping:
+            mapping.skill_key = skill_key
+            mapping.is_active = True
+            await self.session.flush()
+            await self.session.refresh(mapping)
+            return mapping
+        return await self.create(
+            role_key=role_key,
+            category=category,
+            skill_key=skill_key,
+            is_active=True,
+        )
+
+
+class TemplateRoleRepository(BaseRepository):
+    """提示词角色仓库"""
+
+    def __init__(self, session: AsyncSession):
+        super().__init__(session, TemplateRole)
+
+    async def get_by_key(self, role_key: str) -> Optional[TemplateRole]:
+        result = await self.session.execute(
+            select(TemplateRole).where(TemplateRole.role_key == role_key)
+        )
+        return result.scalar_one_or_none()
+
+    async def list_active(self) -> List[TemplateRole]:
+        result = await self.session.execute(
+            select(TemplateRole)
+            .where(TemplateRole.is_active == True)
+            .order_by(TemplateRole.created_at.desc())
+        )
+        return result.scalars().all()
+
+
+class RoleTemplateRepository(BaseRepository):
+    """角色模板仓库"""
+
+    def __init__(self, session: AsyncSession):
+        super().__init__(session, RoleTemplate)
+
+    async def get_by_role_and_category(
+        self, role_key: str, category: str
+    ) -> Optional[RoleTemplate]:
+        result = await self.session.execute(
+            select(RoleTemplate)
+            .where(RoleTemplate.role_key == role_key)
+            .where(RoleTemplate.category == category)
+        )
+        return result.scalar_one_or_none()
+
+    async def list_by_role(self, role_key: str) -> List[RoleTemplate]:
+        result = await self.session.execute(
+            select(RoleTemplate)
+            .where(RoleTemplate.role_key == role_key)
+            .order_by(RoleTemplate.created_at.desc())
         )
         return result.scalars().all()
 

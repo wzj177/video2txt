@@ -116,6 +116,7 @@ logger = logging.getLogger(__name__)
 
 # 导入数据库初始化
 from biz.database.connection import init_database, close_database
+from biz.services.template_skill_service import template_skill_service
 
 # 全局队列管理器
 _queue_manager = None
@@ -181,7 +182,6 @@ from biz.routes.meeting_api import meeting_router
 from biz.routes.model_api import model_router
 from biz.routes.settings_api import settings_router
 from biz.routes.notification_api import notification_router
-from biz.routes.voice_analysis_api import voice_analysis_router
 
 
 @asynccontextmanager
@@ -204,6 +204,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")
         raise
+
+    # 加载提示词模板
+    logger.info("正在加载模板技能...")
+    try:
+        await template_skill_service.initialize()
+        logger.info("模板技能加载完成")
+    except Exception as e:
+        logger.error(f"模板技能加载失败: {e}")
 
     # 智能队列系统启动
     logger.info("正在启动智能队列系统...")
@@ -265,7 +273,6 @@ app.include_router(meeting_router)
 app.include_router(model_router)
 app.include_router(settings_router)
 app.include_router(notification_router)
-app.include_router(voice_analysis_router)
 
 
 @app.get("/")

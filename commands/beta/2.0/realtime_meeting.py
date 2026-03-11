@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 实时会议记录系统
-支持实时语音转文字、多语言翻译、说话人分离、智能总结
+支持实时语音转文字、多语言翻译与说话人分离
 """
 
 import os
@@ -116,7 +116,6 @@ class MeetingConfig:
     # 高级功能
     enable_speaker_diarization: bool = False
     enable_translation: bool = False
-    enable_summarization: bool = False
     enable_meeting_integration: bool = False
 
     def __post_init__(self):
@@ -895,38 +894,7 @@ class MeetingRecorder:
         if self.meeting_integration:
             self.meeting_integration.stop_integration()
 
-        # 生成会议总结
-        if self.transcriptions:
-            self._generate_summary()
-
         print(f"📁 会议记录已保存到: {self.output_dir / self.session_id}")
-
-    def _generate_summary(self):
-        """生成会议总结"""
-        session_dir = self.output_dir / self.session_id
-        summary_file = session_dir / "meeting_summary.md"
-
-        total_duration = 0
-        if self.transcriptions:
-            total_duration = (
-                self.transcriptions[-1].end_time - self.transcriptions[0].start_time
-            )
-
-        languages = set(t.language for t in self.transcriptions)
-        total_words = sum(len(t.text) for t in self.transcriptions)
-
-        with open(summary_file, "w", encoding="utf-8") as f:
-            f.write(f"# 会议记录总结\n\n")
-            f.write(
-                f"**会议时间**: {datetime.datetime.fromtimestamp(self.transcriptions[0].start_time).strftime('%Y-%m-%d %H:%M:%S')}\n"
-            )
-            f.write(f"**会议时长**: {total_duration/60:.1f} 分钟\n")
-            f.write(f"**检测语言**: {', '.join(languages)}\n")
-            f.write(f"**转录字数**: {total_words} 字\n")
-            f.write(f"**转录片段**: {len(self.transcriptions)} 段\n\n")
-
-            if self.config.enable_translation:
-                f.write(f"**翻译语言**: {', '.join(self.config.target_languages)}\n\n")
 
     def _on_meeting_audio_data(self, audio_data: np.ndarray, timestamp: float):
         """会议音频数据回调"""

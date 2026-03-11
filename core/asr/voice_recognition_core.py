@@ -20,6 +20,9 @@ from .engines import (
     SenseVoiceEngine,
     DolphinEngine,
     WhisperXEngine,
+    RemoteAPIEngine,
+    ParakeetEngine,
+    Qwen3ASREngine,
 )
 from .base_asr import BaseVoiceEngine
 
@@ -85,6 +88,19 @@ class VoiceRecognitionCore:
         self.initialized = False
         self.preferred_engine = "auto"
         self.model_size = "small"
+        self.settings_path = Path("config/settings.json")
+        self._asr_settings_cache: Optional[Dict[str, Any]] = None
+        self._engine_fallback_order = [
+            "remote_api",
+            "qwen3_asr",
+            "parakeet",
+            "whisperx",
+            "whisper",
+            "faster_whisper",
+            "sensevoice",
+            "dolphin",
+        ]
+        self._engine_overrides: Dict[str, Dict[str, Any]] = {}
 
     def initialize(
         self, preferred_engine: str = "auto", model_size: str = "small"
@@ -107,6 +123,7 @@ class VoiceRecognitionCore:
         # 标记为已初始化（准备状态）
         self.initialized = True
         VOICE_RECOGNITION_INITIALIZED = True
+        self._asr_settings_cache = None
         logger.info("语音识别核心已准备就绪，将在首次使用时加载引擎")
         return True
 
@@ -124,25 +141,10 @@ class VoiceRecognitionCore:
 
         # 智能引擎选择策略 - 优先使用更稳定的引擎
         if target_engine == "auto":
-            # 按稳定性和成功率排序：whisperx > whisper > faster_whisper > sensevoice > dolphin
-            engines_to_try = [
-                "whisperx",
-                "whisper",
-                "faster_whisper",
-                "sensevoice",
-                "dolphin",
-            ]
+            engines_to_try = list(self._engine_fallback_order)
         else:
             engines_to_try = [target_engine] + [
-                e
-                for e in [
-                    "whisperx",
-                    "whisper",
-                    "faster_whisper",
-                    "sensevoice",
-                    "dolphin",
-                ]
-                if e != target_engine
+                e for e in self._engine_fallback_order if e != target_engine
             ]
 
         successful_engines = []
@@ -201,7 +203,6 @@ class VoiceRecognitionCore:
         """创建指定引擎"""
         # 创建引擎配置，包含模型大小信息
         engine_config = {
-            "model_name": engine_name,
             "model_size": self.model_size,
             "device": getattr(self.config, "device", "auto"),
             "language": getattr(self.config, "language", "auto"),
@@ -219,6 +220,15 @@ class VoiceRecognitionCore:
         elif engine_name == "whisperx":
             # WhisperX引擎配置
             engine_config["model_size"] = self.model_size
+        elif engine_name == "remote_api":
+            engine_config = self._merge_engine_settings("remote_api", engine_config)
+            return RemoteAPIEngine(engine_config)
+        elif engine_name == "parakeet":
+            parakeet_defaults = self._merge_engine_settings("parakeet", engine_config)
+            return ParakeetEngine(parakeet_defaults)
+        elif engine_name == "qwen3_asr":
+            qwen_config = self._merge_engine_settings("qwen3_asr", engine_config)
+            return Qwen3ASREngine(qwen_config)
 
         logger.info(f"创建{engine_name}引擎，配置: {engine_config}")
 
@@ -282,6 +292,14 @@ class VoiceRecognitionCore:
             result = self.current_engine.recognize_file(
                 audio_path, language=language, **kwargs
             )
+            if not result:
+                logger.error("识别失败: 引擎返回空结果")
+                return {
+                    "text": "",
+                    "error": "识别失败: 引擎返回空结果",
+                    "success": False,
+                    "processing_time": 0.0,
+                }
 
             # 检测是否为中文内容，如果是且没有优化，进行第二次优化转录
             if (
@@ -410,7 +428,7 @@ class VoiceRecognitionCore:
 
     def get_supported_engines(self) -> List[str]:
         """获取支持的引擎列表"""
-        return ["whisperx", "whisper", "faster_whisper", "sensevoice", "dolphin"]
+        return list(self._engine_fallback_order)
 
     def get_available_engines(self) -> List[str]:
         """获取可用引擎列表"""
@@ -456,6 +474,50 @@ class VoiceRecognitionCore:
 
         self.initialized = False
         self.current_engine = None
+
+    def _merge_engine_settings(
+        self, key: str, runtime_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        asr_settings = self._load_asr_settings()
+        merged = dict(asr_settings.get(key, {}))
+        merged.update(runtime_config)
+        overrides = self._engine_overrides.get(key)
+        if overrides:
+            merged.update(overrides)
+        merged["settings_path"] = str(self.settings_path)
+        return merged
+
+    def set_engine_override(
+        self, engine_name: str, overrides: Optional[Dict[str, Any]] = None, reset: bool = False
+    ) -> None:
+        """为指定引擎设置运行时覆盖参数"""
+        if overrides is None:
+            self._engine_overrides.pop(engine_name, None)
+        else:
+            self._engine_overrides[engine_name] = overrides
+
+        if reset and engine_name in self.engines:
+            engine = self.engines.pop(engine_name, None)
+            if self.current_engine is engine:
+                self.current_engine = None
+
+    def _load_asr_settings(self) -> Dict[str, Any]:
+        if self._asr_settings_cache is not None:
+            return self._asr_settings_cache
+
+        if not self.settings_path.exists():
+            self._asr_settings_cache = {}
+            return self._asr_settings_cache
+
+        try:
+            with open(self.settings_path, "r", encoding="utf-8") as fp:
+                settings = json.load(fp)
+            self._asr_settings_cache = settings.get("asr", {})
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"加载ASR配置失败: {exc}")
+            self._asr_settings_cache = {}
+
+        return self._asr_settings_cache
 
 
 # 全局语音识别核心实例

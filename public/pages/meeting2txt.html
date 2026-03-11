@@ -9,6 +9,33 @@
     <link rel="stylesheet" href="/assets/css/common.css">
     <link rel="stylesheet" href="/assets/css/icons.css">
     <link rel="stylesheet" href="/assets/css/meeting.css">
+    <style>
+        .diarization-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        .diarization-badge.is-ready {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .diarization-badge.is-processing {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .diarization-badge.is-pending {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+        .diarization-badge.is-fallback {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+    </style>
 </head>
 <body>
 <div id="app" class="meeting2txt-container">
@@ -67,7 +94,7 @@
                 <div class="page-title-content">
                     <div class="title-info">
                         <h1 class="page-title">🎤 实时会议记录</h1>
-                        <p class="page-subtitle">智能音频捕获 • 实时转录 • 自动总结</p>
+                        <p class="page-subtitle">智能音频捕获 • 实时转录 • 说话人分离</p>
                     </div>
                     <div class="page-actions">
                         <button class="create-task-btn" @click="startNewMeeting" :disabled="isRecording">
@@ -193,15 +220,31 @@
                                         <span v-if="meeting.duration">{{ formatDuration(meeting.duration) }}</span>
                                         <span class="status" :class="meeting.status">{{ getStatusText(meeting.status)
                                             }}</span>
+                                        <span v-if="meeting.model_name"> · 模型: {{ meeting.model_name }}</span>
                                     </div>
                                     <div class="meeting-stats" v-if="meeting.stats">
                                         <span>{{ meeting.stats.transcriptLength || 0 }} 字</span>
                                         <span>{{ meeting.stats.speakers || 0 }} 人</span>
+                                        <span v-if="meeting.diarization"
+                                              class="diarization-badge"
+                                              :class="getDiarizationClass(meeting.diarization.status)">
+                                            {{ getDiarizationStatusText(meeting.diarization.status) }}
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="meeting-actions">
                                     <button class="btn btn-sm" @click="viewMeeting(meeting.id)">查看</button>
-                                    <button class="btn btn-sm" @click="downloadMeeting(meeting.id)">下载录制文件
+                                    <button class="btn btn-sm" @click="downloadMeeting(meeting)" :disabled="!meeting.links || !meeting.links.audio">
+                                        下载音频
+                                    </button>
+                                    <button class="btn btn-sm" @click="downloadMeetingBundle(meeting)" :disabled="!meeting.links || !meeting.links.bundle">
+                                        导出结果包
+                                    </button>
+                                    <button class="btn btn-sm" v-if="meeting.hasSpeakerLog" @click="viewSpeakerLog(meeting)">
+                                        说话人日志
+                                    </button>
+                                    <button class="btn btn-sm" v-else @click="generateSpeakerLog(meeting)">
+                                        生成说话人日志
                                     </button>
                                     <button class="btn btn-sm btn-danger" @click="deleteMeeting(meeting.id)">删除
                                     </button>
@@ -248,11 +291,36 @@
                         </div>
                         <div class="form-group">
                             <label>转录引擎</label>
-                            <select v-model="meetingConfig.engine">
-                                <option value="sensevoice">SenseVoice (推荐)</option>
-                                <option value="whisper">Whisper</option>
-                                <option value="openai">OpenAI</option>
+                            <select v-model="meetingConfig.engine" @change="onModelChange">
+                                <option value="whisperx">WhisperX (推荐)</option>
+                                <option value="sensevoice">SenseVoice (中文优化)</option>
+                                <option value="faster_whisper">Faster-Whisper</option>
+                                <option value="whisper">Whisper (OpenAI)</option>
+                                <option value="parakeet">Parakeet (NeMo GPU)</option>
+                                <option value="qwen3_asr" v-if="engineAvailability.qwen3_asr">Qwen3-ASR (DashScope)</option>
+                                <option value="remote_api" v-if="engineAvailability.remote_api">远程API (云端)</option>
                             </select>
+                            <div class="form-help" v-if="selectedEngineModels.length">
+                                <p><strong>当前可用模型规格：</strong></p>
+                                <div v-for="model in selectedEngineModels" :key="model.id" style="margin-bottom: 6px;">
+                                    <div><strong>{{ model.name }}</strong></div>
+                                    <div v-if="model.description">说明：{{ model.description }}</div>
+                                    <div v-if="model.features && model.features.length">能力：{{ formatList(model.features) }}</div>
+                                    <div v-if="model.use_cases && model.use_cases.length">适用：{{ formatList(model.use_cases) }}</div>
+                                    <div v-if="model.constraints && model.constraints.length">限制：{{ formatList(model.constraints) }}</div>
+                                    <div>价格：{{ model.pricing || '—' }}</div>
+                                    <div>输入规格：{{ formatInputSpecs(model.input_specs) }}</div>
+                                </div>
+                            </div>
+                            <div class="form-group" v-if="meetingConfig.engine === 'qwen3_asr' && qwen3ModelOptions.length">
+                                <label>Qwen3 模型版本</label>
+                                <select v-model="meetingConfig.model_name">
+                                    <option v-for="model in qwen3ModelOptions" :key="model.config_key || model.name" :value="model.model_name">
+                                        {{ model.name }}
+                                    </option>
+                                </select>
+                                <div class="form-help">根据音频时长选择 filetrans（≤12小时）或 flash（≤5分钟）</div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>语言设置</label>
@@ -267,12 +335,6 @@
                             <label>
                                 <input type="checkbox" v-model="meetingConfig.enableSpeakerDiarization">
                                 启用说话人分离
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" v-model="meetingConfig.enableRealTimeSummary">
-                                启用实时总结
                             </label>
                         </div>
                     </form>
@@ -324,11 +386,17 @@
                         meetingConfig: {
                             title: '',
                             audioSource: 'system',
-                            engine: 'sensevoice',
+                            engine: 'whisperx',
+                            model_name: '',
                             language: 'auto',
-                            enableSpeakerDiarization: true,
-                            enableRealTimeSummary: false
+                            enableSpeakerDiarization: true
                         },
+                        engineAvailability: {
+                            remote_api: false,
+                            qwen3_asr: false
+                        },
+                        modelCatalog: {},
+                        asrSettingsCache: null,
 
                         // 文件上传相关
                         selectedFile: null,
@@ -355,10 +423,51 @@
                     currentDuration() {
                         if (!this.currentMeeting?.startTime) return '00:00:00';
                         return this.calculateDuration(this.currentMeeting.startTime);
+                    },
+
+                    selectedEngineModels() {
+                        const models = this.modelCatalog || {};
+                        const list = Array.isArray(models[this.selectedEngineType])
+                            ? models[this.selectedEngineType]
+                            : [];
+                        if (this.selectedEngineType === 'qwen3_asr') {
+                            const selectedName = this.selectedModelName;
+                            if (selectedName) {
+                                const matched = list.filter(model => model.model_name === selectedName);
+                                const useList = matched.length ? matched : list;
+                                return useList.map(model => ({
+                                    ...model,
+                                    id: `${this.selectedEngineType}-${model.config_key || model.name}`
+                                }));
+                            }
+                        }
+                        return list.map(model => ({
+                            ...model,
+                            id: `${this.selectedEngineType}-${model.config_key || model.name}`
+                        }));
+                    },
+
+                    qwen3ModelOptions() {
+                        const models = this.modelCatalog || {};
+                        return Array.isArray(models['qwen3_asr']) ? models['qwen3_asr'] : [];
+                    },
+
+                    selectedEngineType() {
+                        const value = this.meetingConfig.engine || '';
+                        return value.startsWith('qwen3-asr') ? 'qwen3_asr' : value;
+                    },
+
+                    selectedModelName() {
+                        const value = this.meetingConfig.engine || '';
+                        if (value.startsWith('qwen3-asr')) {
+                            return value;
+                        }
+                        return this.meetingConfig.model_name || '';
                     }
                 },
 
                 async mounted() {
+                    await this.loadEngineAvailability();
                     await this.loadMeetings();
                     this.startDurationTimer();
                     this.startListTimer();
@@ -372,6 +481,116 @@
                 },
 
                 methods: {
+                    normalizeModelPayload(payload) {
+                        if (Array.isArray(payload)) {
+                            return { qwen3_asr: payload };
+                        }
+                        if (payload && payload.data && payload.data.qwen3_asr) {
+                            return payload.data;
+                        }
+                        return payload || {};
+                    },
+                    async loadEngineAvailability() {
+                        try {
+                            const raw = await http.get('/api/models?type=meeting');
+                            const modelData = this.normalizeModelPayload(raw);
+                            this.modelCatalog = modelData || {};
+                            const remoteList = Array.isArray(modelData?.remote_api) ? modelData.remote_api : [];
+                            const qwenList = Array.isArray(modelData?.qwen3_asr) ? modelData.qwen3_asr : [];
+                            this.engineAvailability.remote_api = remoteList.some(model => model.enabled);
+                            this.engineAvailability.qwen3_asr = qwenList.some(
+                                model => model.enabled && (model.api_key_configured !== false)
+                            );
+                            this.ensureMeetingEngineSelection();
+                        } catch (error) {
+                            console.error('加载云端引擎可用性失败:', error);
+                        }
+                    },
+
+                    ensureMeetingEngineSelection() {
+                        const engineType = this.selectedEngineType;
+                        if (engineType === 'remote_api' && !this.engineAvailability.remote_api) {
+                            this.meetingConfig.engine = 'whisperx';
+                        }
+                        if (engineType === 'qwen3_asr' && !this.engineAvailability.qwen3_asr) {
+                            this.meetingConfig.engine = 'whisperx';
+                        }
+                        this.ensureQwen3ModelSelection();
+                    },
+
+                    ensureQwen3ModelSelection() {
+                        const qwenModels = this.qwen3ModelOptions || [];
+                        if (!qwenModels.length) return;
+                        const currentEngine = this.meetingConfig.engine || '';
+                        const current = currentEngine.startsWith('qwen3-asr')
+                            ? currentEngine
+                            : this.meetingConfig.model_name;
+                        const matched = qwenModels.find(model => model.model_name === current);
+                        const fallback = qwenModels.find(model => model.active) || qwenModels[0];
+                        const target = matched ? matched.model_name : fallback.model_name;
+                        this.meetingConfig.model_name = target;
+                        if (currentEngine.startsWith('qwen3-asr')) {
+                            this.meetingConfig.engine = target;
+                        }
+                    },
+
+                    onModelChange() {
+                        if (this.selectedEngineType === 'qwen3_asr') {
+                            this.ensureQwen3ModelSelection();
+                        }
+                    },
+
+                    normalizeEngineSelection(engineValue, modelName) {
+                        if (engineValue && engineValue.startsWith('qwen3-asr')) {
+                            return { engine: 'qwen3_asr', model_name: engineValue };
+                        }
+                        return { engine: engineValue, model_name: modelName || '' };
+                    },
+
+                    async ensureFiletransOssReady(modelName) {
+                        if (!modelName || !modelName.includes('filetrans')) {
+                            return true;
+                        }
+                        try {
+                            if (!this.asrSettingsCache) {
+                                this.asrSettingsCache = await http.get('/api/settings/asr');
+                            }
+                            const qwenCfg = this.asrSettingsCache?.qwen3_asr || {};
+                            const required = [
+                                { key: 'oss_access_key_id', label: 'OSS AccessKey ID' },
+                                { key: 'oss_access_key_secret', label: 'OSS AccessKey Secret' },
+                                { key: 'oss_endpoint', label: 'OSS Endpoint' },
+                                { key: 'oss_bucket', label: 'OSS Bucket' }
+                            ];
+                            const missing = required
+                                .filter(item => !String(qwenCfg[item.key] || '').trim())
+                                .map(item => item.label);
+                            if (missing.length) {
+                                layer.msg(`FileTrans 需要先配置 OSS：${missing.join('、')}`, { icon: 2, time: 3000 });
+                                return false;
+                            }
+                            return true;
+                        } catch (error) {
+                            console.error('读取 OSS 配置失败:', error);
+                            layer.msg('读取 OSS 配置失败，请先在设置页完成配置', { icon: 2, time: 3000 });
+                            return false;
+                        }
+                    },
+
+                    formatInputSpecs(specs) {
+                        if (!specs) return '—';
+                        const parts = [];
+                        if (specs.format) parts.push(`格式: ${specs.format}`);
+                        if (specs.sample_rate) parts.push(`采样率: ${specs.sample_rate}`);
+                        if (specs.channels) parts.push(`声道: ${specs.channels}`);
+                        if (specs.input) parts.push(`输入: ${specs.input}`);
+                        return parts.join(' / ');
+                    },
+
+                    formatList(items) {
+                        if (!Array.isArray(items) || items.length === 0) return '—';
+                        return items.join('；');
+                    },
                     // 开始新会议
                     async startNewMeeting() {
                         try {
@@ -479,15 +698,23 @@
                         }
 
                         try {
+                            if (this.selectedEngineType === 'qwen3_asr') {
+                                this.ensureQwen3ModelSelection();
+                            }
+                            const normalized = this.normalizeEngineSelection(this.meetingConfig.engine, this.meetingConfig.model_name);
+                            const filetransReady = await this.ensureFiletransOssReady(normalized.model_name);
+                            if (!filetransReady) {
+                                return;
+                            }
                             layer.load(1, {content: '正在启动录制器...'});
 
                             const response = await http.post('/api/tasks/meeting/create', {
                                 title: this.meetingConfig.title,
                                 audioSource: this.meetingConfig.audioSource,
-                                engine: this.meetingConfig.engine,
+                                engine: normalized.engine,
+                                model_name: normalized.model_name,
                                 language: this.meetingConfig.language,
-                                enableSpeakerDiarization: this.meetingConfig.enableSpeakerDiarization,
-                                enableRealTimeSummary: this.meetingConfig.enableRealTimeSummary
+                                enableSpeakerDiarization: this.meetingConfig.enableSpeakerDiarization
                             });
 
                             layer.closeAll('loading');
@@ -622,7 +849,7 @@
                             title: '确认操作'
                         }, async (index) => {
                             try {
-                                layer.load(1, {content: '正在结束录制并生成总结...'});
+                                layer.load(1, {content: '正在结束录制并整理音频...'});
 
                                 await http.post(`/api/tasks/meeting/${targetMeetingId}/stop`);
 
@@ -657,19 +884,20 @@
                     },
 
                     // 加载会议列表
-                    async loadMeetings() {
-                        try {
-                            const result = await http.get('/api/tasks/meeting/list');
-                            this.meetings = result.meetings
-                            this.updateActiveMeetings();
-                            this.filterMeetings();
+                async loadMeetings() {
+                    try {
+                        const result = await http.get('/api/tasks/meeting/list');
+                        this.meetings = result.meetings || []
+                        this.updateActiveMeetings();
+                        this.filterMeetings();
 
-                            // 将刷新方法暴露给子页面
-                            window.refreshMeetingList = this.loadMeetings;
-                        } catch (error) {
-                            console.error('加载会议列表失败:', error);
-                        }
-                    },
+                        // 将刷新方法暴露给子页面
+                        window.refreshMeetingList = this.loadMeetings;
+                        window.openMeetingDetail = (meetingId) => this.viewMeeting(meetingId);
+                    } catch (error) {
+                        console.error('加载会议列表失败:', error);
+                    }
+                },
 
                     // 更新活跃会议
                     updateActiveMeetings() {
@@ -751,23 +979,105 @@
                     },
 
                     // 下载会议
-                    async downloadMeeting(meetingId) {
+                    async downloadMeeting(meeting) {
+                        if (!meeting || !meeting.links || !meeting.links.audio) {
+                            layer.msg('暂无可下载的音频文件', {icon: 0});
+                            return;
+                        }
                         try {
-                            const response = await http.get(`/api/tasks/meeting/${meetingId}/download-audio`, {
-                                responseType: 'blob'
-                            });
-
-                            const url = window.URL.createObjectURL(new Blob([response], {type: 'audio/wav'}));
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = `meeting_${meetingId}.wav`;
-                            link.click();
-                            window.URL.revokeObjectURL(url);
-
+                            await this.downloadBinary(meeting.links.audio, `meeting_${meeting.id}.wav`);
                             layer.msg('录制文件下载成功', {icon: 1});
                         } catch (error) {
                             layer.msg(`下载失败: ${error.message}`, {icon: 2});
                         }
+                    },
+
+                    async downloadMeetingBundle(meeting) {
+                        if (!meeting || !meeting.links || !meeting.links.bundle) {
+                            layer.msg('暂无可导出的结果包', {icon: 0});
+                            return;
+                        }
+                        try {
+                            await this.downloadBinary(meeting.links.bundle, `meeting_${meeting.id}.zip`);
+                            layer.msg('结果包下载成功', {icon: 1});
+                        } catch (error) {
+                            layer.msg(`导出失败: ${error.message}`, {icon: 2});
+                        }
+                    },
+
+                    async viewSpeakerLog(meeting) {
+                        if (!meeting || !meeting.links || !meeting.links.speakerLog) {
+                            layer.msg('暂无说话人日志', {icon: 0});
+                            return;
+                        }
+                        try {
+                            layer.load(1, {content: '加载说话人日志...'});
+                            const response = await http.get(meeting.links.speakerLog);
+                            layer.closeAll('loading');
+
+                            const logEntries = response.speaker_log || [];
+                            if (logEntries.length === 0) {
+                                layer.msg('暂无说话人日志', {icon: 0});
+                                return;
+                            }
+
+                            const logHtml = logEntries.map(entry => {
+                                const timeLabel = entry.time_label || this.formatTime(entry.start || 0);
+                                const durationHtml = entry.duration
+                                    ? `<span>持续 ${Number(entry.duration || 0).toFixed(2)}s</span>`
+                                    : '';
+                                return `
+                                    <div class="speaker-log-entry">
+                                        <div class="speaker-log-meta">
+                                            <strong>${entry.speaker}</strong>
+                                            <span>时间 ${timeLabel}</span>
+                                            ${durationHtml}
+                                        </div>
+                                        <div class="speaker-log-text">${entry.text || ''}</div>
+                                    </div>
+                                `;
+                            }).join('');
+
+                            layui.layer.open({
+                                type: 1,
+                                title: '说话人日志',
+                                area: ['520px', '70%'],
+                                shadeClose: true,
+                                content: `<div class="speaker-log-panel">${logHtml}</div>`
+                            });
+                        } catch (error) {
+                            layer.closeAll('loading');
+                            layer.msg(`获取说话人日志失败: ${error.message}`, {icon: 2});
+                        }
+                    },
+
+                    async generateSpeakerLog(meeting) {
+                        if (!meeting) return;
+                        try {
+                            await http.post(`/api/tasks/meeting/${meeting.id}/speaker-log`, {});
+                            layer.msg('已开始生成说话人日志', {icon: 1, time: 2000});
+                            setTimeout(() => {
+                                this.loadMeetings();
+                            }, 3000);
+                        } catch (error) {
+                            layer.msg(`生成失败: ${error.message}`, {icon: 2, time: 3000});
+                        }
+                    },
+
+                    async downloadBinary(url, filename) {
+                        const response = await fetch(url, {credentials: 'include'});
+                        if (!response.ok) {
+                            throw new Error('下载失败');
+                        }
+                        const blob = await response.blob();
+                        const objectUrl = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = objectUrl;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(objectUrl);
                     },
 
                     // 删除会议
@@ -853,6 +1163,38 @@
                         return new Date(time).toLocaleTimeString();
                     },
 
+                    getDiarizationStatusText(status) {
+                        const mapping = {
+                            ready: '说话人就绪',
+                            fallback_ready: '回退结果',
+                            processing: '分离中',
+                            fallback_processing: '回退中',
+                            pending: '待处理',
+                            not_generated: '未生成',
+                            stopped: '已停止'
+                        };
+                        return mapping[status] || '待处理';
+                    },
+
+                    getDiarizationClass(status) {
+                        switch (status) {
+                            case 'ready':
+                                return 'is-ready';
+                            case 'fallback_ready':
+                                return 'is-fallback';
+                            case 'processing':
+                                return 'is-processing';
+                            case 'fallback_processing':
+                                return 'is-fallback';
+                            case 'not_generated':
+                                return 'is-pending';
+                            case 'stopped':
+                                return 'is-pending';
+                            default:
+                                return 'is-pending';
+                        }
+                    },
+
                     // 计算持续时间
                     calculateDuration(startTime) {
                         const now = new Date();
@@ -888,7 +1230,8 @@
                             'paused': '已暂停',
                             'processing': '处理中',
                             'finished': '已完成',
-                            'error': '出错'
+                            'error': '出错',
+                            'stopped': '已停止'
                         };
                         return statusMap[status] || status;
                     },

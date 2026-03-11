@@ -597,7 +597,6 @@ class MeetingControlGUI:
                     "engine": "sensevoice",
                     "language": "auto",
                     "enable_speaker_diarization": True,
-                    "enable_realtime_summary": False,
                     "created_at": datetime.now().isoformat(),
                     "disable_gui": True,  # 禁用GUI启动
                 }
@@ -787,7 +786,7 @@ class MeetingControlGUI:
             f"是否要结束会议「{self.current_meeting['title']}」的录制？\n\n"
             "停止后将:\n"
             "• 完成音频转录和分析\n"
-            "• 生成会议总结和纪要\n"
+            "• 导出转录文本和说话人日志\n"
             "• 关闭录制控制窗口\n\n"
             "确定要停止吗？",
         )
@@ -1155,7 +1154,7 @@ class MeetingControlGUI:
                 messagebox.showinfo(
                     "后台运行",
                     f"会议「{self.current_meeting['title']}」将在后台继续录制。\n\n"
-                    "• 录制会自动完成并生成总结\n"
+                    "• 录制结束后会自动保存音频并生成说话人日志\n"
                     "• 完成后会收到桌面通知\n"
                     "• 可通过Web界面查看进度和结果",
                 )

@@ -5,6 +5,7 @@ Dolphin语音识别引擎
 支持方言识别的专用模型
 """
 
+import os
 import time
 import logging
 from typing import Dict, Any, Optional
@@ -392,23 +393,24 @@ class DolphinEngine(BaseVoiceEngine):
         Args:
             audio_path: 音频文件路径
             language: 语言代码
-            **kwargs: 其他参数（为兼容性保留，本引擎暂不使用）
+            **kwargs: 额外参数（enable_diarization: 是否启用说话人分离）
         """
         if not self.initialized or not self.model:
             raise RuntimeError("Dolphin引擎未初始化")
 
+        enable_diarization = kwargs.get("enable_diarization", False)
+        start_time = time.time()
+
         try:
-            # import dolphin
             from dolphin.transcribe import transcribe_long
 
-            start_time = time.time()
-            logger.info(f"🐬 Dolphin转录: {audio_path}")
+            logger.info(f"🐬 Dolphin识别音频: {os.path.basename(audio_path)}")
 
-            # 加载音频
+            # ====== 步骤1: 音频转录 ======
+            logger.info("步骤1: 执行语音转录...")
 
             # 根据语言设置进行转录
             if language == "auto" or language == "zh":
-                # 中文识别，可以指定地区
                 results = transcribe_long(
                     model=self.model, audio=audio_path, lang_sym="zh", region_sym="CN"
                 )
@@ -417,100 +419,50 @@ class DolphinEngine(BaseVoiceEngine):
                     model=self.model, audio=audio_path, lang_sym="en"
                 )
             else:
-                # 其他语言或自动检测
                 results = transcribe_long(model=self.model, audio=audio_path)
 
-            processing_time = time.time() - start_time
+            if not results:
+                raise RuntimeError("Dolphin转录结果为空")
 
-            # 解析Dolphin输出，提取纯文本和时间戳信息
-            text = ""
-            first_result = results[0] if len(results) > 0 else None
-            if first_result is None:
-                logger.error("Dolphin输出为空")
-                return {
-                    "text": "",
-                    "segments": [],
-                    "language": language,
-                    "confidence": 0.0,
-                    "processing_time": processing_time,
-                    "model": "dolphin",
-                    "device": self.device,
-                    "sample_rate": 0.0,
-                    "audio_length": 0.0,
-                    "raw_text": "",
-                }
-
-            for result in results:
-                # text: str
-                # text_nospecial: str
-                # language: str
-                # region: str
-                # rtf: float
-                # start: float
-                # end: float
-                text += result.text
-            # debug
-            logger.info(f"Dolphin输出: {text}")
+            first_result = results[0]
+            text = "".join([result.text for result in results])
             parsed_result = self._parse_dolphin_output(text)
 
-            # 格式化分段信息，对齐 WhisperX 格式
-            formatted_segments = []
-            for segment in parsed_result["segments"]:
-                formatted_segment = {
-                    "start": round(segment.get("start", 0), 2),
-                    "end": round(segment.get("end", 0), 2),
-                    "duration": round(
-                        segment.get("end", 0) - segment.get("start", 0), 2
-                    ),
-                    "text": segment.get("text", "").strip(),
-                    "speaker": "Speaker_1",  # Dolphin 不支持说话人分离
-                    "confidence": getattr(first_result, "confidence", 0.9),
-                    "language": getattr(first_result, "language", language),
-                    "emotion": None,
-                }
-                formatted_segments.append(formatted_segment)
-
-            # 计算音频时长
-            audio_duration = (
-                formatted_segments[-1]["end"] if formatted_segments else 0.0
+            detected_language = getattr(first_result, "language", language)
+            logger.info(
+                f"✅ 转录完成: {len(parsed_result['segments'])} 个片段, 语言: {detected_language}"
             )
 
-            # 构建默认说话人信息
-            speakers_info = {
-                "Speaker_1": {
-                    "id": "Speaker_1",
-                    "name": "Speaker_1",
-                    "segments_count": len(formatted_segments),
-                    "total_duration": audio_duration,
-                    "words": [seg["text"] for seg in formatted_segments],
+            # ====== 步骤2: 说话人分离（可选）======
+            speakers_info = {}
+            if enable_diarization:
+                logger.info("⚠️  Dolphin不支持说话人分离，使用默认Speaker_1")
+                speakers_info = {
+                    "Speaker_1": {
+                        "id": "Speaker_1",
+                        "name": "Speaker_1",
+                        "segments_count": len(parsed_result["segments"]),
+                    }
                 }
-            }
+            else:
+                logger.info("⏭️  跳过说话人分离（未启用）")
 
-            # 构建返回结果 - 对齐 WhisperX 格式
-            return {
+            # ====== 步骤3: 格式化输出 ======
+            result = {
                 "text": parsed_result["clean_text"],
-                "language": getattr(first_result, "language", language),
-                "segments": formatted_segments,  # 使用格式化后的分段
-                "speakers": speakers_info,  # 新增：对齐 WhisperX 格式
-                "processing_time": processing_time,
+                "language": detected_language,
+                "segments": parsed_result["segments"],
+                "speakers": speakers_info,
+                "processing_time": time.time() - start_time,
                 "model": "dolphin",
                 "device": self.device,
-                "confidence": getattr(
-                    first_result, "confidence", 0.9
-                ),  # 新增：对齐 WhisperX 格式
-                "audio_length": audio_duration,  # 新增：对齐 WhisperX 格式
-                "features": {  # 新增：对齐 WhisperX 格式
-                    "word_level_timestamps": False,
-                    "speaker_diarization": False,
-                    "emotion_detection": False,
-                },
-                "statistics": {  # 新增：对齐 WhisperX 格式
-                    "total_segments": len(formatted_segments),
-                    "total_speakers": 1,
-                    "total_duration": audio_duration,
-                },
-                "raw_text": text,  # 保留原始输出用于调试
             }
+
+            formatted_result = self.format_result(result, audio_path)
+            logger.info(
+                f"✅ Dolphin识别完成，耗时: {formatted_result['processing_time']:.2f}s"
+            )
+            return formatted_result
 
         except ImportError:
             logger.error("Dolphin库未安装")
@@ -605,5 +557,3 @@ class DolphinEngine(BaseVoiceEngine):
                 "comparison": "base/small/medium模型可达到Whisper large-v3的性能",
             },
         }
-
-

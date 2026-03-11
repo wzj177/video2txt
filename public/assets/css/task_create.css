@@ -340,3 +340,30 @@
     width: 24px;
     height: 24px;
 }
+
+.role-template-hint {
+    margin-top: 8px;
+    border: 1px dashed var(--border-light, #f0f0f0);
+    border-radius: var(--radius-medium, 8px);
+    padding: 8px 12px;
+    background: #fafafa;
+}
+
+.role-template-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-secondary, #595959);
+}
+
+.role-template-line + .role-template-line {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--border-light, #f0f0f0);
+}
+
+.role-template-line .role-template-badge {
+    font-weight: 500;
+    color: var(--primary-color, #00B26A);
+}

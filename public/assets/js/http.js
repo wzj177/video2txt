@@ -304,6 +304,57 @@ const http = new Http();
 // 导出为全局对象
 window.http = http;
 
+// 全局 alert/confirm 封装（优先使用 layer.js）
+const nativeAlert = window.alert ? window.alert.bind(window) : null;
+const nativeConfirm = window.confirm ? window.confirm.bind(window) : null;
+
+window.appAlert = function(message, options = {}) {
+  if (window.layui && layui.layer) {
+    const iconValue = typeof options.icon === 'number' ? options.icon : 0;
+    layui.layer.alert(message || '', {
+      title: options.title || '提示',
+      icon: iconValue
+    });
+    return;
+  }
+  if (nativeAlert) {
+    nativeAlert(message);
+  }
+};
+
+window.appConfirm = function(message, options = {}) {
+  return new Promise((resolve) => {
+    if (window.layui && layui.layer) {
+      const iconValue = typeof options.icon === 'number' ? options.icon : 3;
+      layui.layer.confirm(message || '', {
+        title: options.title || '确认',
+        icon: iconValue,
+        btn: options.btn || ['确定', '取消']
+      }, (index) => {
+        layui.layer.close(index);
+        resolve(true);
+      }, (index) => {
+        layui.layer.close(index);
+        resolve(false);
+      });
+      return;
+    }
+    if (nativeConfirm) {
+      resolve(nativeConfirm(message));
+      return;
+    }
+    resolve(true);
+  });
+};
+
+window.alert = function(message) {
+  window.appAlert(message);
+};
+
+window.confirm = function(message) {
+  return window.appConfirm(message);
+};
+
 // 添加错误提示样式
 const style = document.createElement('style');
 style.textContent = `

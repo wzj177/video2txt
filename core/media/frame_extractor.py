@@ -689,6 +689,7 @@ class FrameExtractor:
             import matplotlib.pyplot as plt
             import numpy as np
             import librosa
+            import librosa.display
 
             # 加载音频文件
             y, sr = librosa.load(audio_path, duration=None)

@@ -927,41 +927,6 @@ class VideoProcessor:
 
             files = []
             ai_output_types = config.get("ai_output_types", [])
-            content_role = config.get("content_role", "auto")
-
-            # BUG修复: 当用户选择了content_role但没有选择ai_output_types时，智能添加合适的类型
-            if content_role != "auto" and not ai_output_types:
-                # 根据不同角色推荐合适的AI输出类型
-                role_recommendations = {
-                    "education": [
-                        "content_card",
-                        "mind_map",
-                    ],  # 教育：内容卡片+思维导图
-                    "meeting": ["content_card"],  # 会议：内容卡片
-                    "exam_review": [
-                        "content_card",
-                        "flashcards",
-                    ],  # 考试复习：内容卡片+闪卡
-                    "cooking": ["content_card"],  # 烹饪：内容卡片
-                    "technology": [
-                        "content_card",
-                        "mind_map",
-                    ],  # 科技：内容卡片+思维导图
-                    "business": ["content_card"],  # 商业：内容卡片
-                    "travel": ["content_card"],  # 旅行：内容卡片
-                    "health": ["content_card"],  # 健康：内容卡片
-                    "lifestyle": ["content_card"],  # 生活：内容卡片
-                    "entertainment": ["content_card"],  # 娱乐：内容卡片
-                }
-
-                ai_output_types = role_recommendations.get(
-                    content_role, ["content_card"]
-                )
-                logger.info(
-                    f"用户选择了角色'{content_role}'但未选择AI输出类型，智能推荐: {ai_output_types}"
-                )
-                # 更新config中的ai_output_types，确保后续逻辑能使用
-                config["ai_output_types"] = ai_output_types
 
             # 提取文本内容
             transcript_text = (
@@ -1187,7 +1152,16 @@ class VideoProcessor:
 
                 # 记录帧信息到任务
                 await task_service.update_task(
-                    "av", task_id, {"frame_info": frame_info}
+                    "av",
+                    task_id,
+                    {
+                        "frame_info": frame_info,
+                        "cover": (
+                            f"keyframes/{Path(cover_frame).name}"
+                            if cover_frame
+                            else None
+                        ),
+                    },
                 )
 
             elif audio_path:
@@ -1365,6 +1339,20 @@ class VideoProcessor:
             is_video = frame_info.get("type", "video") == "video"
             has_frames = frame_info.get("has_frames", False)
             enhanced_transcript_file = output_dir / "transcription_format.json"
+            enhanced_subtitles = None
+            if has_frames and enhanced_transcript_file.exists():
+                try:
+                    enhanced_data = json.loads(
+                        enhanced_transcript_file.read_text(encoding="utf-8")
+                    )
+                    enhanced_segments = enhanced_data.get("segments", [])
+                    if enhanced_segments:
+                        enhanced_subtitles = enhanced_segments
+                        logger.info(
+                            f"加载增强版转录segments用于AI内容生成: {len(enhanced_segments)}"
+                        )
+                except Exception as e:
+                    logger.warning(f"读取增强版转录失败，回退原始字幕: {e}")
 
             logger.info(f"AI内容生成检查: is_video={is_video}, has_frames={has_frames}")
 
@@ -1398,7 +1386,7 @@ class VideoProcessor:
 
                         # 验证增强版转录是否包含帧映射信息
                         if not subtitles or not any(
-                                "frame" in segment for segment in subtitles
+                            "frame" in segment for segment in subtitles
                         ):
                             error_msg = "增强版转录文件存在但缺少帧映射信息，无法进行AI内容生成。"
                             logger.error(error_msg)
@@ -1416,6 +1404,11 @@ class VideoProcessor:
                         logger.error(error_msg)
                         raise Exception(error_msg)
 
+            if enhanced_subtitles is None and subtitles and any(
+                "frame" in segment for segment in subtitles
+            ):
+                enhanced_subtitles = subtitles
+
             # 处理视频/音频路径
             video_path = ""
             audio_path = ""
@@ -1428,9 +1421,6 @@ class VideoProcessor:
                     progress = 85 + int((i / total_types) * 10)  # 85-95%
                     type_names = {
                         "content_card": "内容卡片",
-                        "mind_map": "思维导图",
-                        "flashcards": "学习闪卡",
-                        "ai_analysis": "AI分析",
                     }
                     current_type_name = type_names.get(output_type, output_type)
 
@@ -1447,7 +1437,7 @@ class VideoProcessor:
                     generate_kwargs = {
                         "video_path": video_path,
                         "audio_path": audio_path,
-                        "subtitles": subtitles,  # 这里的subtitles可能包含精确的帧映射（视频有帧时）
+                        "subtitles": subtitles,
                         "language": config.get("language", "zh"),
                         "task_id": task_id,
                         "media_duration": config.get("media_duration", 0),
@@ -1463,38 +1453,43 @@ class VideoProcessor:
                             "ai_enhancement", False
                         ),  # 传递AI扩写润色参数
                     }
+                    if output_type == "content_card" and enhanced_subtitles:
+                        generate_kwargs["subtitles"] = enhanced_subtitles
 
-                    # 传递简化的frame_info：仅用于统计和封面信息，不用于提示词生成
-                    simplified_frame_info = {
-                        "enhanced_mapping": has_frames,  # 只在有帧时才标记使用增强版映射
-                        "has_frames": has_frames,  # 使用实际的has_frames值
-                        "type": frame_info.get("type", "video"),
-                        "cover_frame": frame_info.get("cover_frame", ""),  # 保留封面帧
-                        "frame_dir": frame_info.get("frame_dir", ""),  # 保留帧目录
-                        "frame_count": len(
-                            frame_info.get("frames", [])
-                        ),  # 仅保留帧数量统计
-                    }
-                    generate_kwargs["frame_info"] = simplified_frame_info
+                    frame_count = len(frame_info.get("frames", []))
+                    mapping_count = (
+                        sum(1 for s in subtitles if s.get("frame")) if subtitles else 0
+                    )
+
+                    # 内容卡片需要完整frame_info以生成关键帧图片，其它类型只需统计信息
+                    if output_type == "content_card":
+                        full_frame_info = dict(frame_info or {})
+                        full_frame_info["enhanced_mapping"] = bool(enhanced_subtitles)
+                        generate_kwargs["frame_info"] = full_frame_info
+                    else:
+                        simplified_frame_info = {
+                            "enhanced_mapping": has_frames,
+                            "has_frames": has_frames,
+                            "type": frame_info.get("type", "video"),
+                            "cover_frame": frame_info.get("cover_frame", ""),
+                            "frame_dir": frame_info.get("frame_dir", ""),
+                            "frame_count": frame_count,
+                        }
+                        generate_kwargs["frame_info"] = simplified_frame_info
 
                     # 输出调试信息
                     if has_frames:
                         logger.info(
-                            f"🚀 使用增强版映射模式 - 帧数量统计: {simplified_frame_info['frame_count']}"
+                            f"🚀 使用增强版映射模式 - 帧数量统计: {frame_count}"
                         )
                         logger.info(f"增强版转录文件: {enhanced_transcript_file}")
                         logger.info(
-                            f"包含帧映射的时间段数量: {sum(1 for s in subtitles if s.get('frame'))}"
+                            f"包含帧映射的时间段数量: {mapping_count}"
                         )
                     else:
                         logger.info(f"📝 使用纯文本模式 - 无关键帧映射")
 
-                    # 如果配置中有content_role且不是auto，传递给AI生成器
-                    if "content_role" in config and config["content_role"] != "auto":
-                        generate_kwargs["force_domain"] = config["content_role"]
-                        logger.info(f"使用指定内容角色: {config['content_role']}")
-                    elif config.get("content_role") == "auto":
-                        logger.info(f"启用智能角色推荐模式（auto）")
+                    generate_kwargs["content_role"] = config.get("content_role", "general")
 
                     result = await ai_factory.generate(
                         output_type, transcript_text, **generate_kwargs
@@ -1507,11 +1502,11 @@ class VideoProcessor:
 
                     if result.get("success"):
                         # 根据输出类型生成文件
-                        file_info = await self._save_ai_content(
+                        file_infos = await self._save_ai_content(
                             output_dir, output_type, result, frame_info, ai_factory
                         )
-                        if file_info:
-                            files.append(file_info)
+                        if file_infos:
+                            files.extend(file_infos)
 
                 except Exception as e:
                     logger.error(f"生成{output_type}失败: {e}")
@@ -1538,257 +1533,344 @@ class VideoProcessor:
             result: Dict[str, Any],
             frame_info: Dict[str, Any],
             ai_factory,
-    ) -> Optional[Dict[str, str]]:
+    ) -> Optional[List[Dict[str, str]]]:
         """保存AI生成的内容到文件"""
         try:
             content = result.get("content", "")
             if not content:
                 return None
+            files: List[Dict[str, str]] = []
 
             # 根据输出类型确定文件名和格式
             if output_type == "content_card":
                 filename = "内容卡片.md"
-                file_path = output_dir / filename
-                file_path.write_text(content, encoding="utf-8")
-
+                content = self._normalize_content_card_images(
+                    content, frame_info, output_dir
+                )
             elif output_type == "mind_map":
                 filename = "思维导图.md"
-                file_path = output_dir / filename
-                file_path.write_text(content, encoding="utf-8")
-
-                # 同时生成FreeMind格式
-                mm_filename = "思维导图.mm"
-                mm_file_path = output_dir / mm_filename
-
-                # 使用已有的 ai_factory 的 export_xmind_format 方法
-                success = ai_factory.export_xmind_format(content, str(mm_file_path))
-
-                if not success:
-                    # 如果导出失败，使用简化的备用方法
-                    mm_content = self._convert_to_freemind(content)
-                    mm_file_path.write_text(mm_content, encoding="utf-8")
-
-                return {
-                    "name": filename,
-                    "path": str(file_path),
-                    "type": "mind_map",
-                    "additional_files": [
-                        {
-                            "name": mm_filename,
-                            "path": str(mm_file_path),
-                            "type": "freemind",
-                        }
-                    ],
-                }
-
             elif output_type == "flashcards":
-                # 生成学习闪卡.md文件
                 filename = "学习闪卡.md"
-                file_path = output_dir / filename
-                file_path.write_text(content, encoding="utf-8")
-
-                # 使用新的Anki导出功能
-                anki_filename = "学习闪卡-Anki格式.csv"
-                anki_file_path = output_dir / anki_filename
-
-                # 调用AI生成器的Anki导出功能
-                try:
-                    anki_success = ai_factory.export_anki_format(
-                        content, str(anki_file_path)
-                    )
-                    if not anki_success:
-                        logger.warning("Anki格式导出失败，使用备用方法")
-                        # 备用：使用原有的转换方法
-                        anki_content = self._convert_to_anki(content)
-                        anki_file_path.write_text(anki_content, encoding="utf-8")
-                except Exception as e:
-                    logger.error(f"Anki导出异常: {e}")
-                    # 备用：使用原有的转换方法
-                    anki_content = self._convert_to_anki(content)
-                    anki_file_path.write_text(anki_content, encoding="utf-8")
-
-                # 生成JSON格式的闪卡文件
-                json_filename = "flashcards.json"
-                json_file_path = output_dir / json_filename
-                json_content = self._convert_to_flashcard_json(content)
-                json_file_path.write_text(json_content, encoding="utf-8")
-
-                return {
-                    "name": filename,
-                    "path": str(file_path),
-                    "type": "flashcards",
-                    "additional_files": [
-                        {
-                            "name": anki_filename,
-                            "path": str(anki_file_path),
-                            "type": "anki",
-                        },
-                        {
-                            "name": json_filename,
-                            "path": str(json_file_path),
-                            "type": "flashcards_json",
-                        },
-                    ],
-                }
-
-            # elif output_type == "ai_analysis":
-            #     filename = "AI分析结果.json"
-            #     file_path = output_dir / filename
-            #     # 清理JSON内容中的代码块标记
-            #     cleaned_content = self._clean_json_content(content)
-            #     file_path.write_text(cleaned_content, encoding="utf-8")
-            #     return {"name": filename, "path": str(file_path), "type": output_type}
-
             else:
                 return None
+
+            file_path = output_dir / filename
+            file_path.write_text(content, encoding="utf-8")
+            files.append(
+                {"name": filename, "path": str(file_path), "type": output_type}
+            )
+
+            if output_type == "mind_map":
+                mm_path = output_dir / "思维导图.mm"
+                if self._export_mind_map_freemind(content, str(mm_path)):
+                    files.append(
+                        {
+                            "name": "思维导图.mm",
+                            "path": str(mm_path),
+                            "type": "mind_map_mm",
+                        }
+                    )
+
+            if output_type == "flashcards":
+                anki_path = output_dir / "学习闪卡-Anki格式.csv"
+                if self._export_flashcards_anki(content, str(anki_path)):
+                    files.append(
+                        {
+                            "name": "学习闪卡-Anki格式.csv",
+                            "path": str(anki_path),
+                            "type": "flashcards_anki",
+                        }
+                    )
+
+            return files
 
         except Exception as e:
             logger.error(f"保存AI内容失败: {e}")
             return None
 
-    def _clean_json_content(self, content: str) -> str:
-        """清理JSON内容中的代码标记"""
-        if not content:
-            return content
+    def _normalize_content_card_images(
+        self, content: str, frame_info: Dict[str, Any], output_dir: Path
+    ) -> str:
+        """修复内容卡片图片引用路径格式"""
+        try:
+            frame_names = set()
+            frames = (frame_info or {}).get("frames", [])
+            for frame in frames:
+                filename = ""
+                if isinstance(frame, dict):
+                    filename = frame.get("filename") or frame.get("name") or ""
+                elif isinstance(frame, (list, tuple)) and frame:
+                    filename = str(frame[0])
+                else:
+                    filename = str(frame)
+                if filename:
+                    frame_names.add(Path(filename).name)
 
-        import re
+            keyframes_dir = output_dir / "keyframes"
+            if keyframes_dir.exists():
+                for item in keyframes_dir.iterdir():
+                    if item.is_file():
+                        frame_names.add(item.name)
 
-        # 去除代码块标记
-        content = re.sub(r"^``json\s*\n?", "", content, flags=re.MULTILINE)
-        content = re.sub(r"\n?```\s*$", "", content, flags=re.MULTILINE)
+            if not frame_names:
+                return content
 
-        # 去除其他可能的代码标记
-        content = re.sub(r"^```\s*\n?", "", content, flags=re.MULTILINE)
+            pattern = re.compile(r"!\[(?P<label>[^\]]*)\]\((?P<path>[^)]+)\)")
+            bare_pattern = re.compile(r"!\[(?P<label>[^\]]+)\]\s*$", re.MULTILINE)
 
-        # 清理多余的空白字符
-        content = content.strip()
+            def replace(match):
+                label = (match.group("label") or "").strip()
+                raw_path = (match.group("path") or "").strip()
+                if "keyframes/" in raw_path:
+                    return match.group(0)
 
-        return content
+                cleaned = raw_path
+                for prefix in ("frame:", "frame：", "frame", "frames:"):
+                    if cleaned.lower().startswith(prefix):
+                        cleaned = cleaned[len(prefix) :]
+                        break
+                cleaned = cleaned.strip()
+                filename = Path(cleaned).name
+                if filename in frame_names:
+                    new_label = filename
+                    return f"![{new_label}](keyframes/{filename})"
+                return match.group(0)
 
-    def _convert_to_freemind(self, markdown_content: str) -> str:
-        """将Markdown内容转换为FreeMind格式"""
-        # 简单的FreeMind格式转换
-        lines = markdown_content.split("\n")
-        freemind_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
-        freemind_content += '<map version="1.0.1">\n'
-        freemind_content += '  <node ID="root" TEXT="思维导图">\n'
+            content = pattern.sub(replace, content)
 
-        current_level = 0
-        for line in lines:
-            line = line.strip()
-            if line.startswith("#"):
-                level = len(line) - len(line.lstrip("#"))
-                text = line.lstrip("#").strip()
-                if text:
-                    freemind_content += (
-                            "    " * (level + 1) + f'<node TEXT="{text}"/>\n'
-                    )
+            def replace_bare(match):
+                label = (match.group("label") or "").strip()
+                cleaned = label
+                for prefix in ("frame:", "frame：", "frame", "frames:"):
+                    if cleaned.lower().startswith(prefix):
+                        cleaned = cleaned[len(prefix) :]
+                        break
+                cleaned = cleaned.strip()
+                filename = Path(cleaned).name
+                if filename in frame_names:
+                    return f"![{filename}](keyframes/{filename})"
+                return match.group(0)
 
-        freemind_content += "  </node>\n"
-        freemind_content += "</map>"
+            content = bare_pattern.sub(replace_bare, content)
 
-        return freemind_content
-
-    def _convert_to_anki(self, markdown_content: str) -> str:
-        """将Markdown内容转换为Anki格式"""
-        # 简单的Anki CSV格式转换
-        lines = markdown_content.split("\n")
-        anki_content = "Question,Answer\n"
-
-        current_question = ""
-        current_answer = ""
-
-        for line in lines:
-            line = line.strip()
-            if line.startswith("Q:"):
-                if current_question and current_answer:
-                    anki_content += f'"{current_question}","{current_answer}"\n'
-                current_question = line[2:].strip()
-                current_answer = ""
-            elif line.startswith("A:"):
-                current_answer = line[2:].strip()
-            elif line.startswith("---"):
-                if current_question and current_answer:
-                    anki_content += f'"{current_question}","{current_answer}"\n'
-                current_question = ""
-                current_answer = ""
-
-        # 处理最后一个卡片
-        if current_question and current_answer:
-            anki_content += f'"{current_question}","{current_answer}"\n'
-
-        return anki_content
-
-    def _convert_to_flashcard_json(self, markdown_content: str) -> str:
-        """将Markdown内容转换为JSON格式的闪卡"""
-        lines = markdown_content.split("\n")
-        flashcards = []
-        current_question = ""
-        current_answer = ""
-        card_id = 1
-
-        for line in lines:
-            line = line.strip()
-            if line.startswith("Q:"):
-                if current_question and current_answer:
-                    flashcards.append(
-                        {
-                            "id": f"card_{card_id}",
-                            "question": current_question,
-                            "answer": current_answer,
-                            "category": "主要内容",
-                        }
-                    )
-                    card_id += 1
-                current_question = line[2:].strip()
-                current_answer = ""
-            elif line.startswith("A:"):
-                current_answer = line[2:].strip()
-            elif line.startswith("---"):
-                if current_question and current_answer:
-                    flashcards.append(
-                        {
-                            "id": f"card_{card_id}",
-                            "question": current_question,
-                            "answer": current_answer,
-                            "category": "主要内容",
-                        }
-                    )
-                    card_id += 1
-                current_question = ""
-                current_answer = ""
-
-        # 处理最后一个卡片
-        if current_question and current_answer:
-            flashcards.append(
-                {
-                    "id": f"card_{card_id}",
-                    "question": current_question,
-                    "answer": current_answer,
-                    "category": "主要内容",
-                }
+            image_line_pattern = re.compile(
+                r"^(?P<prefix>\s*[-*]?\s*)图片[:：]\s*(?P<body>.+)$",
+                re.MULTILINE,
             )
 
-        # 如果没有找到Q:A:格式，生成默认的闪卡
-        if not flashcards:
-            # 基于内容生成简单的问答卡片
-            content_lines = [
-                line.strip()
-                for line in lines
-                if line.strip() and not line.startswith("#")
-            ]
-            if content_lines:
-                for i, line in enumerate(content_lines[:5]):  # 最多5张卡片
-                    flashcards.append(
-                        {
-                            "id": f"card_{i + 1}",
-                            "question": f"关于第{i + 1}个要点的问题",
-                            "answer": line,
-                            "category": "主要内容",
-                        }
-                    )
+            def replace_image_line(match):
+                prefix = match.group("prefix") or ""
+                body = (match.group("body") or "").strip()
+                name_match = re.search(
+                    r"([A-Za-z0-9_.-]+\.(?:jpg|jpeg|png|webp))",
+                    body,
+                    re.IGNORECASE,
+                )
+                if not name_match:
+                    return match.group(0)
+                filename = name_match.group(1)
+                if filename not in frame_names:
+                    return match.group(0)
+                time_match = re.search(r"[（(]([^）)]+)[）)]", body)
+                time_text = time_match.group(1).strip() if time_match else ""
+                suffix = f" `{time_text}`" if time_text else ""
+                return f"{prefix}![{filename}](keyframes/{filename}){suffix}"
 
-        return json.dumps(flashcards, ensure_ascii=False, indent=2)
+            return image_line_pattern.sub(replace_image_line, content)
+        except Exception as e:
+            logger.warning(f"修复内容卡片图片引用失败: {e}")
+            return content
+
+    def _export_mind_map_freemind(self, markdown_content: str, output_path: str) -> bool:
+        """将Markdown思维导图转换为FreeMind格式"""
+        try:
+            import xml.etree.ElementTree as ET
+            import re
+
+            lines = markdown_content.strip().split("\n")
+
+            root = ET.Element("map")
+            root.set("version", "1.0.1")
+
+            main_title = "思维导图"
+            for line in lines:
+                if line.startswith("# "):
+                    main_title = line[2:].strip()
+                    break
+
+            node_map = ET.SubElement(root, "node")
+            node_map.set("ID", "root")
+            node_map.set("TEXT", main_title)
+
+            current_parents = [node_map]
+            node_id = 1
+
+            for line in lines:
+                line = line.rstrip()
+                if not line or line.startswith("#"):
+                    continue
+
+                indent_level = 0
+                stripped_line = line.lstrip()
+                if stripped_line.startswith("-"):
+                    for char in line:
+                        if char == " ":
+                            indent_level += 1
+                        else:
+                            break
+                    indent_level = indent_level // 2
+
+                    text = stripped_line[1:].strip()
+                    timestamp_match = re.search(r"`(\d{2}:\d{2})`", text)
+                    if timestamp_match:
+                        text = text.replace(timestamp_match.group(), "").strip()
+                        timestamp = timestamp_match.group(1)
+                    else:
+                        timestamp = None
+
+                    if text:
+                        target_level = indent_level + 1
+                        if target_level <= len(current_parents):
+                            current_parents = current_parents[:target_level]
+
+                        parent_node = current_parents[-1]
+                        new_node = ET.SubElement(parent_node, "node")
+                        new_node.set("ID", f"node_{node_id}")
+                        new_node.set("TEXT", text)
+
+                        if timestamp:
+                            note = ET.SubElement(new_node, "richcontent")
+                            note.set("TYPE", "NOTE")
+                            html = ET.SubElement(note, "html")
+                            body = ET.SubElement(html, "body")
+                            p = ET.SubElement(body, "p")
+                            p.text = f"时间: {timestamp}"
+
+                        current_parents.append(new_node)
+                        node_id += 1
+
+            xml_str = ET.tostring(root, encoding="unicode", method="xml")
+            formatted_xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml_str
+
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(formatted_xml)
+
+            logger.info(f"成功导出思维导图到 FreeMind 格式：{output_path}")
+            return True
+        except Exception as e:
+            logger.error(f"思维导图FreeMind导出失败: {e}")
+            return False
+
+    def _export_flashcards_anki(self, flashcards_content: str, output_path: str) -> bool:
+        """将闪卡导出为Anki CSV格式"""
+        try:
+            import re
+
+            cards = []
+            qa_pattern = (
+                r"\*\*Q\*\*:\s*(.+?)\n\*\*A\*\*:\s*(.+?)(?=\n---|\n\*\*Q\*\*|\Z)"
+            )
+            matches = re.findall(qa_pattern, flashcards_content, re.DOTALL)
+            if matches:
+                cards = [("问答卡", q.strip(), a.strip(), "基础") for q, a in matches]
+            else:
+                pattern1 = r"## 闪卡 \d+ - (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
+                matches = re.findall(pattern1, flashcards_content, re.DOTALL)
+                if matches:
+                    cards = matches
+                else:
+                    pattern2 = r"##.*?闪卡.*?\n.*?正面.*?[:：]\s*(.+?)\n.*?背面.*?[:：]\s*(.+?)(?:\n.*?标签.*?[:：]\s*(.+?))?(?=\n\n|\n##|\Z)"
+                    matches = re.findall(pattern2, flashcards_content, re.DOTALL)
+                    cards = [
+                        (
+                            "通用卡",
+                            match[0],
+                            match[1],
+                            match[2] if len(match) > 2 and match[2] else "基础",
+                        )
+                        for match in matches
+                    ]
+
+            if not cards:
+                simple_qa_pattern = r"(?:Q|问题|Question)[:：]\s*(.+?)\n(?:A|答案|Answer)[:：]\s*(.+?)(?=\n(?:Q|问题|Question)|\Z)"
+                qa_matches = re.findall(
+                    simple_qa_pattern, flashcards_content, re.DOTALL | re.IGNORECASE
+                )
+                if qa_matches:
+                    cards = [
+                        ("问答卡", q.strip(), a.strip(), "基础") for q, a in qa_matches
+                    ]
+                else:
+                    logger.error(
+                        f"无法解析任何闪卡格式，内容预览：{flashcards_content[:300]}"
+                    )
+                    return False
+
+            anki_content = []
+            for card_type, front, back, tags in cards:
+                front = front.strip().replace("\n", "<br>").replace("\t", " ")
+                back = back.strip().replace("\n", "<br>").replace("\t", " ")
+                tags = tags.replace("#", "").replace(" ", "_")
+                anki_content.append(f"{front}\t{back}\t{tags}")
+
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write("Front\tBack\tTags\n")
+                f.write("\n".join(anki_content))
+
+            logger.info(f"成功导出 {len(cards)} 张闪卡到 Anki 格式：{output_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Anki格式导出失败: {e}")
+            return False
+
+    def _parse_flashcards_multiple_formats(self, content: str) -> List[Dict[str, str]]:
+        """解析多种闪卡格式为结构化数据"""
+        import re
+
+        qa_pattern = r"\*\*Q\*\*:\s*(.+?)\n\*\*A\*\*:\s*(.+?)(?=\n---|\n\*\*Q\*\*|\Z)"
+        matches = re.findall(qa_pattern, content, re.DOTALL)
+        if matches:
+            return [
+                {"question": q.strip(), "answer": a.strip(), "type": "qa"}
+                for q, a in matches
+            ]
+
+        pattern1 = r"## 闪卡 \d+ - (.+?)\n\*\*正面\*\*: (.+?)\n\*\*背面\*\*: (.+?)\n\*\*标签\*\*: (.+?)(?=\n\n|\Z)"
+        matches = re.findall(pattern1, content, re.DOTALL)
+        if matches:
+            return [
+                {
+                    "question": front.strip(),
+                    "answer": back.strip(),
+                    "type": card_type.strip(),
+                    "tags": tags.strip(),
+                }
+                for card_type, front, back, tags in matches
+            ]
+
+        pattern2 = r"##.*?闪卡.*?\n.*?正面.*?[:：]\s*(.+?)\n.*?背面.*?[:：]\s*(.+?)(?:\n.*?标签.*?[:：]\s*(.+?))?(?=\n\n|\n##|\Z)"
+        matches = re.findall(pattern2, content, re.DOTALL)
+        if matches:
+            return [
+                {
+                    "question": match[0].strip(),
+                    "answer": match[1].strip(),
+                    "type": "通用卡",
+                    "tags": match[2].strip() if len(match) > 2 and match[2] else "基础",
+                }
+                for match in matches
+            ]
+
+        simple_qa_pattern = r"(?:Q|问题|Question)[:：]\s*(.+?)\n(?:A|答案|Answer)[:：]\s*(.+?)(?=\n(?:Q|问题|Question)|\Z)"
+        matches = re.findall(simple_qa_pattern, content, re.DOTALL | re.IGNORECASE)
+        if matches:
+            return [
+                {"question": q.strip(), "answer": a.strip(), "type": "简单问答"}
+                for q, a in matches
+            ]
+
+        logger.warning(f"无法解析闪卡格式，内容预览：{content[:200]}")
+        return []
 
     def _generate_subtitle_from_segments(
             self, segments: List[Dict[str, Any]], transcript_text: str
@@ -1865,10 +1947,10 @@ class VideoProcessor:
 - 原始转录.txt - 纯文本转录内容
 - 原始转录.json - 结构化转录数据
 - 字幕文件.srt - 标准字幕格式
-- AI分析结果.json - 智能分析报告
 - 内容卡片.md - 结构化内容总结
-- 学习闪卡.md - 学习卡片
-- 思维导图.md - 思维导图"""
+ - 思维导图.md - 思维导图
+ - 学习闪卡.md - 学习闪卡
+"""
 
         # 添加AI角色和分析信息
         if analysis_result or content_role or ai_output_types:
@@ -1916,7 +1998,6 @@ class VideoProcessor:
                     "content_card": "内容卡片",
                     "mind_map": "思维导图",
                     "flashcards": "学习闪卡",
-                    "ai_analysis": "AI分析",
                 }
                 generated_types = [type_names.get(t, t) for t in ai_output_types]
                 report += f"\n- **生成内容**: {', '.join(generated_types)}"
@@ -1929,7 +2010,6 @@ class VideoProcessor:
                     "content_card": "内容卡片",
                     "mind_map": "思维导图",
                     "flashcards": "学习闪卡",
-                    "ai_analysis": "AI分析",
                 }.get(output_type, output_type)
 
                 report += f"\n\n### {type_name}生成提示词"
@@ -2039,25 +2119,7 @@ class VideoProcessor:
 - **配图要求**: 至少50%的主要章节有配图
 - **禁用区域**: 总结和思考段落不插图"""
 
-            # 思维导图提示词策略
-            if "mind_map" in (ai_output_types or []):
-                report += f"""
-
-### 思维导图生成
-- **角色定位**: {primary_domain}领域信息结构化专家
-- **结构要求**: 3-5个主节点，每节点2-4个子点
-- **节点总数**: 控制在9-15个以内
-- **表达方式**: 简洁短语，体现领域特色"""
-
-            # 学习闪卡提示词策略
-            if "flashcards" in (ai_output_types or []):
-                report += f"""
-
-### 学习闪卡生成
-- **角色定位**: {primary_domain}领域学习专家
-- **卡片数量**: 8-12张
-- **类型分布**: 概念30% + 应用40% + 问题20% + 经验10%
-- **质量标准**: 结合{primary_domain}领域实践要点"""
+            # 仅保留内容卡片策略说明
 
         return report
 

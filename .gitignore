@@ -16,3 +16,4 @@ URL_SUPPORT_GUIDE.md
 .vscode
 tests/models
 config/settings.json
+.spec-workflow

@@ -389,15 +389,16 @@
                     <select v-model="uploadConfig.engine" class="form-select" @change="onModelChange">
                         <template v-if="models.length > 0">
                             <!-- 按引擎类型分组显示 -->
-                            <optgroup v-for="(engineModels, engineType) in groupedModelsByEngine"
-                                      :key="engineType" :label="getEngineDisplayName(engineType)">
-                                <option v-for="model in engineModels" :key="model.id" :value="model.engineType"
-                                        :selected="model.engineType === uploadConfig.engine"
-                                        :class="{'recommended': model.recommended, 'not-installed': !model.installed}">
-                                    {{ model.displayName || model.name }}{{ model.recommended ? ' (推荐)' : '' }}{{
-                                        !model.installed ? ' (未安装)' : '' }}
-                                </option>
-                            </optgroup>
+                        <optgroup v-for="(engineModels, engineType) in groupedModelsByEngine"
+                                  :key="engineType" :label="getEngineDisplayName(engineType)">
+                            <option v-for="model in engineModels" :key="model.id"
+                                    :value="(engineType === 'qwen3_asr' && model.model_name) ? model.model_name : model.engineType"
+                                    :selected="((engineType === 'qwen3_asr' && model.model_name) ? model.model_name : model.engineType) === uploadConfig.engine"
+                                    :class="{'recommended': model.recommended, 'not-installed': !model.installed}">
+                                {{ model.displayName || model.name }}{{ model.recommended ? ' (推荐)' : '' }}{{
+                                    !model.installed ? ' (未安装)' : '' }}
+                            </option>
+                        </optgroup>
                         </template>
                         <!-- 模型未加载时的备用选项 -->
                         <template v-else>
@@ -406,8 +407,32 @@
                             <option value="whisper">Whisper (OpenAI原版)</option>
                             <option value="faster_whisper">Faster-Whisper (优化版)</option>
                             <option value="dolphin">Dolphin (多语言)</option>
+                            <option value="parakeet">Parakeet (NeMo GPU)</option>
+                            <option value="qwen3_asr" v-if="engineAvailability.qwen3_asr">Qwen3-ASR (DashScope)</option>
+                            <option value="remote_api" v-if="engineAvailability.remote_api">远程API (云端)</option>
                         </template>
                     </select>
+                    <div class="form-help" v-if="selectedEngineModels.length">
+                        <p><strong>当前可用模型规格：</strong></p>
+                        <div v-for="model in selectedEngineModels" :key="model.id" style="margin-bottom: 6px;">
+                            <div><strong>{{ model.name }}</strong></div>
+                            <div v-if="model.description">说明：{{ model.description }}</div>
+                            <div v-if="model.features && model.features.length">能力：{{ formatList(model.features) }}</div>
+                            <div v-if="model.use_cases && model.use_cases.length">适用：{{ formatList(model.use_cases) }}</div>
+                            <div v-if="model.constraints && model.constraints.length">限制：{{ formatList(model.constraints) }}</div>
+                            <div>价格：{{ model.pricing || '—' }}</div>
+                            <div>输入规格：{{ formatInputSpecs(model.input_specs) }}</div>
+                        </div>
+                    </div>
+                    <div class="form-group" v-if="uploadConfig.engine === 'qwen3_asr' && qwen3ModelOptions.length">
+                        <label class="form-label">Qwen3 模型版本</label>
+                        <select v-model="uploadConfig.model_name" class="form-input">
+                            <option v-for="model in qwen3ModelOptions" :key="model.id" :value="model.model_name">
+                                {{ model.name }}
+                            </option>
+                        </select>
+                        <div class="form-help">根据音频时长选择 filetrans（≤12小时）或 flash（≤5分钟）</div>
+                    </div>
                     <div class="form-help">
                         <p><strong>💡 引擎说明：</strong></p>
                         <p>• <strong>WhisperX</strong>：集成转录和说话人分离，提供词级时间戳，推荐使用</p>
@@ -415,6 +440,8 @@
                         <p>• <strong>Whisper</strong>：OpenAI官方模型，多语言支持</p>
                         <p>• <strong>Faster-Whisper</strong>：优化版Whisper，速度更快，资源占用更低</p>
                         <p>• <strong>Dolphin</strong>：支持40种东方语言和22种中文方言</p>
+                        <p>• <strong>Parakeet</strong>：NVIDIA NeMo GPU 模型，适合本地高性能场景</p>
+                        <p>• <strong>远程API</strong>：将音频发送到云端自研 ASR 服务</p>
                     </div>
                 </div>
 
@@ -426,34 +453,6 @@
                         <option value="en">英文</option>
                         <option value="ja">日文</option>
                     </select>
-                </div>
-
-                <div class="form-group form-checkbox-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" v-model="uploadConfig.enableSpeakerDiarization">
-                        <span class="checkmark"></span>
-                        启用说话人分离
-                    </label>
-                    <div class="form-help">
-                        识别并区分不同的说话人<br>
-                        <em style="color: #666; font-size: 13px;">
-                            注：WhisperX 引擎自动包含说话人分离功能，无需额外配置
-                        </em>
-                    </div>
-                </div>
-
-                <div class="form-group form-checkbox-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" v-model="uploadConfig.enableAIAnalysis">
-                        <span class="checkmark"></span>
-                        启用AI分析和总结
-                    </label>
-                    <div class="form-help">
-                        生成会议摘要、要点和关键词<br>
-                        <em style="color: #999; font-size: 13px;">
-                            注：情感分析功能开发中，暂不可用
-                        </em>
-                    </div>
                 </div>
 
                 <!-- 文件上传区域 -->
@@ -519,28 +518,13 @@
                     <div class="step" :class="{ completed: processingStep >= 3 }">
                         <div class="step-icon">3</div>
                         <div class="step-content">
-                            <div class="step-title">说话人分离</div>
-                            <div class="step-desc" v-if="uploadConfig.enableSpeakerDiarization">正在识别不同说话人</div>
-                            <div class="step-desc" v-else>跳过说话人分离</div>
-                        </div>
-                    </div>
-                    <div class="step" :class="{ completed: processingStep >= 4 }">
-                        <div class="step-icon">4</div>
-                        <div class="step-content">
-                            <div class="step-title">AI分析</div>
-                            <div class="step-desc" v-if="uploadConfig.enableAIAnalysis">正在生成会议摘要和要点</div>
-                            <div class="step-desc" v-else>跳过AI分析</div>
+                            <div class="step-title">结果整理</div>
+                            <div class="step-desc">正在整理输出结果</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="form-actions">
-                <button v-if="processingStatus === 'completed'" class="btn btn-primary" @click="viewResult">
-                    查看结果
-                </button>
-                <button class="btn btn-secondary" @click="closePage">关闭</button>
-            </div>
         </div>
     </div>
 </div>
@@ -560,6 +544,11 @@
                 return {
                     // 模型列表
                     models: [],
+                    engineAvailability: {
+                        remote_api: false,
+                        qwen3_asr: false
+                    },
+                    asrSettingsCache: null,
                     
                     // 上传配置
                     uploadConfig: {
@@ -570,10 +559,8 @@
                             minute: '2-digit'
                         })}`,
                         engine: 'whisperx',  // 默认使用 WhisperX
-                        language: 'auto',
-                        contentRole: 'meeting',
-                        enableSpeakerDiarization: true,
-                        enableAIAnalysis: true
+                        model_name: '',
+                        language: 'auto'
                     },
 
                     // 文件上传相关
@@ -585,7 +572,7 @@
                     // 处理状态
                     uploadStarted: false,
                     processingStatus: 'processing', // processing, completed
-                    processingStep: 0, // 0-4
+                    processingStep: 0, // 0-3
                     currentStepText: '', // 当前处理步骤的详细文本
                     taskId: null
                 }
@@ -604,24 +591,60 @@
                         if (!grouped[model.engineType]) {
                             grouped[model.engineType] = [];
                         }
+                        const displayName = this.getModelDisplayName(model, model.engineType);
                         grouped[model.engineType].push({
                             ...model,
                             recommended: this.isModelRecommended(model),
-                            displayName: this.getModelDisplayName(model, model.engineType)
+                            displayName
                         });
                     });
 
                     // 排序：已安装的在前，未安装的在后
                     Object.keys(grouped).forEach(engineType => {
                         grouped[engineType].sort((a, b) => {
+                            if (a.active !== b.active) {
+                                return (b.active ? 1 : 0) - (a.active ? 1 : 0);
+                            }
                             if (a.installed !== b.installed) {
                                 return b.installed - a.installed;
                             }
                             return a.name.localeCompare(b.name);
                         });
+
                     });
 
                     return grouped;
+                },
+
+                selectedEngineModels() {
+                    const grouped = this.groupedModelsByEngine;
+                    const list = grouped[this.selectedEngineType] || [];
+                    if (this.selectedEngineType === 'qwen3_asr') {
+                        const selectedName = this.selectedModelName;
+                        if (selectedName) {
+                            const matched = list.filter(model => model.model_name === selectedName);
+                            return matched.length ? matched : list;
+                        }
+                    }
+                    return list;
+                },
+
+                qwen3ModelOptions() {
+                    const grouped = this.groupedModelsByEngine;
+                    return grouped['qwen3_asr'] || [];
+                },
+
+                selectedEngineType() {
+                    const value = this.uploadConfig.engine || '';
+                    return value.startsWith('qwen3-asr') ? 'qwen3_asr' : value;
+                },
+
+                selectedModelName() {
+                    const value = this.uploadConfig.engine || '';
+                    if (value.startsWith('qwen3-asr')) {
+                        return value;
+                    }
+                    return this.uploadConfig.model_name || '';
                 }
             },
 
@@ -630,28 +653,72 @@
             },
 
             methods: {
+                normalizeModelPayload(payload) {
+                    if (Array.isArray(payload)) {
+                        return { qwen3_asr: payload };
+                    }
+                    if (payload && payload.data && payload.data.qwen3_asr) {
+                        return payload.data;
+                    }
+                    return payload || {};
+                },
                 async loadModels() {
                     try {
-                        const data = await http.get('/api/models?type=meeting');
+                        const raw = await http.get('/api/models?type=meeting');
+                        const data = this.normalizeModelPayload(raw);
+                        this.updateEngineAvailability(data || {});
                         this.models = [];
 
-                        Object.entries(data).forEach(([engineType, models]) => {
-                            if (Array.isArray(models)) {
-                                models.forEach((model) => {
-                                    const modelKey = model.config_key || model.name;
-                                    this.models.push({
-                                        ...model,
-                                        id: `${engineType}-${modelKey}`,
-                                        engineType,
-                                        displayName: model.name,
-                                        installed: model.installed || false
-                                    });
-                                });
+                        Object.entries(data || {}).forEach(([engineType, models]) => {
+                            if (!Array.isArray(models)) {
+                                return;
                             }
+                            const shouldDisplayCloud =
+                                (engineType === 'remote_api' && this.engineAvailability.remote_api) ||
+                                (engineType === 'qwen3_asr' && this.engineAvailability.qwen3_asr);
+                            if (['remote_api', 'qwen3_asr'].includes(engineType) && !shouldDisplayCloud) {
+                                return;
+                            }
+
+                            models.forEach((model) => {
+                                const modelKey = model.config_key || model.name;
+                                this.models.push({
+                                    ...model,
+                                    id: `${engineType}-${modelKey}`,
+                                    engineType,
+                                    displayName: model.name,
+                                    installed: model.installed || false
+                                });
+                            });
                         });
+                        this.ensureQwen3ModelSelection();
                     } catch (error) {
                         console.error('加载模型列表失败:', error);
                     }
+                },
+
+                updateEngineAvailability(modelPayload) {
+                    const payload = this.normalizeModelPayload(modelPayload);
+                    const remoteList = Array.isArray(payload?.remote_api) ? payload.remote_api : [];
+                    const qwenList = Array.isArray(payload?.qwen3_asr) ? payload.qwen3_asr : [];
+
+                    this.engineAvailability.remote_api = remoteList.some(model => model.enabled);
+                    this.engineAvailability.qwen3_asr = qwenList.some(
+                        model => model.enabled && (model.api_key_configured !== false)
+                    );
+
+                    this.ensureUploadEngineSelection();
+                },
+
+                ensureUploadEngineSelection() {
+                    const engineType = this.selectedEngineType;
+                    if (engineType === 'remote_api' && !this.engineAvailability.remote_api) {
+                        this.uploadConfig.engine = 'whisperx';
+                    }
+                    if (engineType === 'qwen3_asr' && !this.engineAvailability.qwen3_asr) {
+                        this.uploadConfig.engine = 'whisperx';
+                    }
+                    this.ensureQwen3ModelSelection();
                 },
 
                 getEngineDisplayName(engineType) {
@@ -660,7 +727,9 @@
                         'whisper': 'Whisper (OpenAI)',
                         'faster_whisper': 'Faster-Whisper (优化版)',
                         'sensevoice': 'SenseVoice (阿里)',
-                        'dolphin': 'Dolphin (方言)'
+                        'dolphin': 'Dolphin (方言)',
+                        'remote_api': '远程API (云端)',
+                        'qwen3_asr': 'Qwen3-ASR (DashScope)'
                     };
                     return engineMap[engineType] || engineType;
                 },
@@ -674,9 +743,82 @@
                     return model.engineType === 'whisperx';
                 },
 
+                formatInputSpecs(specs) {
+                    if (!specs) return '—';
+                    const parts = [];
+                    if (specs.format) parts.push(`格式: ${specs.format}`);
+                    if (specs.sample_rate) parts.push(`采样率: ${specs.sample_rate}`);
+                    if (specs.channels) parts.push(`声道: ${specs.channels}`);
+                    if (specs.input) parts.push(`输入: ${specs.input}`);
+                    return parts.join(' / ');
+                },
+
+                formatList(items) {
+                    if (!Array.isArray(items) || items.length === 0) return '—';
+                    return items.join('；');
+                },
+
                 onModelChange(event) {
                     // 模型变更时的处理
                     console.log('选择的引擎:', this.uploadConfig.engine);
+                    if (this.selectedEngineType === 'qwen3_asr') {
+                        this.ensureQwen3ModelSelection();
+                    }
+                },
+
+                ensureQwen3ModelSelection() {
+                    const qwenModels = this.models.filter(model => model.engineType === 'qwen3_asr');
+                    if (!qwenModels.length) {
+                        return;
+                    }
+                    const currentEngine = this.uploadConfig.engine || '';
+                    const current = currentEngine.startsWith('qwen3-asr')
+                        ? currentEngine
+                        : this.uploadConfig.model_name;
+                    const matched = qwenModels.find(model => model.model_name === current);
+                    const fallback = qwenModels.find(model => model.active) || qwenModels[0];
+                    const target = matched ? matched.model_name : fallback.model_name;
+                    this.uploadConfig.model_name = target;
+                    if (currentEngine.startsWith('qwen3-asr')) {
+                        this.uploadConfig.engine = target;
+                    }
+                },
+
+                normalizeEngineSelection(engineValue, modelName) {
+                    if (engineValue && engineValue.startsWith('qwen3-asr')) {
+                        return { engine: 'qwen3_asr', model_name: engineValue };
+                    }
+                    return { engine: engineValue, model_name: modelName || '' };
+                },
+
+                async ensureFiletransOssReady(modelName) {
+                    if (!modelName || !modelName.includes('filetrans')) {
+                        return true;
+                    }
+                    try {
+                        if (!this.asrSettingsCache) {
+                            this.asrSettingsCache = await http.get('/api/settings/asr');
+                        }
+                        const qwenCfg = this.asrSettingsCache?.qwen3_asr || {};
+                        const required = [
+                            { key: 'oss_access_key_id', label: 'OSS AccessKey ID' },
+                            { key: 'oss_access_key_secret', label: 'OSS AccessKey Secret' },
+                            { key: 'oss_endpoint', label: 'OSS Endpoint' },
+                            { key: 'oss_bucket', label: 'OSS Bucket' }
+                        ];
+                        const missing = required
+                            .filter(item => !String(qwenCfg[item.key] || '').trim())
+                            .map(item => item.label);
+                        if (missing.length) {
+                            layer.msg(`FileTrans 需要先配置 OSS：${missing.join('、')}`, { icon: 2, time: 3000 });
+                            return false;
+                        }
+                        return true;
+                    } catch (error) {
+                        console.error('读取 OSS 配置失败:', error);
+                        layer.msg('读取 OSS 配置失败，请先在设置页完成配置', { icon: 2, time: 3000 });
+                        return false;
+                    }
                 },
 
                 async uploadMeeting() {
@@ -689,14 +831,20 @@
                     this.uploadProgress = 0;
 
                     try {
+                        if (this.selectedEngineType === 'qwen3_asr') {
+                            this.ensureQwen3ModelSelection();
+                        }
+                        const normalized = this.normalizeEngineSelection(this.uploadConfig.engine, this.uploadConfig.model_name);
+                        const filetransReady = await this.ensureFiletransOssReady(normalized.model_name);
+                        if (!filetransReady) {
+                            return;
+                        }
                         const formData = new FormData();
                         formData.append('audio_file', this.selectedFile);
                         formData.append('title', this.uploadConfig.title);
-                        formData.append('engine', this.uploadConfig.engine);
+                        formData.append('engine', normalized.engine);
+                        formData.append('model_name', normalized.model_name || '');
                         formData.append('language', this.uploadConfig.language);
-                        formData.append('content_role', this.uploadConfig.contentRole);
-                        formData.append('enable_speaker_diarization', this.uploadConfig.enableSpeakerDiarization);
-                        formData.append('enable_ai_analysis', this.uploadConfig.enableAIAnalysis);
 
                         // 创建上传任务
                         const response = await this.uploadWithProgress('/api/tasks/meeting/upload', formData);
@@ -767,36 +915,44 @@
                     if (!this.taskId) return;
 
                     try {
-                        console.log('polling task status...');
                         const task = await http.get(`/api/tasks/meeting/${this.taskId}`);
-                        console.log('task status:', task)
                         // 根据任务状态和进度更新处理步骤
                         if (task.status === 'uploaded') {
                             this.processingStep = 1;
                             this.currentStepText = '文件上传完成，等待处理...';
                         } else if (task.status === 'processing') {
-                            // 根据进度更新处理步骤
                             if (task.progress >= 70) {
-                                this.processingStep = 4; // AI分析
-                                this.currentStepText = task.current_step || '正在进行AI分析...';
+                                this.processingStep = 3;
+                                this.currentStepText = task.current_step || '正在整理输出结果...';
                             } else if (task.progress >= 50) {
-                                this.processingStep = 3; // 说话人分离
-                                this.currentStepText = task.current_step || '正在进行说话人分离...';
+                                this.processingStep = 2;
+                                this.currentStepText = task.current_step || '正在进行语音识别...';
                             } else if (task.progress >= 30) {
-                                this.processingStep = 2; // 语音识别
+                                this.processingStep = 2;
                                 this.currentStepText = task.current_step || '正在进行语音识别...';
                             } else {
-                                this.processingStep = 1; // 文件上传完成
+                                this.processingStep = 1;
                                 this.currentStepText = task.current_step || '文件上传完成，等待处理...';
                             }
                         } else if (task.status === 'finished') {
-                            this.processingStep = 4;
+                            this.processingStep = 3;
                             this.processingStatus = 'completed';
-                            this.currentStepText = '处理已完成，可以查看结果';
+                            this.currentStepText = '处理已完成';
                             return; // 任务完成，停止轮询
+                        } else if (task.status === 'error' || task.status === 'failed') {
+                            this.processingStep = 3;
+                            this.processingStatus = 'completed';
+                            this.currentStepText = task.error || task.current_step || '处理失败';
+                            layer.msg(this.currentStepText, { icon: 2, time: 3000 });
+                            return;
+                        } else if (task.status === 'stopped' || task.status === 'cancelled') {
+                            this.processingStep = 3;
+                            this.processingStatus = 'completed';
+                            this.currentStepText = '任务已停止';
+                            layer.msg(this.currentStepText, { icon: 0, time: 2000 });
+                            return;
                         }
 
-                        // 如果任务未完成，继续轮询
                         if (this.processingStatus !== 'completed') {
                             setTimeout(() => {
                                 this.pollTaskStatus();
@@ -804,44 +960,33 @@
                         }
                     } catch (error) {
                         console.error('获取任务状态失败:', error);
-                        // 出错时继续轮询
                         setTimeout(() => {
                             this.pollTaskStatus();
                         }, 5000);
                     }
                 },
 
-                closePage() {
+                closePage(callback) {
                     // 使用layui关闭当前页面
-                    const index = parent.layer.getFrameIndex(window.name);
-                    parent.layer.close(index);
-
-                    // 通知父页面刷新会议列表
-                    if (window.parent && window.parent.refreshMeetingList) {
-                        window.parent.refreshMeetingList();
-                    }
-                },
-
-                viewResult() {
-                    if (this.taskId) {
-                        // 关闭当前页面
-                        this.closePage();
-
-                        // 在父页面中打开会议详情页
-                        setTimeout(() => {
-                            if (window.parent && window.parent.layui) {
-                                window.parent.layui.layer.open({
-                                    type: 2,
-                                    title: `会议详情`,
-                                    offset: 'r',
-                                    anim: 'slideLeft',
-                                    shade: 0.1,
-                                    shadeClose: true,
-                                    content: `/meeting_detail?id=${this.taskId}`,
-                                    area: ['85%', '100%']
-                                });
+                    let closed = false;
+                    if (window.parent && window.parent.layer && window.name) {
+                        const index = parent.layer.getFrameIndex(window.name);
+                        if (index !== undefined) {
+                            if (window.parent && window.parent.refreshMeetingList) {
+                                window.parent.refreshMeetingList();
                             }
-                        }, 300);
+                            callback && callback();
+                            parent.layer.close(index);
+                            closed = true;
+                        }
+                    }
+
+                    if (!closed) {
+                        if (window.parent && window.parent.refreshMeetingList) {
+                            window.parent.refreshMeetingList();
+                        }
+                        callback && callback();
+                        window.location.href = '/meeting2txt';
                     }
                 },
 
@@ -863,14 +1008,14 @@
                                 case 2:
                                     return '正在进行语音识别...';
                                 case 3:
-                                    return '正在进行说话人分离...';
+                                    return '正在整理输出结果...';
                                 case 4:
                                     return '正在进行AI分析...';
                                 default:
                                     return '处理中...';
                             }
                         case 'completed':
-                            return '✅ 处理已完成，可以查看结果';
+                            return '✅ 处理已完成';
                         default:
                             return '状态未知';
                     }

@@ -39,13 +39,13 @@ class SenseVoiceEngine(BaseVoiceEngine):
         """
         # 检查ModelScope缓存
         modelscope_cache = (
-                Path.home()
-                / ".cache"
-                / "modelscope"
-                / "hub"
-                / "models"
-                / "iic"
-                / "SenseVoiceSmall"
+            Path.home()
+            / ".cache"
+            / "modelscope"
+            / "hub"
+            / "models"
+            / "iic"
+            / "SenseVoiceSmall"
         )
 
         if modelscope_cache.exists():
@@ -193,7 +193,15 @@ class SenseVoiceEngine(BaseVoiceEngine):
 
             # 特殊处理网络连接错误
             error_str = str(e)
-            if any(keyword in error_str for keyword in ["NameResolutionError","modelscope.cn","Connection","timeout"]):
+            if any(
+                keyword in error_str
+                for keyword in [
+                    "NameResolutionError",
+                    "modelscope.cn",
+                    "Connection",
+                    "timeout",
+                ]
+            ):
                 logger.error("检测到网络连接问题")
 
                 # 如果有本地模型但加载失败，尝试强制离线模式
@@ -311,7 +319,7 @@ class SenseVoiceEngine(BaseVoiceEngine):
             return re.sub(r"[🎼😊🎵🎶🎤🎧🔊🔇📢📣📯🎺🎷🎸🥁🎹]", "", text).strip()
 
     def _smart_text_segmentation(
-            self, text: str, total_duration: float, min_segments: int = 2
+        self, text: str, total_duration: float, min_segments: int = 2
     ) -> List[Dict[str, Any]]:
         """智能文本分割，创建合理的字幕片段"""
         if not text.strip():
@@ -336,7 +344,7 @@ class SenseVoiceEngine(BaseVoiceEngine):
             max_chars_per_segment = len(text) // min_segments
             sentences = []
             for i in range(0, len(text), max_chars_per_segment):
-                segment = text[i: i + max_chars_per_segment].strip()
+                segment = text[i : i + max_chars_per_segment].strip()
                 if segment:
                     sentences.append(segment)
 
@@ -349,10 +357,16 @@ class SenseVoiceEngine(BaseVoiceEngine):
                 mid_point = len(longest_sentence) // 2
                 # 寻找最近的空格或标点
                 for offset in range(5):
-                    if mid_point + offset < len(longest_sentence) and longest_sentence[mid_point + offset] in " ，,":
+                    if (
+                        mid_point + offset < len(longest_sentence)
+                        and longest_sentence[mid_point + offset] in " ，,"
+                    ):
                         mid_point += offset
                         break
-                    elif mid_point - offset >= 0 and longest_sentence[mid_point - offset] in " ，,":
+                    elif (
+                        mid_point - offset >= 0
+                        and longest_sentence[mid_point - offset] in " ，,"
+                    ):
                         mid_point -= offset
                         break
 
@@ -382,23 +396,24 @@ class SenseVoiceEngine(BaseVoiceEngine):
         return segments
 
     def recognize_file(
-            self, audio_path: str, language: str = "auto", **kwargs
+        self, audio_path: str, language: str = "auto", **kwargs
     ) -> Dict[str, Any]:
         """识别音频文件 - 使用官方FunASR方式
 
         Args:
             audio_path: 音频文件路径
             language: 语言代码
-            **kwargs: 其他参数（为兼容性保留，本引擎暂不使用）
+            **kwargs: 额外参数（enable_diarization: 是否启用说话人分离）
         """
         if not self.initialized:
-            # 尝试重新初始化
             if not self.initialize():
                 raise RuntimeError("SenseVoice引擎未初始化")
 
+        enable_diarization = kwargs.get("enable_diarization", False)
+        start_time = time.time()
+
         try:
-            start_time = time.time()
-            logger.info(f"SenseVoice识别音频: {Path(audio_path).name}")
+            logger.info(f"🎤 SenseVoice识别音频: {Path(audio_path).name}")
 
             if not os.path.exists(audio_path):
                 raise FileNotFoundError(f"音频文件不存在: {audio_path}")
@@ -561,47 +576,40 @@ class SenseVoiceEngine(BaseVoiceEngine):
                 else:
                     detected_language = "en"
 
-            # 构建默认说话人信息（因为不支持说话人分离）
-            speakers_info = {
-                "Speaker_1": {
-                    "id": "Speaker_1",
-                    "name": "Speaker_1",
-                    "segments_count": len(formatted_segments),
-                    "total_duration": audio_duration,
-                    "words": [seg["text"] for seg in formatted_segments],
+            logger.info(
+                f"✅ 转录完成: {len(formatted_segments)} 个片段, 语言: {detected_language}"
+            )
+
+            # ====== 步骤2: 说话人分离（可选）======
+            speakers_info = {}
+            if enable_diarization:
+                logger.info("⚠️  SenseVoice不支持说话人分离，使用默认Speaker_1")
+                speakers_info = {
+                    "Speaker_1": {
+                        "id": "Speaker_1",
+                        "name": "Speaker_1",
+                        "segments_count": len(formatted_segments),
+                    }
                 }
-            }
+            else:
+                logger.info("⏭️  跳过说话人分离（未启用）")
 
-            # 构建返回结果 - 对齐 WhisperX 格式
-            processing_time = time.time() - start_time
-
+            # ====== 步骤3: 格式化输出 ======
             result = {
                 "text": processed_text,
                 "language": detected_language,
-                "segments": formatted_segments,  # 使用格式化后的分段
-                "speakers": speakers_info,  # 新增：对齐 WhisperX 格式
-                "processing_time": processing_time,
+                "segments": formatted_segments,
+                "speakers": speakers_info,
+                "processing_time": time.time() - start_time,
                 "model": "sensevoice",
                 "device": self.device,
-                "confidence": 0.95,  # SenseVoice通常有很高的识别准确率
-                "audio_length": audio_duration,
-                "features": {  # 更新：对齐 WhisperX 格式
-                    "word_level_timestamps": False,  # SenseVoice 不支持词级时间戳
-                    "speaker_diarization": False,  # SenseVoice 不支持说话人分离
-                    "emotion_detection": True,  # SenseVoice支持情感识别
-                },
-                "statistics": {  # 新增：对齐 WhisperX 格式
-                    "total_segments": len(formatted_segments),
-                    "total_speakers": 1,
-                    "total_duration": audio_duration,
-                },
-                "raw_result": res[0],  # 保留原始结果用于调试
             }
 
-            logger.info(f"SenseVoice识别完成，耗时: {processing_time:.2f}s")
-            logger.info(f"识别结果: {processed_text[:100]}...")
-
-            return result
+            formatted_result = self.format_result(result, audio_path)
+            logger.info(
+                f"✅ SenseVoice识别完成，耗时: {formatted_result['processing_time']:.2f}s"
+            )
+            return formatted_result
 
         except Exception as e:
             logger.error(f"SenseVoice识别失败: {e}")

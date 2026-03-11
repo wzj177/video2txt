@@ -7,6 +7,7 @@
 from .base import Base
 from .task import MediaTask, VideoTask, MeetingTask, TaskQueue
 from .user_data import UserPreference, ProcessingHistory
+from .template import TemplateSkill, RoleTemplateMapping, TemplateRole, RoleTemplate
 
 __all__ = [
     "Base",
@@ -16,4 +17,8 @@ __all__ = [
     "TaskQueue",
     "UserPreference",
     "ProcessingHistory",
+    "TemplateSkill",
+    "RoleTemplateMapping",
+    "TemplateRole",
+    "RoleTemplate",
 ]

@@ -4,14 +4,18 @@
 听语AI - 设置API路由
 """
 
-from fastapi import APIRouter, HTTPException
-from typing import Dict, Any
+from fastapi import APIRouter, HTTPException, Query
+from typing import Dict, Any, Optional, List
 import json
 import os
 import requests
 import subprocess
 from pathlib import Path
 import logging
+from pydantic import BaseModel
+from copy import deepcopy
+
+from ..services.template_skill_service import template_skill_service
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +25,58 @@ settings_router = APIRouter(prefix="/api/settings", tags=["settings"])
 # 配置文件路径
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 CONFIG_FILE = PROJECT_ROOT / "config" / "settings.json"
+ASR_DEFAULTS = {
+    "remote_api": {
+        "enabled": False,
+        "base_url": "",
+        "endpoint": "/api/v1/asr/transcribe",
+        "api_key": "",
+        "auth_type": "header",
+        "auth_header": "X-API-Key",
+        "timeout": 120,
+        "max_retries": 2,
+        "extra_headers": {},
+        "default_params": {},
+        "cloud_provider": "custom",
+        "notes": "",
+    },
+    "parakeet": {
+        "selected_model": "tdt-0.6b-v2",
+        "model_name": "parakeet-tdt-0.6b-v2",
+        "device": "auto",
+        "batch_size": 2,
+        "segment_duration": 18.0,
+        "words_per_segment": 32,
+        "diarization": {"enabled": True, "max_speakers": 8},
+    },
+    "qwen3_asr": {
+        "enabled": False,
+        "model_name": "qwen3-asr-flash-filetrans",
+        "dashscope_api_key": "",
+        "base_http_api_url": "",
+        "oss_access_key_id": "",
+        "oss_access_key_secret": "",
+        "oss_endpoint": "",
+        "oss_bucket": "",
+        "oss_prefix": "qwen3/asr",
+        "oss_public_base_url": "",
+        "filetrans_use_http": True,
+        "filetrans_poll_interval": 5,
+        "filetrans_poll_timeout": 3600,
+        "num_threads": 4,
+        "vad_segment_threshold": 120,
+        "max_segment_duration": 180,
+        "min_duration_for_vad": 180,
+        "tmp_dir": "./data/qwen3/cache",
+        "silence": True,
+        "realtime_url": "wss://dashscope.aliyuncs.com/api-ws/v1/realtime",
+        "realtime_chunk_ms": 200,
+        "realtime_send_delay": 0.1,
+        "realtime_sample_rate": 16000,
+        "realtime_format": "pcm",
+        "realtime_finish_timeout": 10,
+    },
+}
 
 
 def load_settings() -> Dict[str, Any]:
@@ -52,54 +108,47 @@ def save_settings(settings: Dict[str, Any]) -> bool:
         return False
 
 
-def get_role_mapping(category: str = "content_generator") -> Dict[str, str]:
-    """获取角色映射配置
+class TemplateSkillPayload(BaseModel):
+    skill_markdown: str
+    is_active: bool = True
 
-    Args:
-        category: 角色类别 (content_generator, flashcard_generator, ai_analysis, content_card)
 
-    Returns:
-        角色映射字典
-    """
+class RoleTemplateUpdatePayload(BaseModel):
+    mappings: Dict[str, Dict[str, str]]
+
+
+class RolePayload(BaseModel):
+    role_key: str
+    name: str
+    description: Optional[str] = ""
+    system_prompt: Optional[str] = ""
+    icon: Optional[str] = ""
+    content_categories: Optional[List[str]] = None
+
+
+class RoleUpdatePayload(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    system_prompt: Optional[str] = None
+    icon: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class RoleTemplatePayload(BaseModel):
+    skill_markdown: str
+    is_active: Optional[bool] = None
+
+
+class RoleTemplateTogglePayload(BaseModel):
+    is_active: bool
+
+
+def get_role_mapping(category: str = "content_card") -> Dict[str, str]:
+    """获取角色映射配置（兼容旧逻辑，默认返回角色名称映射）"""
     try:
-        settings = load_settings()
-
-        # 新的配置结构：从roles中提取指定类别的映射
-        roles = settings.get("roles", {})
-        if roles:
-            category_mapping = {}
-            for role_key, role_config in roles.items():
-                if isinstance(role_config, dict) and category in role_config:
-                    category_mapping[role_key] = role_config[category]
-
-            if category_mapping:
-                return category_mapping
-
-        # 兼容旧的role_mapping结构
-        role_mapping = settings.get("role_mapping", {})
-        category_mapping = role_mapping.get(category, {})
-
-        # 如果指定类别不存在，返回默认的content_generator映射
-        if not category_mapping:
-            category_mapping = role_mapping.get("content_generator", {})
-
-        # 如果还是没有，返回默认映射
-        if not category_mapping:
-            category_mapping = {
-                "education": "教育内容专家",
-                "exam_review": "试卷评讲专家",
-                "cooking": "美食知识专家",
-                "travel": "旅行攻略专家",
-                "meeting": "会议管理专家",
-                "technology": "科技内容专家",
-                "business": "商业分析专家",
-                "general": "内容专家",
-            }
-
-        return category_mapping
+        return template_skill_service.get_role_map()
     except Exception as e:
         logger.error(f"获取角色映射失败: {e}")
-        # 返回默认映射
         return {
             "education": "教育内容专家",
             "exam_review": "试卷评讲专家",
@@ -113,7 +162,7 @@ def get_role_mapping(category: str = "content_generator") -> Dict[str, str]:
 
 
 def get_role_name(
-    domain: str, category: str = "content_generator", default: str = "内容专家"
+    domain: str, category: str = "content_card", default: str = "内容专家"
 ) -> str:
     """获取指定领域的角色名称
 
@@ -126,8 +175,7 @@ def get_role_name(
         角色名称
     """
     try:
-        role_mapping = get_role_mapping(category)
-        return role_mapping.get(domain, default)
+        return template_skill_service.get_role_name(domain, default=default)
     except Exception as e:
         logger.error(f"获取角色名称失败: {e}")
         return default
@@ -137,26 +185,36 @@ def get_prompt_template(template_type: str, prompt_part: str = "system_prompt") 
     """从配置文件获取提示词模板
 
     Args:
-        template_type: 模板类型 (mind_map, flashcards, ai_analysis, content_card)
+        template_type: 模板类型 (content_card)
         prompt_part: 提示词部分 (system_prompt, user_prompt, audio_system_prompt)
 
     Returns:
         提示词模板字符串
     """
     try:
-        settings = load_settings()
-        prompt_templates = settings.get("prompt_templates", {})
-        template = prompt_templates.get(template_type, {})
-
-        # 特殊处理 content_card 类型的 audio_system_prompt
-        if template_type == "content_card" and prompt_part == "audio_system_prompt":
-            return template.get("audio_system_prompt", "")
-
-        return template.get(prompt_part, "")
-
-    except Exception as e:
+        prompt = template_skill_service.get_prompt(template_type, prompt_part)
+        return prompt or ""
+    except Exception as e:  # pragma: no cover - 兜底
         logger.error(f"读取提示词模板失败: {e}")
         return ""
+
+
+def ensure_asr_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
+    """确保设置里包含ASR默认配置"""
+    if "asr" not in settings or not isinstance(settings["asr"], dict):
+        settings["asr"] = {}
+
+    asr_settings = settings["asr"]
+    for key, default_value in ASR_DEFAULTS.items():
+        if key not in asr_settings or not isinstance(asr_settings[key], dict):
+            asr_settings[key] = deepcopy(default_value)
+        else:
+            # 填充缺失字段
+            for sub_key, sub_value in default_value.items():
+                if sub_key not in asr_settings[key]:
+                    asr_settings[key][sub_key] = deepcopy(sub_value)
+
+    return asr_settings
 
 
 @settings_router.get("/openai")
@@ -364,6 +422,117 @@ async def update_system_settings(config: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
+@settings_router.get("/asr")
+async def get_asr_settings_api() -> Dict[str, Any]:
+    """获取语音识别配置（远端API、Parakeet等）"""
+    try:
+        settings = load_settings()
+        asr_settings = ensure_asr_settings(settings)
+        return {"success": True, "data": asr_settings}
+    except Exception as e:
+        logger.error(f"读取ASR配置失败: {e}")
+        return {"success": False, "error": str(e), "data": {}}
+
+
+@settings_router.post("/asr")
+async def update_asr_settings_api(config: Dict[str, Any]) -> Dict[str, Any]:
+    """更新语音识别配置"""
+    try:
+        settings = load_settings()
+        asr_settings = ensure_asr_settings(settings)
+
+        if "remote_api" in config:
+            allowed = {
+                "enabled",
+                "base_url",
+                "endpoint",
+                "api_key",
+                "auth_type",
+                "auth_header",
+                "timeout",
+                "max_retries",
+                "extra_headers",
+                "default_params",
+                "cloud_provider",
+                "notes",
+            }
+            for key, value in config["remote_api"].items():
+                if key in allowed:
+                    asr_settings["remote_api"][key] = value
+
+        if "parakeet" in config:
+            allowed = {
+                "selected_model",
+                "model_name",
+                "device",
+                "batch_size",
+                "segment_duration",
+                "words_per_segment",
+                "diarization",
+            }
+            for key, value in config["parakeet"].items():
+                if key in allowed:
+                    asr_settings["parakeet"][key] = value
+
+        if "qwen3_asr" in config:
+            qwen_payload = config.get("qwen3_asr") or {}
+            if qwen_payload.get("enabled") and "filetrans" in str(
+                qwen_payload.get("model_name", "")
+            ):
+                required = [
+                    "oss_access_key_id",
+                    "oss_access_key_secret",
+                    "oss_endpoint",
+                    "oss_bucket",
+                ]
+                missing = [key for key in required if not qwen_payload.get(key)]
+                if missing:
+                    return {
+                        "success": False,
+                        "error": f"filetrans 需要先配置 OSS: {', '.join(missing)}",
+                    }
+            allowed = {
+                "enabled",
+                "model_name",
+                "context",
+                "dashscope_api_key",
+                "base_http_api_url",
+                "oss_access_key_id",
+                "oss_access_key_secret",
+                "oss_endpoint",
+                "oss_bucket",
+                "oss_prefix",
+                "oss_public_base_url",
+                "filetrans_use_http",
+                "filetrans_poll_interval",
+                "filetrans_poll_timeout",
+                "num_threads",
+                "vad_segment_threshold",
+                "max_segment_duration",
+                "min_duration_for_vad",
+                "tmp_dir",
+                "silence",
+                "realtime_url",
+                "realtime_chunk_ms",
+                "realtime_send_delay",
+                "realtime_sample_rate",
+                "realtime_format",
+                "realtime_finish_timeout",
+            }
+            for key, value in config["qwen3_asr"].items():
+                if key in allowed:
+                    asr_settings["qwen3_asr"][key] = value
+
+        settings["asr"] = asr_settings
+        if save_settings(settings):
+            return {"success": True, "message": "ASR配置已更新", "data": asr_settings}
+        return {"success": False, "error": "保存配置失败"}
+
+    except Exception as e:
+        logger.error(f"更新ASR配置失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
 @settings_router.get("/role_mapping")
 async def get_role_mapping_api() -> Dict[str, Any]:
     """获取角色映射配置API"""
@@ -386,164 +555,30 @@ async def get_role_mapping_api() -> Dict[str, Any]:
 async def get_content_roles() -> Dict[str, Any]:
     """获取内容角色选项 - 用于前端动态加载"""
     try:
-        settings = load_settings()
-
-        # 新的配置结构：从roles中提取content_card映射
-        roles = settings.get("roles", {})
-        content_card_roles = {}
-
-        if roles:
-            for role_key, role_config in roles.items():
-                if isinstance(role_config, dict) and "content_card" in role_config:
-                    content_card_roles[role_key] = role_config["content_card"]
-
-        # 兼容旧的role_mapping结构
-        if not content_card_roles:
-            role_mapping = settings.get("role_mapping", {})
-            content_card_roles = role_mapping.get("content_card", {})
-
-        # 如果还是没有配置，返回默认的角色选项
-        if not content_card_roles:
-            content_card_roles = {
-                "education": "教育学习专家",
-                "exam_review": "试卷评讲专家",
-                "meeting": "会议纪要专家",
-                "cooking": "烹饪美食专家",
-                "travel": "旅游探索专家",
-                "technology": "科技数码专家",
-                "business": "商业财经专家",
-                "health": "健康养生专家",
-                "lifestyle": "生活方式专家",
-                "entertainment": "娱乐休闲专家",
-                "emotion": "情感心理专家",
-                "finance": "金融投资专家",
-                "beauty": "美容护肤专家",
-                "male": "男性内容专家",
-                "female": "女性内容专家",
-                "fitness": "运动健身专家",
-                "parenting": "育儿教育专家",
-            }  # 构建前端需要的格式 - 包含显示文本、图标和描述
-        role_options = []
-
-        # 默认选项：智能识别
-        role_options.append(
-            {
-                "value": "auto",
-                "label": "🤖 智能识别（推荐）",
-                "icon": "🤖",
-                "text": "智能识别模式",
-                "description": "系统将自动分析内容类型，选择最适合的生成策略",
-            }
-        )
-
-        # 角色选项映射 - 定义图标和描述
-        role_display_config = {
-            "education": {
-                "icon": "📚",
-                "label": "教育学习",
-                "description": "专注于知识传授和学习要点，适合教学视频和课程内容",
-            },
-            "exam_review": {
-                "icon": "📝",
-                "label": "试卷评讲",
-                "description": "重点分析题目解答和考点，适合试卷讲解和习题分析",
-            },
-            "meeting": {
-                "icon": "💼",
-                "label": "会议纪要",
-                "description": "提取决议要点和行动计划，适合会议录音和讨论内容",
-            },
-            "cooking": {
-                "icon": "🍳",
-                "label": "烹饪美食",
-                "description": "突出制作步骤和技巧要点，适合美食教学和菜谱分享",
-            },
-            "travel": {
-                "icon": "✈️",
-                "label": "旅游探索",
-                "description": "强调体验分享和实用攻略，适合旅行记录和景点介绍",
-            },
-            "technology": {
-                "icon": "💻",
-                "label": "科技数码",
-                "description": "注重技术原理和操作指南，适合科技评测和教程内容",
-            },
-            "business": {
-                "icon": "💰",
-                "label": "商业财经",
-                "description": "分析商业逻辑和市场趋势，适合商业分析和财经讨论",
-            },
-            "health": {
-                "icon": "🏥",
-                "label": "健康养生",
-                "description": "关注健康知识和养生方法，适合医疗科普和健康指导",
-            },
-            "lifestyle": {
-                "icon": "🏠",
-                "label": "生活方式",
-                "description": "展现生活品质和实用建议，适合生活分享和经验交流",
-            },
-            "entertainment": {
-                "icon": "🎬",
-                "label": "娱乐休闲",
-                "description": "突出娱乐价值和观点评论，适合影视评论和娱乐内容",
-            },
-            "emotion": {
-                "icon": "💝",
-                "label": "情感心理",
-                "description": "深度解析情感表达和心理状态，适合情感类和心理分析内容",
-            },
-            "finance": {
-                "icon": "📈",
-                "label": "金融投资",
-                "description": "专业解读投资策略和金融产品，适合理财教学和投资分析",
-            },
-            "beauty": {
-                "icon": "💄",
-                "label": "美容护肤",
-                "description": "专注美容技巧和护肤知识，适合化妆教程和护肤分享",
-            },
-            "male": {
-                "icon": "👨",
-                "label": "男性内容",
-                "description": "面向男性用户的内容优化，适合男性兴趣和生活内容",
-            },
-            "female": {
-                "icon": "👩",
-                "label": "女性内容",
-                "description": "面向女性用户的内容优化，适合女性兴趣和生活内容",
-            },
-            "fitness": {
-                "icon": "💪",
-                "label": "运动健身",
-                "description": "强调训练方法和健身技巧，适合运动教学和健身指导",
-            },
-            "parenting": {
-                "icon": "👶",
-                "label": "育儿教育",
-                "description": "专注育儿经验和教育方法，适合亲子内容和教育分享",
-            },
+        roles = await template_skill_service.list_roles()
+        category_labels = {
+            "content_card": "内容卡片",
+            "mind_map": "思维导图",
+            "flashcards": "学习闪卡",
         }
 
-        # 根据配置生成角色选项
-        for role_key, role_name in content_card_roles.items():
-            display_config = role_display_config.get(
-                role_key,
-                {
-                    "icon": "👤",
-                    "label": role_name,
-                    "description": f"专业的{role_name}，提供该领域的专业内容分析",
-                },
-            )
+        role_options: List[Dict[str, Any]] = []
 
+        for role in roles:
+            role_key = role["role_key"]
+            content_types = template_skill_service.get_role_content_types(role_key)
+            icon = role.get("icon") or ""
+            label = f"{icon} {role['name']}".strip()
             role_options.append(
                 {
                     "value": role_key,
-                    "label": f"{display_config['icon']} {display_config['label']}",
-                    "icon": display_config["icon"],
-                    "text": f"{display_config['label']}模式",
-                    "description": display_config["description"],
-                    "expert_name": role_name,
+                    "label": label,
+                    "icon": icon,
+                    "text": role["name"],
+                    "description": role.get("description") or "",
+                    "system_prompt": role.get("system_prompt") or "",
+                    "content_types": content_types,
+                    "content_type_labels": category_labels,
                 }
             )
 
@@ -555,6 +590,150 @@ async def get_content_roles() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"获取内容角色失败: {e}")
         return {"success": False, "error": str(e), "data": {"roles": [], "total": 0}}
+
+
+@settings_router.get("/roles")
+async def list_roles() -> Dict[str, Any]:
+    """列出角色"""
+    try:
+        roles = await template_skill_service.list_roles(include_inactive=True)
+        for role in roles:
+            role["content_types"] = template_skill_service.get_role_content_types(
+                role["role_key"]
+            )
+        return {"success": True, "data": roles}
+    except Exception as e:
+        logger.error(f"获取角色列表失败: {e}")
+        return {"success": False, "error": str(e), "data": []}
+
+
+@settings_router.post("/roles")
+async def create_role(payload: RolePayload) -> Dict[str, Any]:
+    """创建角色"""
+    try:
+        role = await template_skill_service.create_role(
+            role_key=payload.role_key,
+            name=payload.name,
+            description=payload.description or "",
+            system_prompt=payload.system_prompt or "",
+            icon=payload.icon or "",
+            content_categories=payload.content_categories,
+        )
+        return {"success": True, "data": role}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"创建角色失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.put("/roles/{role_key}")
+async def update_role(role_key: str, payload: RoleUpdatePayload) -> Dict[str, Any]:
+    """更新角色"""
+    try:
+        role = await template_skill_service.update_role(
+            role_key,
+            name=payload.name,
+            description=payload.description,
+            system_prompt=payload.system_prompt,
+            icon=payload.icon,
+            is_active=payload.is_active,
+        )
+        return {"success": True, "data": role}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"更新角色失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.delete("/roles/{role_key}")
+async def delete_role(role_key: str) -> Dict[str, Any]:
+    """删除角色"""
+    try:
+        await template_skill_service.delete_role(role_key)
+        return {"success": True, "message": "角色已删除"}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"删除角色失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.get("/roles/{role_key}/templates")
+async def list_role_templates(role_key: str) -> Dict[str, Any]:
+    """列出角色模板"""
+    try:
+        templates = await template_skill_service.list_role_templates(role_key)
+        return {"success": True, "data": templates}
+    except Exception as e:
+        logger.error(f"获取角色模板失败: {e}")
+        return {"success": False, "error": str(e), "data": []}
+
+
+@settings_router.put("/roles/{role_key}/templates/{category}")
+async def update_role_template(
+    role_key: str, category: str, payload: RoleTemplatePayload
+) -> Dict[str, Any]:
+    """更新角色模板"""
+    try:
+        template = await template_skill_service.update_role_template(
+            role_key=role_key,
+            category=category,
+            skill_markdown=payload.skill_markdown,
+            is_active=payload.is_active,
+        )
+        return {"success": True, "data": template}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"更新角色模板失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.post("/roles/{role_key}/templates/{category}/toggle")
+async def toggle_role_template(
+    role_key: str, category: str, payload: RoleTemplateTogglePayload
+) -> Dict[str, Any]:
+    """启用/停用角色模板"""
+    try:
+        await template_skill_service.toggle_role_template(
+            role_key=role_key, category=category, is_active=payload.is_active
+        )
+        return {"success": True, "message": "角色模板已更新"}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"更新角色模板状态失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.post("/roles/{role_key}/templates/{category}/reset")
+async def reset_role_template(role_key: str, category: str) -> Dict[str, Any]:
+    """重置角色模板为默认版本"""
+    try:
+        template = await template_skill_service.reset_role_template(role_key, category)
+        return {"success": True, "data": template}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"重置角色模板失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.post("/roles/{role_key}/templates/{category}/restore")
+async def restore_role_template(role_key: str, category: str) -> Dict[str, Any]:
+    """回退到上一次内容"""
+    try:
+        template = await template_skill_service.restore_role_template(
+            role_key, category
+        )
+        return {"success": True, "data": template}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"回退角色模板失败: {e}")
+        return {"success": False, "error": str(e)}
 
 
 @settings_router.post("/role_mapping")
@@ -585,8 +764,8 @@ async def get_all_settings() -> Dict[str, Any]:
             "system": settings.get("system", {}),
             "whisperx": settings.get("whisperx", {}),
             "role_mapping": settings.get("role_mapping", {}),
-            "roles": settings.get("roles", {}),
-            "prompt_templates": settings.get("prompt_templates", {}),
+            "roles": template_skill_service.get_role_map(),
+            "prompt_templates": template_skill_service.get_prompt_map(),
         }
 
         # 隐藏敏感信息
@@ -598,6 +777,124 @@ async def get_all_settings() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"获取所有设置失败: {e}")
         return {}
+
+
+@settings_router.get("/prompt-templates")
+async def list_prompt_templates(category: Optional[str] = None) -> Dict[str, Any]:
+    """列出全部提示词模板"""
+    try:
+        templates = await template_skill_service.list_templates(category)
+        return {"success": True, "data": templates}
+    except Exception as e:
+        logger.error(f"获取模板列表失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.post("/prompt-templates")
+async def create_prompt_template(payload: TemplateSkillPayload) -> Dict[str, Any]:
+    """创建新的提示词模板"""
+    try:
+        await template_skill_service.create_template(
+            payload.skill_markdown, payload.is_active
+        )
+        return {"success": True, "message": "模板已创建"}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"创建模板失败: {e}")
+        return {"success": False, "error": f"创建失败: {str(e)}"}
+
+
+@settings_router.put("/prompt-templates/{template_id}")
+async def update_prompt_template(
+    template_id: str, payload: TemplateSkillPayload
+) -> Dict[str, Any]:
+    """更新指定模板"""
+    try:
+        await template_skill_service.update_template(
+            template_id, payload.skill_markdown, payload.is_active
+        )
+        return {"success": True, "message": "模板已更新"}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"更新模板失败: {e}")
+        return {"success": False, "error": f"更新失败: {str(e)}"}
+
+
+@settings_router.delete("/prompt-templates/{template_id}")
+async def delete_prompt_template(template_id: str) -> Dict[str, Any]:
+    """删除模板"""
+    try:
+        await template_skill_service.delete_template(template_id)
+        return {"success": True, "message": "模板已删除"}
+    except Exception as e:
+        logger.error(f"删除模板失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@settings_router.get("/prompt-templates/resolve")
+async def resolve_prompt_template(
+    role: str = Query("general"), category: str = Query("content_card")
+) -> Dict[str, Any]:
+    """解析角色在指定类别下实际使用的模板"""
+    try:
+        template = await template_skill_service.get_role_template_info(role, category)
+        if template:
+            return {
+                "success": True,
+                "data": {
+                    "role": role,
+                    "category": category,
+                    "template": template,
+                },
+            }
+
+        skill_key = template_skill_service.get_skill_for_role(role, category)
+        if not skill_key:
+            return {"success": False, "error": "未找到匹配的模板", "data": {}}
+
+        meta = template_skill_service.get_template_meta(skill_key) or {}
+        return {
+            "success": True,
+            "data": {
+                "role": role,
+                "category": category,
+                "skill_key": skill_key,
+                "template_name": meta.get("name", skill_key),
+                "scenario": meta.get("scenario"),
+                "description": meta.get("description"),
+                "prompt_schema": meta.get("prompt_schema", {}),
+                "variables": meta.get("variables", []),
+            },
+        }
+    except Exception as e:
+        logger.error(f"解析模板失败: {e}")
+        return {"success": False, "error": str(e), "data": {}}
+
+
+@settings_router.get("/prompt-templates/role-mappings")
+async def get_prompt_template_role_mappings() -> Dict[str, Any]:
+    """返回角色到模板的映射"""
+    try:
+        mappings = await template_skill_service.list_role_mappings()
+        return {"success": True, "data": mappings}
+    except Exception as e:
+        logger.error(f"获取角色模板映射失败: {e}")
+        return {"success": False, "error": str(e), "data": {}}
+
+
+@settings_router.post("/prompt-templates/role-mappings")
+async def update_prompt_template_role_mappings(
+    payload: RoleTemplateUpdatePayload,
+) -> Dict[str, Any]:
+    """更新角色到模板的映射"""
+    try:
+        await template_skill_service.update_role_mappings(payload.mappings)
+        return {"success": True, "message": "角色模板映射已更新"}
+    except Exception as e:
+        logger.error(f"更新角色模板映射失败: {e}")
+        return {"success": False, "error": str(e)}
 
 
 @settings_router.post("/whisperx")

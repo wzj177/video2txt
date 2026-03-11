@@ -26,7 +26,7 @@ def transcribe_audio(audio_path: str, language: str = "auto"):
 
 def get_available_engines():
     """获取可用的语音识别引擎列表"""
-    return ["whisper", "faster_whisper", "sensevoice", "dolphin"]
+    return voice_core.get_supported_engines()
 
 
 __all__ = [

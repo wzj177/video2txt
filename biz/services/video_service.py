@@ -291,12 +291,8 @@ class VideoService:
             # 创建AI工厂
             factory = await create_ai_factory(settings)
 
-            # 关键：处理content_role参数
-            content_role = kwargs.get("content_role", "auto")
-            if content_role != "auto":
-                # 如果指定了特定角色，强制覆盖智能分析结果
-                logger.info(f"使用指定角色: {content_role}")
-                kwargs["force_domain"] = content_role
+            # 传递内容角色（不启用智能识别）
+            kwargs["content_role"] = kwargs.get("content_role") or "general"
 
             # 调用AI工厂生成内容
             result = await factory.generate(

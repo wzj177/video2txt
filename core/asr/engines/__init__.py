@@ -10,6 +10,9 @@ from .faster_whisper_engine import FasterWhisperEngine
 from .sensevoice_engine import SenseVoiceEngine
 from .dolphin_engine import DolphinEngine
 from .whisperx_engine import WhisperXEngine
+from .remote_api_engine import RemoteAPIEngine
+from .parakeet_engine import ParakeetEngine
+from .qwen3_asr_engine import Qwen3ASREngine
 
 __all__ = [
     "WhisperEngine",
@@ -17,4 +20,7 @@ __all__ = [
     "SenseVoiceEngine",
     "DolphinEngine",
     "WhisperXEngine",
+    "RemoteAPIEngine",
+    "ParakeetEngine",
+    "Qwen3ASREngine",
 ]

@@ -142,6 +142,9 @@
                             <button class="task-action-btn" @click.stop="viewTask(task)">
                                 查看详情
                             </button>
+                            <button class="task-action-btn" v-if="task.cover" @click.stop="viewCover(task)">
+                                查看封面
+                            </button>
                             <button class="task-action-btn delete" @click.stop="deleteTask(task)">
                                 删除
                             </button>
@@ -647,6 +650,22 @@
                             content: `/task_detail?task_id=${task.id}`,
                             area: ['80%', '100%']
                         })
+                    },
+
+                    viewCover(task) {
+                        if (!task || !task.cover) {
+                            layer.msg('暂无封面', { icon: 0 });
+                            return;
+                        }
+                        const coverPath = encodeURI(task.cover);
+                        const coverUrl = `/api/tasks/video/${task.id}/images/${coverPath}`;
+                        layer.photos({
+                            photos: {
+                                title: '任务封面',
+                                data: [{ src: coverUrl, alt: '封面' }]
+                            },
+                            anim: 5
+                        });
                     },
 
                     // 安全获取任务标题

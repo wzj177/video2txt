@@ -1,590 +1,50 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-会议处理服务 - 实时音频捕获、转录、分析
+会议处理服务 - 针对离线/上传音频的处理流程，仅保留转录与说话人分离
 """
 
-import os
-import sys
-import logging
-import asyncio
-import threading
-import time
 import json
-import tempfile
-from typing import Dict, Any, Optional, List, Callable
+import logging
 from pathlib import Path
-from datetime import datetime
-import numpy as np
+import subprocess
+import tempfile
+import wave
+import shutil
+import warnings
+import io
+from contextlib import redirect_stderr
+from typing import Any, Dict, List, Optional
 
-# 添加项目根目录到Python路径
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+import asyncio
 
-from core.audio.audio_capture import AudioCapture, AudioBuffer
-from core.asr import initialize_voice_recognition, transcribe_audio
-from .task_service import task_service
+from core.asr import initialize_voice_recognition
 from core.asr.voice_recognition_core import get_voice_core
+
+from .task_service import task_service
 
 logger = logging.getLogger(__name__)
 
 
-class MeetingProcessor:
-    """会议处理器"""
-
-    def __init__(self, task_id: str, config: Dict[str, Any]):
-        self.task_id = task_id
-        self.config = config
-        self.is_running = False
-
-        # 音频相关
-        self.audio_capture = AudioCapture(
-            sample_rate=16000, channels=1, chunk_size=1024
-        )
-        self.audio_buffer = AudioBuffer(max_duration=30.0)
-
-        # 转录相关
-        self.last_transcribe_time = 0
-        self.transcribe_interval = 3.0  # 每3秒转录一次
-        self.accumulated_text = []
-
-        # 说话人识别
-        self.speakers = {}
-        self.current_speaker = None
-
-        # SSE推送回调
-        self.sse_callback = None
-
-        # 分析结果
-        self.meeting_summary = {
-            "transcripts": [],
-            "speakers": {},
-            "keywords": [],
-            "key_points": [],
-            "start_time": datetime.now().isoformat(),
-        }
-
-    def set_sse_callback(self, callback: Callable):
-        """设置SSE推送回调"""
-        self.sse_callback = callback
-
-    async def start_processing(self):
-        """开始会议处理"""
-        if self.is_running:
-            logger.warning(f"会议处理器 {self.task_id} 已在运行")
-            return False
-
-        try:
-            self.is_running = True
-
-            # 更新任务状态
-            await asyncio.create_task(
-                task_service.update_task(
-                    "meeting",
-                    self.task_id,
-                    {
-                        "status": "initializing",
-                        "progress": 10,
-                        "current_step": "初始化语音识别引擎...",
-                    },
-                )
-            )
-
-            # 初始化语音识别（延迟加载）
-            engine = self.config.get("engine", "sensevoice")
-            initialize_voice_recognition(engine)  # 现在只是准备，不会实际加载引擎
-
-            # 更新状态
-            await asyncio.create_task(
-                task_service.update_task(
-                    "meeting",
-                    self.task_id,
-                    {
-                        "status": "starting_audio",
-                        "progress": 30,
-                        "current_step": "启动音频捕获...",
-                    },
-                )
-            )
-
-            # 启动音频捕获
-            if not self.audio_capture.start_capture(callback=self._audio_callback):
-                raise RuntimeError("音频捕获启动失败")
-
-            # 启动转录处理线程
-            self.transcribe_thread = threading.Thread(
-                target=self._transcribe_loop, daemon=True
-            )
-            self.transcribe_thread.start()
-
-            # 更新状态为监控中
-            await asyncio.create_task(
-                task_service.update_task(
-                    "meeting",
-                    self.task_id,
-                    {
-                        "status": "monitoring",
-                        "progress": 50,
-                        "current_step": "正在监控会议音频...",
-                    },
-                )
-            )
-
-            # 推送连接成功消息
-            if self.sse_callback:
-                await self.sse_callback(
-                    {
-                        "type": "connected",
-                        "message": "会议监控已启动",
-                        "config": self.config,
-                    }
-                )
-
-            logger.info(f"会议处理器 {self.task_id} 启动成功")
-            return True
-
-        except Exception as e:
-            logger.error(f"会议处理器启动失败: {e}")
-            await self.stop_processing()
-
-            # 更新任务状态为错误
-            await asyncio.create_task(
-                task_service.update_task(
-                    "meeting",
-                    self.task_id,
-                    {
-                        "status": "error",
-                        "progress": 0,
-                        "current_step": f"启动失败: {str(e)}",
-                        "error": str(e),
-                    },
-                )
-            )
-
-            return False
-
-    async def stop_processing(self):
-        """停止会议处理"""
-        if not self.is_running:
-            return
-
-        logger.info(f"正在停止会议处理器 {self.task_id}")
-        self.is_running = False
-
-        # 停止音频捕获
-        self.audio_capture.stop_capture()
-
-        # 等待转录线程结束
-        if hasattr(self, "transcribe_thread") and self.transcribe_thread.is_alive():
-            self.transcribe_thread.join(timeout=3)
-
-        # 生成最终摘要
-        await self._generate_final_summary()
-
-        # 更新任务状态
-        await asyncio.create_task(
-            task_service.update_task(
-                "meeting",
-                self.task_id,
-                {
-                    "status": "completed",
-                    "progress": 100,
-                    "current_step": "会议监控已停止",
-                    "end_time": datetime.now().isoformat(),
-                    "summary": self.meeting_summary,
-                },
-            )
-        )
-
-        # 推送停止消息
-        if self.sse_callback:
-            await self.sse_callback(
-                {
-                    "type": "disconnected",
-                    "message": "会议监控已停止",
-                    "summary": self.meeting_summary,
-                }
-            )
-
-        logger.info(f"会议处理器 {self.task_id} 已停止")
-
-    def _audio_callback(self, audio_data: Dict[str, Any]):
-        """音频数据回调"""
-        if not self.is_running:
-            return
-
-        # 添加音频到缓冲区
-        self.audio_buffer.add_audio(audio_data["audio_data"])
-
-        # 推送音量数据
-        if self.sse_callback:
-            asyncio.create_task(
-                self.sse_callback(
-                    {
-                        "type": "volume",
-                        "level": audio_data["volume_level"],
-                        "timestamp": audio_data["timestamp"],
-                    }
-                )
-            )
-
-    def _transcribe_loop(self):
-        """转录处理循环"""
-        logger.info(f"转录处理线程已启动 (任务: {self.task_id})")
-
-        while self.is_running:
-            try:
-                current_time = time.time()
-
-                # 检查是否到了转录时间
-                if current_time - self.last_transcribe_time >= self.transcribe_interval:
-                    self._process_transcription()
-                    self.last_transcribe_time = current_time
-
-                time.sleep(0.5)  # 避免过度消耗CPU
-
-            except Exception as e:
-                logger.error(f"转录处理循环错误: {e}")
-                if self.is_running:
-                    time.sleep(1)  # 错误后等待1秒再继续
-
-        logger.info(f"转录处理线程已结束 (任务: {self.task_id})")
-
-    def _process_transcription(self):
-        """处理音频转录"""
-        try:
-            # 获取最近的音频数据
-            audio_data = self.audio_buffer.get_audio(duration=5.0)  # 最近5秒
-
-            if len(audio_data) < 16000:  # 少于1秒的音频不处理
-                return
-
-            # 检查音频是否有足够的能量（避免处理静音）
-            energy = np.sqrt(np.mean(audio_data**2))
-            if energy < 0.01:  # 能量阈值
-                return
-
-            # 保存音频到临时文件
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
-                temp_path = temp_file.name
-
-            # 保存音频
-            if not self.audio_buffer.save_to_file(temp_path, duration=5.0):
-                logger.warning("保存临时音频文件失败")
-                return
-
-            try:
-                # 进行语音识别
-                language = self.config.get("source_language", "auto")
-                result = transcribe_audio(temp_path, language=language)
-
-                if result and result.get("text", "").strip():
-                    transcript_text = result["text"].strip()
-
-                    # 说话人识别 (简单实现)
-                    speaker = self._identify_speaker(audio_data)
-
-                    # 创建转录记录
-                    transcript = {
-                        "text": transcript_text,
-                        "speaker": speaker,
-                        "timestamp": datetime.now().isoformat(),
-                        "confidence": result.get("confidence", 0.9),
-                        "language": result.get("language", language),
-                    }
-
-                    # 添加到累积文本
-                    self.accumulated_text.append(transcript)
-                    self.meeting_summary["transcripts"].append(transcript)
-
-                    # 更新说话人统计
-                    if speaker not in self.meeting_summary["speakers"]:
-                        self.meeting_summary["speakers"][speaker] = {
-                            "name": speaker,
-                            "word_count": 0,
-                            "speaking_time": 0,
-                        }
-
-                    self.meeting_summary["speakers"][speaker]["word_count"] += len(
-                        transcript_text.split()
-                    )
-
-                    # 推送转录结果
-                    if self.sse_callback:
-                        asyncio.create_task(
-                            self.sse_callback(
-                                {"type": "transcript", "content": transcript}
-                            )
-                        )
-
-                    # 如果需要翻译
-                    if self.config.get("target_language", "none") != "none":
-                        translation = self._translate_text(
-                            transcript_text, self.config["target_language"]
-                        )
-
-                        if translation:
-                            if self.sse_callback:
-                                asyncio.create_task(
-                                    self.sse_callback(
-                                        {
-                                            "type": "translation",
-                                            "content": {
-                                                "translation": translation,
-                                                "target_language": self.config[
-                                                    "target_language"
-                                                ],
-                                            },
-                                        }
-                                    )
-                                )
-
-                    # 定期进行关键词提取和分析
-                    if len(self.accumulated_text) % 5 == 0:  # 每5句话分析一次
-                        self._analyze_content()
-
-            finally:
-                # 清理临时文件
-                try:
-                    os.unlink(temp_path)
-                except:
-                    pass
-
-        except Exception as e:
-            logger.error(f"转录处理失败: {e}")
-
-    def _identify_speaker(self, audio_data: np.ndarray) -> str:
-        """简单的说话人识别"""
-        # 这里实现简单的说话人识别逻辑
-        # 实际应用中可以使用更复杂的声纹识别算法
-
-        # 计算音频特征
-        energy = np.sqrt(np.mean(audio_data**2))
-        pitch_estimate = self._estimate_pitch(audio_data)
-
-        # 基于特征匹配说话人
-        speaker_key = f"pitch_{int(pitch_estimate/50)*50}_energy_{int(energy*1000)}"
-
-        if speaker_key not in self.speakers:
-            speaker_count = len(self.speakers) + 1
-            speaker_name = f"参与者{speaker_count}"
-            self.speakers[speaker_key] = speaker_name
-
-        return self.speakers[speaker_key]
-
-    def _estimate_pitch(self, audio_data: np.ndarray) -> float:
-        """估算基频（简单实现）"""
-        try:
-            # 使用自相关法估算基频
-            correlation = np.correlate(audio_data, audio_data, mode="full")
-            correlation = correlation[len(correlation) // 2 :]
-
-            # 找到第一个峰值
-            for i in range(50, min(400, len(correlation))):
-                if correlation[i] > 0.3 * np.max(correlation):
-                    return 16000 / i  # 转换为频率
-
-            return 150.0  # 默认值
-        except:
-            return 150.0
-
-    def _translate_text(self, text: str, target_language: str) -> Optional[str]:
-        """翻译文本（简单实现）"""
-        # 这里可以集成翻译API或本地翻译模型
-        # 目前返回模拟翻译结果
-
-        translation_map = {
-            "en": f"[EN] {text}",
-            "ja": f"[JA] {text}",
-            "ko": f"[KO] {text}",
-        }
-
-        return translation_map.get(
-            target_language, f"[{target_language.upper()}] {text}"
-        )
-
-    def _analyze_content(self):
-        """分析会议内容"""
-        try:
-            # 合并最近的文本
-            recent_texts = [t["text"] for t in self.accumulated_text[-10:]]
-            combined_text = " ".join(recent_texts)
-
-            if not combined_text.strip():
-                return
-
-            # 简单的关键词提取
-            keywords = self._extract_keywords(combined_text)
-
-            # 更新关键词（去重）
-            for keyword in keywords:
-                if keyword not in self.meeting_summary["keywords"]:
-                    self.meeting_summary["keywords"].append(keyword)
-
-            # 生成要点
-            key_point = self._generate_key_point(combined_text)
-            if key_point:
-                self.meeting_summary["key_points"].append(
-                    {"content": key_point, "timestamp": datetime.now().isoformat()}
-                )
-
-            # 推送分析结果
-            if self.sse_callback:
-                asyncio.create_task(
-                    self.sse_callback(
-                        {
-                            "type": "analysis",
-                            "content": {"keywords": keywords, "key_point": key_point},
-                        }
-                    )
-                )
-
-        except Exception as e:
-            logger.error(f"内容分析失败: {e}")
-
-    def _extract_keywords(self, text: str) -> List[str]:
-        """提取关键词（简单实现）"""
-        # 简单的关键词提取逻辑
-        import re
-
-        # 移除标点符号，分词
-        words = re.findall(r"\b\w+\b", text.lower())
-
-        # 过滤停用词
-        stop_words = {
-            "的",
-            "是",
-            "在",
-            "有",
-            "和",
-            "了",
-            "我",
-            "你",
-            "他",
-            "她",
-            "它",
-            "the",
-            "is",
-            "at",
-            "which",
-            "on",
-            "and",
-            "a",
-            "an",
-            "as",
-            "are",
-        }
-
-        keywords = [word for word in words if len(word) > 2 and word not in stop_words]
-
-        # 统计词频，返回高频词
-        from collections import Counter
-
-        word_counts = Counter(keywords)
-
-        return [word for word, count in word_counts.most_common(5)]
-
-    def _generate_key_point(self, text: str) -> Optional[str]:
-        """生成要点（简单实现）"""
-        # 简单的要点生成逻辑
-        sentences = text.split("。")
-
-        # 选择最长的句子作为要点
-        if sentences:
-            longest_sentence = max(sentences, key=len).strip()
-            if len(longest_sentence) > 10:
-                return longest_sentence + "。"
-
-        return None
-
-    async def _generate_final_summary(self):
-        """生成最终会议摘要"""
-        try:
-            if not self.meeting_summary["transcripts"]:
-                return
-
-            # 统计信息
-            total_words = sum(
-                len(t["text"].split()) for t in self.meeting_summary["transcripts"]
-            )
-            duration = (
-                datetime.now()
-                - datetime.fromisoformat(self.meeting_summary["start_time"])
-            ).total_seconds()
-
-            # 生成摘要
-            summary_text = self._generate_summary_text()
-
-            self.meeting_summary.update(
-                {
-                    "total_words": total_words,
-                    "duration_seconds": duration,
-                    "summary_text": summary_text,
-                    "end_time": datetime.now().isoformat(),
-                }
-            )
-
-            logger.info(f"会议摘要已生成 (任务: {self.task_id})")
-
-        except Exception as e:
-            logger.error(f"生成最终摘要失败: {e}")
-
-    def _generate_summary_text(self) -> str:
-        """生成摘要文本"""
-        if not self.meeting_summary["transcripts"]:
-            return "本次会议没有有效的转录内容。"
-
-        # 简单的摘要生成
-        key_points = [kp["content"] for kp in self.meeting_summary["key_points"]]
-        keywords = ", ".join(self.meeting_summary["keywords"][:10])
-
-        summary_parts = []
-
-        if key_points:
-            summary_parts.append(f"会议要点：{'; '.join(key_points[:3])}")
-
-        if keywords:
-            summary_parts.append(f"关键词：{keywords}")
-
-        speaker_count = len(self.meeting_summary["speakers"])
-        summary_parts.append(f"参与人数：{speaker_count}人")
-
-        return " | ".join(summary_parts)
-
-
 class MeetingService:
-    """会议服务管理器"""
+    """会议处理服务（上传音频版）"""
 
-    def __init__(self):
-        self.processors = {}  # task_id -> MeetingProcessor
+    diarization_model_path = (
+        Path(__file__).parent.parent.parent
+        / "data"
+        / "models"
+        / "speaker-diarization-community-1"
+    )
 
-    async def create_meeting_processor(
-        self, task_id: str, config: Dict[str, Any]
-    ) -> bool:
-        """创建会议处理器"""
-        if task_id in self.processors:
-            logger.warning(f"会议处理器 {task_id} 已存在")
-            return False
+    async def process_uploaded_audio(self, task_id: str, audio_file_path: str) -> bool:
+        """
+        处理上传的会议录音，仅输出转录文本与说话人日志
 
-        try:
-            processor = MeetingProcessor(task_id, config)
-            self.processors[task_id] = processor
+        Args:
+            task_id: 会议任务ID
+            audio_file_path: 已保存的会议录音文件
+        """
 
-            # 启动处理器
-            success = await processor.start_processing()
-
-            if not success:
-                del self.processors[task_id]
-                return False
-
-            return True
-
-        except Exception as e:
-            logger.error(f"创建会议处理器失败: {e}")
-            return False
-
-    async def process_uploaded_audio(self, task_id: str, audio_file_path: str):
-        """处理上传的音频文件"""
         try:
             # 获取任务信息
             task = await task_service.get_task_by_id("meeting", task_id)
@@ -592,10 +52,17 @@ class MeetingService:
                 logger.error(f"任务 {task_id} 不存在")
                 return False
 
-            config = task.get("config", None)
-            if config is None:
-                logger.error(f"任务 {task_id} 配置不存在")
+            if task.get("status") in ["stopped", "cancelled"]:
+                logger.info("任务已被停止，跳过处理: %s", task_id)
                 return False
+
+            config = task.get("config") or {}
+            if isinstance(config, str):
+                try:
+                    config = json.loads(config)
+                except Exception:
+                    logger.error(f"任务 {task_id} 配置解析失败")
+                    config = {}
 
             # 更新任务状态
             await task_service.update_task(
@@ -610,48 +77,127 @@ class MeetingService:
 
             # 初始化语音识别引擎
             engine = config.get("engine", "sensevoice")
+            if engine == "qwen3_asr":
+                model_name = config.get("model_name")
+                base_http_api_url = config.get("base_http_api_url")
+                logger.info(
+                    "会议任务使用 Qwen3-ASR: model_name=%s base_http_api_url=%s",
+                    model_name or "(default)",
+                    base_http_api_url or "(default)",
+                )
+                overrides = {}
+                if model_name:
+                    overrides["model_name"] = model_name
+                if base_http_api_url:
+                    overrides["base_http_api_url"] = base_http_api_url
+                if overrides:
+                    voice_core = get_voice_core()
+                    voice_core.set_engine_override("qwen3_asr", overrides, reset=True)
+            initialize_voice_recognition(engine)
             voice_core = get_voice_core()
-            voice_core.initialize(engine)  # 修复：将 initialize_engine 改为 initialize
 
-            # 更新任务状态
             await task_service.update_task(
                 "meeting",
                 task_id,
                 {
                     "status": "processing",
                     "progress": 30,
-                    "current_step": "正在进行语音识别和说话人分离...",
+                    "current_step": "正在执行转录与说话人分离...",
                 },
             )
 
             # 执行语音识别
-
             result = voice_core.recognize_file(
                 audio_file_path,
                 language=config.get("language", "auto"),
-                enable_diarization=config.get("enable_speaker_diarization", True),  # 传递说话人分离配置
+                enable_diarization=config.get("enable_speaker_diarization", True),
             )
 
-
-            # 如果启用了AI分析，则进行处理
-            if config.get("enable_ai_analysis", False):
+            transcript_text = self._extract_transcript_text(result)
+            if not result or not transcript_text:
+                error_message = "音频文件中未检测到有效的语音内容"
+                if isinstance(result, dict) and result.get("error"):
+                    error_message = str(result.get("error"))
                 await task_service.update_task(
                     "meeting",
                     task_id,
                     {
-                        "status": "processing",
-                        "progress": 70,
-                        "current_step": "正在进行AI分析...",
+                        "status": "error",
+                        "progress": 100,
+                        "current_step": "未识别到有效音频内容",
+                        "error": error_message,
                     },
                 )
+                return False
 
-            # 完成处理
+            # 若用户在处理中主动停止，避免覆盖状态
+            latest_task = await task_service.get_task_by_id("meeting", task_id)
+            if latest_task and latest_task.get("status") in ["stopped", "cancelled"]:
+                logger.info("任务已停止，跳过结果写入: %s", task_id)
+                return False
 
-            logger.info(f"✅ 音频文件处理完成: {task_id}")
+            if result is not None and transcript_text and not result.get("text"):
+                result["text"] = transcript_text
+            segments = result.get("segments", []) or []
+            speakers_info = result.get("speakers", {}) or {}
+
+            if engine == "qwen3_asr":
+                speakers_info = {}
+                for segment in segments:
+                    if isinstance(segment, dict):
+                        segment["speaker"] = ""
+
+            total_words = len(transcript_text.split())
+            total_duration = result.get("audio_length", 0)
+            speaker_count = len(speakers_info)
+
+            speaker_log = (
+                self._build_speaker_log_from_segments(segments) if speakers_info else []
+            )
+
+            final_results: Dict[str, Any] = {
+                "transcript": transcript_text,
+                "segments": segments,
+                "speakers": speakers_info,
+                "speaker_log": speaker_log,
+                "audio_file": audio_file_path,
+            }
+
+            config["audio_file_path"] = audio_file_path
+
+            await task_service.update_task(
+                "meeting",
+                task_id,
+                {
+                    "status": "processing",
+                    "progress": 70,
+                    "current_step": "正在整理输出结果...",
+                },
+            )
+
+            await task_service.update_task(
+                "meeting",
+                task_id,
+                {
+                    "status": "finished",
+                    "progress": 100,
+                    "current_step": "处理完成",
+                    "results": final_results,
+                    "transcript": transcript_text,
+                    "transcripts": segments,
+                    "total_words": total_words,
+                    "speaker_count": speaker_count,
+                    "total_duration": total_duration,
+                    "engine": engine,
+                    "config": config,
+                },
+            )
+
+            logger.info(f"音频文件处理完成: {task_id}")
             return True
 
-        except Exception as e:
-            logger.error(f"处理上传音频文件失败: {e}")
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"处理上传音频文件失败: {exc}")
             await task_service.update_task(
                 "meeting",
                 task_id,
@@ -659,37 +205,475 @@ class MeetingService:
                     "status": "error",
                     "progress": 100,
                     "current_step": "处理失败",
-                    "error": str(e),
+                    "error": str(exc),
                 },
             )
             return False
 
-    async def stop_meeting_processor(self, task_id: str) -> bool:
-        """停止会议处理器"""
-        if task_id not in self.processors:
-            logger.warning(f"会议处理器 {task_id} 不存在")
-            return False
-
+    async def generate_speaker_log(self, task_id: str) -> bool:
+        """基于 pyannote 模型生成说话人日志并合并结果"""
         try:
-            processor = self.processors[task_id]
-            await processor.stop_processing()
-            del self.processors[task_id]
+            task = await task_service.get_task_by_id("meeting", task_id)
+            if not task:
+                logger.error("任务不存在: %s", task_id)
+                return False
+
+            status = task.get("status")
+            if status in ["recording", "paused", "monitoring", "starting_audio"]:
+                logger.warning("会议仍在进行中，无法生成说话人日志: %s", task_id)
+                return False
+
+            config = self._parse_json(task.get("config")) or {}
+            results = self._parse_json(task.get("results")) or {}
+            base_status = status or "pending"
+            base_progress = task.get("progress", 100)
+            base_step = task.get("current_step")
+            audio_path = config.get("audio_file_path") or results.get("audio_file")
+            if not audio_path or not Path(audio_path).exists():
+                logger.error("音频文件不存在，无法生成说话人日志: %s", audio_path)
+                await task_service.update_task(
+                    "meeting",
+                    task_id,
+                    {
+                        "status": base_status,
+                        "progress": base_progress,
+                        "current_step": base_step,
+                        "results": {
+                            **results,
+                            "diarization_status": "failed",
+                            "diarization_error": "找不到音频文件",
+                        },
+                    },
+                )
+                return False
+
+            results["diarization_status"] = "processing"
+            await task_service.update_task(
+                "meeting",
+                task_id,
+                {
+                    "status": base_status,
+                    "progress": base_progress,
+                    "current_step": base_step,
+                    "results": results,
+                },
+            )
+
+            diarization_segments = await asyncio.to_thread(
+                self._run_diarization, str(audio_path)
+            )
+            if not diarization_segments:
+                await task_service.update_task(
+                    "meeting",
+                    task_id,
+                    {
+                        "status": base_status,
+                        "progress": base_progress,
+                        "current_step": base_step,
+                        "results": {
+                            **results,
+                            "diarization_status": "failed",
+                            "diarization_error": "未识别到说话人段落",
+                        },
+                    },
+                )
+                return False
+
+            segments = results.get("segments") or []
+            if segments:
+                segments = self._assign_speakers_to_segments(
+                    segments, diarization_segments
+                )
+            else:
+                segments = [
+                    {
+                        "start": seg["start"],
+                        "end": seg["end"],
+                        "duration": round(seg["end"] - seg["start"], 2),
+                        "speaker": seg["speaker"],
+                        "text": "",
+                    }
+                    for seg in diarization_segments
+                ]
+
+            speaker_log = self._build_speaker_log_from_segments(segments)
+            speakers_info = self._summarize_speakers(segments)
+
+            results["segments"] = segments
+            results["speaker_log"] = speaker_log
+            results["speakers"] = speakers_info
+            results["diarization_model"] = str(self.diarization_model_path)
+            results["diarization_status"] = "ready"
+
+            await task_service.update_task(
+                "meeting",
+                task_id,
+                {
+                    "status": base_status,
+                    "progress": base_progress,
+                    "current_step": base_step,
+                    "results": results,
+                    "speaker_count": len(speakers_info),
+                },
+            )
             return True
 
-        except Exception as e:
-            logger.error(f"停止会议处理器失败: {e}")
+        except Exception as exc:  # noqa: BLE001
+            logger.error("生成说话人日志失败: %s", exc)
+            try:
+                task = await task_service.get_task_by_id("meeting", task_id)
+                if task:
+                    status = task.get("status") or "pending"
+                    results = self._parse_json(task.get("results")) or {}
+                    await task_service.update_task(
+                        "meeting",
+                        task_id,
+                        {
+                            "status": status,
+                            "progress": task.get("progress", 100),
+                            "current_step": task.get("current_step"),
+                            "results": {
+                                **results,
+                                "diarization_status": "failed",
+                                "diarization_error": str(exc),
+                            },
+                        },
+                    )
+            except Exception:
+                pass
             return False
 
-    def get_meeting_processor(self, task_id: str) -> Optional[MeetingProcessor]:
-        """获取会议处理器"""
-        return self.processors.get(task_id)
+    def _build_speaker_log_from_segments(
+        self, segments: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """基于识别分段构建说话人日志"""
+        speaker_log: List[Dict[str, Any]] = []
 
-    def set_sse_callback(self, task_id: str, callback: Callable):
-        """设置SSE回调"""
-        processor = self.processors.get(task_id)
-        if processor:
-            processor.set_sse_callback(callback)
+        for segment in segments:
+            start = segment.get("start", 0) or 0
+            end = segment.get("end", start) or start
+            duration = max(end - start, 0)
+            speaker_log.append(
+                {
+                    "speaker": segment.get("speaker", "Speaker"),
+                    "start": start,
+                    "end": end,
+                    "duration": round(duration, 2),
+                    "text": (segment.get("text") or "").strip(),
+                    "time_label": self._format_timestamp(start),
+                }
+            )
+
+        return speaker_log
+
+    def _parse_json(self, value: Any) -> Dict[str, Any]:
+        if isinstance(value, dict):
+            return value
+        if not value:
+            return {}
+        try:
+            return json.loads(value)
+        except Exception:
+            return {}
+
+    def _run_diarization(self, audio_path: str) -> List[Dict[str, Any]]:
+        if not self.diarization_model_path.exists():
+            raise FileNotFoundError(
+                f"未找到说话人模型: {self.diarization_model_path}"
+            )
+        warnings.filterwarnings(
+            "ignore",
+            message=r"torchcodec is not installed correctly.*",
+            category=UserWarning,
+        )
+        warnings.filterwarnings(
+            "ignore",
+            message=r"torchaudio\._backend\.list_audio_backends has been deprecated.*",
+            category=UserWarning,
+        )
+        warnings.filterwarnings(
+            "ignore",
+            message=r"std\(\): degrees of freedom is <= 0.*",
+            category=UserWarning,
+        )
+        try:
+            import importlib.metadata
+            import torch
+            from packaging.version import Version
+            with io.StringIO() as stderr_buf, redirect_stderr(stderr_buf):
+                from pyannote.audio import Pipeline
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"未安装 pyannote.audio 依赖: {exc}") from exc
+
+        model_source = str(self.diarization_model_path)
+        temp_configs: List[Path] = []
+        config_path = self.diarization_model_path / "config.yaml"
+        if config_path.exists():
+            try:
+                import yaml
+
+                with open(config_path, "r", encoding="utf-8") as handle:
+                    config_data = yaml.safe_load(handle) or {}
+                required_version = (
+                    config_data.get("dependencies", {}) or {}
+                ).get("pyannote.audio")
+                if required_version:
+                    installed_version = importlib.metadata.version("pyannote.audio")
+                    if Version(installed_version) < Version(str(required_version)):
+                        raise RuntimeError(
+                            "说话人模型需要 pyannote.audio>=%s，当前版本为 %s，请升级依赖。"
+                            % (required_version, installed_version)
+                        )
+            except RuntimeError:
+                raise
+            except Exception:
+                pass
+        if config_path.exists():
+            prepared = self._prepare_diarization_config(config_path)
+            if prepared:
+                model_source = str(prepared)
+                temp_configs.append(prepared)
+
+        try:
+            with io.StringIO() as stderr_buf, redirect_stderr(stderr_buf):
+                pipeline = Pipeline.from_pretrained(model_source)
+        except TypeError as exc:
+            if "plda" in str(exc).lower() and config_path.exists():
+                logger.warning("检测到旧版 pyannote.audio，移除 plda 参数后重试")
+                prepared = self._prepare_diarization_config(
+                    config_path, remove_plda=True
+                )
+                if prepared:
+                    model_source = str(prepared)
+                    temp_configs.append(prepared)
+                pipeline = Pipeline.from_pretrained(model_source)
+            else:
+                raise
+        finally:
+            for tmp_path in temp_configs:
+                try:
+                    tmp_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        pipeline.to(device)
+        audio_input = self._prepare_diarization_audio(audio_path)
+        with io.StringIO() as stderr_buf, redirect_stderr(stderr_buf):
+            diarization = pipeline(audio_input)
+
+        segments: List[Dict[str, Any]] = []
+        diarization_tracks = None
+        if hasattr(diarization, "speaker_diarization"):
+            diarization_tracks = diarization.speaker_diarization
+        elif hasattr(diarization, "itertracks"):
+            diarization_tracks = diarization
+
+        if diarization_tracks is not None:
+            for turn, _, speaker in diarization_tracks.itertracks(yield_label=True):
+                segments.append(
+                    {
+                        "start": round(turn.start, 2),
+                        "end": round(turn.end, 2),
+                        "speaker": str(speaker),
+                    }
+                )
+        elif hasattr(diarization, "serialize"):
+            serialized = diarization.serialize()
+            for item in serialized.get("diarization", []):
+                segments.append(
+                    {
+                        "start": round(float(item["start"]), 2),
+                        "end": round(float(item["end"]), 2),
+                        "speaker": str(item["speaker"]),
+                    }
+                )
+        return segments
+
+    def _prepare_diarization_config(
+        self, config_path: Path, remove_plda: bool = False
+    ) -> Optional[Path]:
+        try:
+            import tempfile
+            import yaml
+
+            with open(config_path, "r", encoding="utf-8") as handle:
+                config_data = yaml.safe_load(handle) or {}
+
+            config_data = self._replace_model_vars(config_data, self.diarization_model_path)
+
+            if remove_plda:
+                pipeline_cfg = config_data.get("pipeline", {})
+                params = pipeline_cfg.get("params", {}) or {}
+                params.pop("plda", None)
+                pipeline_cfg["params"] = params
+                config_data["pipeline"] = pipeline_cfg
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".yaml", delete=False
+            ) as tmp_file:
+                yaml.safe_dump(config_data, tmp_file, allow_unicode=False)
+                return Path(tmp_file.name)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("准备说话人模型配置失败: %s", exc)
+            return None
+
+    def _replace_model_vars(self, payload: Any, model_root: Path) -> Any:
+        if isinstance(payload, str):
+            if payload.startswith("$model/"):
+                resolved = model_root / payload.replace("$model/", "")
+                if resolved.is_dir():
+                    plda_file = resolved / "plda.npz"
+                    xvec_file = resolved / "xvec_transform.npz"
+                    if plda_file.exists() and xvec_file.exists():
+                        return str(resolved)
+                    bin_file = resolved / "pytorch_model.bin"
+                    if bin_file.exists():
+                        return str(bin_file)
+                return str(resolved)
+            return payload
+        if isinstance(payload, list):
+            return [self._replace_model_vars(item, model_root) for item in payload]
+        if isinstance(payload, dict):
+            return {
+                key: self._replace_model_vars(value, model_root)
+                for key, value in payload.items()
+            }
+        return payload
+
+    def _prepare_diarization_audio(self, audio_path: str) -> Dict[str, Any]:
+        """Load audio as waveform dict to avoid torchcodec dependency."""
+        path = Path(audio_path)
+        if not path.exists():
+            raise FileNotFoundError(f"音频文件不存在: {audio_path}")
+
+        wav_path: Optional[Path] = None
+        if path.suffix.lower() != ".wav":
+            ffmpeg = shutil.which("ffmpeg")
+            if not ffmpeg:
+                raise RuntimeError("未找到 ffmpeg，无法转换音频用于说话人日志")
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+                wav_path = Path(tmp_file.name)
+            cmd = [
+                ffmpeg,
+                "-y",
+                "-i",
+                str(path),
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-f",
+                "wav",
+                str(wav_path),
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                if wav_path.exists():
+                    wav_path.unlink(missing_ok=True)
+                raise RuntimeError(f"ffmpeg 转码失败: {result.stderr.strip()}")
+            path = wav_path
+
+        try:
+            import numpy as np
+            import torch
+
+            with wave.open(str(path), "rb") as handle:
+                channels = handle.getnchannels()
+                sample_rate = handle.getframerate()
+                sampwidth = handle.getsampwidth()
+                if sampwidth != 2:
+                    raise RuntimeError(f"不支持的采样位宽: {sampwidth * 8}bit")
+                frames = handle.readframes(handle.getnframes())
+            data = np.frombuffer(frames, dtype="<i2")
+            if channels > 1:
+                data = data.reshape(-1, channels).mean(axis=1)
+            waveform = torch.from_numpy(data.astype("float32") / 32768.0).unsqueeze(0)
+            return {"waveform": waveform, "sample_rate": sample_rate}
+        finally:
+            if wav_path and wav_path.exists():
+                wav_path.unlink(missing_ok=True)
+
+    def _assign_speakers_to_segments(
+        self,
+        segments: List[Dict[str, Any]],
+        diarization_segments: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        if not diarization_segments:
+            return segments
+
+        for segment in segments:
+            start = float(segment.get("start", 0))
+            end = float(segment.get("end", start))
+            if end < start:
+                end = start
+            best_speaker = ""
+            best_overlap = 0.0
+            for diar in diarization_segments:
+                d_start = diar["start"]
+                d_end = diar["end"]
+                overlap = max(0.0, min(end, d_end) - max(start, d_start))
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    best_speaker = diar["speaker"]
+            if not best_speaker:
+                mid = (start + end) / 2.0
+                nearest = min(
+                    diarization_segments,
+                    key=lambda d: abs(((d["start"] + d["end"]) / 2.0) - mid),
+                )
+                best_speaker = nearest["speaker"]
+            segment["speaker"] = best_speaker
+        return segments
+
+    def _summarize_speakers(self, segments: List[Dict[str, Any]]) -> Dict[str, Any]:
+        speakers: Dict[str, Dict[str, Any]] = {}
+        for seg in segments:
+            speaker = seg.get("speaker")
+            if not speaker:
+                continue
+            speakers.setdefault(
+                speaker,
+                {
+                    "id": speaker,
+                    "name": speaker,
+                    "segments_count": 0,
+                    "total_duration": 0.0,
+                    "words": [],
+                },
+            )
+            speakers[speaker]["segments_count"] += 1
+            speakers[speaker]["total_duration"] += (
+                seg.get("end", 0) - seg.get("start", 0)
+            )
+            if seg.get("text"):
+                speakers[speaker]["words"].append(seg["text"])
+        return speakers
+
+    def _extract_transcript_text(self, result: Dict[str, Any] | None) -> str:
+        if not result:
+            return ""
+        text = (
+            result.get("text")
+            or result.get("transcript")
+            or result.get("result")
+            or ""
+        )
+        if not text:
+            segments = result.get("segments") or []
+            if isinstance(segments, list):
+                text = " ".join(
+                    seg.get("text", "").strip()
+                    for seg in segments
+                    if isinstance(seg, dict) and seg.get("text")
+                )
+        return text.strip()
+
+    def _format_timestamp(self, seconds_value: float) -> str:
+        """格式化时间戳为 mm:ss"""
+        total_seconds = int(max(seconds_value or 0, 0))
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        return f"{minutes:02d}:{seconds:02d}"
 
 
-# 全局会议服务实例
 meeting_service = MeetingService()

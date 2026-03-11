@@ -35,6 +35,7 @@ class MediaTask(BaseModel):
     # 结果信息
     results = Column(JSON)  # 处理结果（转录文本、摘要、文件路径等）
     error_message = Column(Text)
+    cover = Column(String(500))  # 封面图相对路径（如 keyframes/xx.jpg）
 
     # 性能指标
     processing_time = Column(Float)  # 处理耗时（秒）

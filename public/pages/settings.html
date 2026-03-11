@@ -153,8 +153,25 @@
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            justify-content: center;
             gap: var(--spacing-sm);
+            text-align: left;
+        }
+
+        .tab-btn .tab-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.2;
+        }
+
+        .tab-btn .tab-label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .tab-btn .tab-tip {
+            font-size: 12px;
+            color: var(--text-tertiary);
         }
 
         .tab-btn.active {
@@ -173,6 +190,464 @@
             margin-bottom: var(--spacing-xxl);
         }
 
+        .template-tab-nav {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .template-tab-btn {
+            flex: 1;
+            border: 1px solid var(--border-light);
+            background: var(--card-bg);
+            color: var(--text-secondary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-medium);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .template-tab-btn strong {
+            display: block;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .template-tab-btn small {
+            color: var(--text-tertiary);
+        }
+
+        .template-tab-btn.active {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-light);
+            background: rgba(0, 178, 106, 0.08);
+        }
+
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .role-mapping-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .role-mapping-card {
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            background: var(--card-bg);
+            box-shadow: var(--shadow-light);
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .role-mapping-header {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .role-mapping-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+
+        .role-mapping-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .role-mapping-rows {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .role-mapping-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px dashed var(--border-light);
+        }
+
+        .role-mapping-row:last-child {
+            border-bottom: none;
+        }
+
+        .role-mapping-empty {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            padding: var(--spacing-md) 0;
+        }
+
+        .role-info {
+            flex: 0 0 48%;
+        }
+
+        .role-info-title {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .role-info-desc {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .role-template-select {
+            flex: 1;
+        }
+
+        .role-template-select select {
+            width: 100%;
+        }
+
+        .role-template-badge {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .role-layout {
+            display: flex;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: flex-end;
+            z-index: 2000;
+        }
+
+        .drawer-panel {
+            width: min(520px, 92vw);
+            height: 100%;
+            background: var(--card-bg);
+            box-shadow: var(--shadow-medium);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer-panel.is-wide {
+            width: min(90vw, 1600px);
+        }
+
+        .drawer-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .drawer-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .drawer-close {
+            border: none;
+            background: transparent;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text-tertiary);
+        }
+
+        .drawer-body {
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .drawer-footer {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+        }
+
+        .content-type-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: var(--spacing-sm);
+        }
+
+        .content-type-option {
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            background: var(--card-bg);
+        }
+
+        .role-list-panel {
+            flex: 0 0 260px;
+            min-width: 240px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            background: var(--card-bg);
+            box-shadow: var(--shadow-light);
+            height: fit-content;
+        }
+
+        .role-list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+            font-weight: 600;
+        }
+
+        .role-card {
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .role-card.active {
+            border-color: var(--primary-color);
+            background: rgba(0, 178, 106, 0.08);
+        }
+
+        .role-card-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .role-card-desc {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+
+        .role-detail-panel {
+            flex: 1 1 420px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            background: var(--card-bg);
+            box-shadow: var(--shadow-light);
+        }
+
+        .role-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .role-form-grid .full {
+            grid-column: 1 / -1;
+        }
+
+        .content-type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+
+        .content-type-card {
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            background: var(--card-bg);
+        }
+
+        .content-type-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .content-type-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+        }
+
+        .role-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: var(--spacing-md);
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .template-card {
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            background: var(--card-bg);
+            box-shadow: var(--shadow-light);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .template-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .template-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .template-meta {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-xs);
+        }
+
+        .template-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            flex: 1;
+        }
+
+        .template-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .template-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .template-form-grid .full {
+            grid-column: 1 / -1;
+        }
+
+        .template-inline {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .template-inline .form-input {
+            flex: 1;
+        }
+
+        .template-editor-wrapper {
+            display: flex;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .template-editor-pane,
+        .template-preview-pane {
+            flex: 1 1 0;
+            min-width: 320px;
+        }
+
+        .template-editor {
+            width: 100%;
+            min-height: 620px;
+            font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            resize: vertical;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .template-preview {
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-lg);
+            background: #ffffff;
+            box-shadow: var(--shadow-light);
+            min-height: 620px;
+            overflow: auto;
+        }
+
+        .template-preview h1,
+        .template-preview h2,
+        .template-preview h3 {
+            margin-top: var(--spacing-md);
+        }
+
+        .template-preview pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-small);
+            overflow: auto;
+        }
+
+        .editor-actions {
+            margin-top: var(--spacing-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            color: white;
+        }
+
+        .badge-info {
+            background: var(--secondary-color);
+        }
+
+        .badge-success {
+            background: var(--primary-color);
+        }
+
+        .spacer {
+            flex: 1;
+        }
+
         .section-title {
             font-size: 18px;
             font-weight: 600;
@@ -181,6 +656,12 @@
             display: flex;
             align-items: center;
             gap: var(--spacing-sm);
+        }
+
+        .section-tip {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
         }
 
         .setting-item {
@@ -308,7 +789,13 @@
 
         .form-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: var(--spacing-lg);
         }
 
@@ -316,8 +803,11 @@
             border: 1px solid var(--border-light);
             border-radius: var(--radius-medium);
             padding: var(--spacing-lg);
-            margin-bottom: var(--spacing-md);
             transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: var(--card-bg);
         }
 
         .model-card:hover {
@@ -330,6 +820,26 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: var(--spacing-sm);
+        }
+
+        .model-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            margin-left: 8px;
+            font-weight: 600;
+        }
+
+        .model-pill.is-cloud {
+            background: rgba(25, 118, 210, 0.12);
+            color: #1967d2;
+        }
+
+        .model-pill.is-local {
+            background: rgba(0, 178, 106, 0.15);
+            color: var(--primary-color);
         }
 
         .model-name {
@@ -415,6 +925,60 @@
             background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
             transition: width 0.3s ease;
             border-radius: 4px;
+        }
+
+        .model-tab-layout {
+            display: flex;
+            gap: var(--spacing-lg);
+            align-items: stretch;
+        }
+
+        .model-tab-nav {
+            width: 240px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .model-tab-button {
+            border: none;
+            border-radius: var(--radius-medium);
+            padding: var(--spacing-md);
+            background: transparent;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .model-tab-button.active {
+            background: linear-gradient(135deg, rgba(0, 178, 106, 0.12), rgba(0, 161, 214, 0.12));
+            border: 1px solid rgba(0, 178, 106, 0.3);
+        }
+
+        .model-tab-button span {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .model-tab-button small {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .model-tab-content {
+            flex: 1;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-large);
+            padding: var(--spacing-lg);
+            background: var(--card-bg);
+            box-shadow: var(--shadow-light);
         }
 
         .model-features {
@@ -603,22 +1167,39 @@
                 <svg class="icon icon-md" viewBox="0 0 24 24">
                     <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                 </svg>
-                AI配置
+                <div class="tab-text">
+                    <span class="tab-label">AI & 内容</span>
+                    <span class="tab-tip">对话模型 · 角色配置</span>
+                </div>
             </button>
             <button class="tab-btn" :class="{active: currentTab === 'models'}" @click="setTab('models')">
                 <svg class="icon icon-md" viewBox="0 0 24 24">
                     <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
                 </svg>
-                语音模型
+                <div class="tab-text">
+                    <span class="tab-label">语音模型</span>
+                    <span class="tab-tip">本地 ASR · GPU 引擎</span>
+                </div>
             </button>
             <button class="tab-btn" :class="{active: currentTab === 'system'}" @click="setTab('system')">
                 <svg class="icon icon-md" viewBox="0 0 24 24">
                     <path d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/>
                 </svg>
-                系统设置
+                <div class="tab-text">
+                    <span class="tab-label">系统 & 存储</span>
+                    <span class="tab-tip">路径 · 并发 · 环境</span>
+                </div>
+            </button>
+            <button class="tab-btn" :class="{active: currentTab === 'templates'}" @click="setTab('templates')">
+                <svg class="icon icon-md" viewBox="0 0 24 24">
+                    <path d="M5 4h14v2H5V4zm0 4h14v12H5V8zm2 3v2h10v-2H7zm0 4v2h6v-2H7z"/>
+                </svg>
+                <div class="tab-text">
+                    <span class="tab-label">提示词模板</span>
+                    <span class="tab-tip">Skill Markdown 管理</span>
+                </div>
             </button>
         </div>
-
         <!-- 设置内容 -->
         <div class="settings-content fade-in">
             <!-- AI配置 -->
@@ -838,109 +1419,406 @@
                         </svg>
                         语音模型
                     </div>
-
-                    <div v-for="model in whisperModels" :key="model.name" class="model-card">
-                        <div class="model-header">
-                            <div>
-                                <div class="model-name">{{ model.name }}</div>
-                                <div class="model-size">{{ model.size }}</div>
-                            </div>
-                            <div class="model-status" :class="model.status">
-                                {{ getModelStatusText(model.status) }}
-                            </div>
-                        </div>
-                        <div class="model-desc">{{ model.description }}</div>
-
-                        <!-- 语言支持信息 -->
-                        <div v-if="model.languages || model.dialect_support || model.features" class="model-features">
-                            <div v-if="model.languages" class="feature-item">
-                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                    <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.01-4.65 1.73-6.53C11.87 5.5 11.45 5 10.95 5s-.92.5-1.14 1c-.28 1.88-.01 4.59 1.73 6.53l.03.03-2.54 2.51c-.42.42-.42 1.1 0 1.52s1.1.42 1.52 0L12 15.14l1.45 1.45c.42.42 1.1.42 1.52 0s.42-1.1 0-1.52z"/>
-                                </svg>
-                                <span class="feature-label">支持语言:</span>
-                                <span class="feature-value">{{ Array.isArray(model.languages) ? model.languages.join('、') : model.languages
-                                    }}</span>
-                            </div>
-                            <div v-if="model.dialect_support" class="feature-item">
-                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                    <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.89-1.99 2L3 20c0 1.11.89 2 2 2h14c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 16H5V9h14v11z"/>
-                                </svg>
-                                <span class="feature-label">方言支持:</span>
-                                <span class="feature-value">{{ model.dialect_support }}</span>
-                            </div>
-                            <div v-if="model.features" class="feature-item">
-                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                </svg>
-                                <span class="feature-label">特色功能:</span>
-                                <span class="feature-value">{{ Array.isArray(model.features) ? model.features.join('、') : model.features
-                                    }}</span>
-                            </div>
-                            <div v-if="model.performance" class="feature-item">
-                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                    <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
-                                </svg>
-                                <span class="feature-label">性能优势:</span>
-                                <span class="feature-value">{{ model.performance }}</span>
-                            </div>
-                            <div v-if="model.supported_devices" class="feature-item">
-                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                    <path d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/>
-                                </svg>
-                                <span class="feature-label">支持设备:</span>
-                                <span class="feature-value">{{ Array.isArray(model.supported_devices) ? model.supported_devices.join('、') : model.supported_devices }}</span>
-                            </div>
-                            <div v-if="model.compute_types" class="feature-item">
-                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                    <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
-                                </svg>
-                                <span class="feature-label">计算类型:</span>
-                                <span class="feature-value">{{ Array.isArray(model.compute_types) ? model.compute_types.join('、') : model.compute_types }}</span>
-                            </div>
-                        </div>
-
-                        <div v-if="model.status === 'installed' && model.localPath" class="model-path">
-                            <small style="color: var(--text-tertiary); font-size: 0.8em;">
-                                <svg class="icon icon-xs" viewBox="0 0 24 24" style="margin-right: 4px;">
-                                    <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
-                                </svg>
-                                {{ model.localPath }}
-                            </small>
-                        </div>
-                        <div v-if="model.status === 'downloading'" class="download-progress">
-                            <div class="progress-info">
-                                <span class="progress-text">{{ model.currentStep || '下载中...' }}</span>
-                                <span class="progress-percent">{{ Math.round(model.progress || 0) }}%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" :style="{width: (model.progress || 0) + '%'}"></div>
-                            </div>
-                        </div>
-                        <div class="model-actions">
-                            <button v-if="model.status === 'not-installed'"
-                                    class="btn btn-primary"
-                                    @click="downloadModel(model)">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
-                                </svg>
-                                下载
+                    <div class="model-tab-layout">
+                        <div class="model-tab-nav">
+                            <button v-for="tab in modelTabs"
+                                    :key="tab.key"
+                                    class="model-tab-button"
+                                    :class="{active: activeModelTab === tab.key}"
+                                    @click="activeModelTab = tab.key">
+                                <span>{{ tab.label }}</span>
+                                <small>{{ tab.desc }}</small>
                             </button>
-                            <button v-else-if="model.status === 'installed'"
-                                    class="btn btn-secondary"
-                                    @click="deleteModel(model)">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                                </svg>
-                                删除
-                            </button>
-                            <button v-else-if="model.status === 'downloading'"
-                                    class="btn btn-secondary"
-                                    @click="cancelDownload(model)">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                                </svg>
-                                取消
-                            </button>
+                        </div>
+                        <div class="model-tab-content">
+                            <template v-if="activeModelTab === 'local'">
+                                <div class="model-grid" v-if="filteredLocalModels.length">
+                                    <div v-for="model in filteredLocalModels" :key="model.name" class="model-card">
+                                        <div class="model-header">
+                                            <div>
+                                                <div class="model-name">
+                                                    {{ model.name }}
+                                                    <span class="model-pill is-local">本地</span>
+                                                </div>
+                                                <div class="model-size">{{ model.size }}</div>
+                                            </div>
+                                            <div class="model-status" :class="model.status">
+                                                {{ getModelStatusText(model.status) }}
+                                            </div>
+                                        </div>
+                                        <div class="model-desc">{{ model.description }}</div>
+                                        <div class="model-desc" v-if="model.pricing">价格：{{ model.pricing }}</div>
+                                        <div class="model-desc" v-if="model.input_specs">输入规格：{{ formatInputSpecs(model.input_specs) }}</div>
+                                        <div class="model-desc" v-if="model.input_specs">输入规格：{{ formatInputSpecs(model.input_specs) }}</div>
+                                        <div class="model-desc" v-if="model.pricing">价格：{{ model.pricing }}</div>
+                                        <div class="model-desc" v-if="model.input_specs">输入规格：{{ formatInputSpecs(model.input_specs) }}</div>
+                                        <div v-if="model.languages || model.dialect_support || model.features" class="model-features">
+                                            <div v-if="model.languages" class="feature-item">
+                                                <span class="feature-label">支持语言:</span>
+                                                <span class="feature-value">{{ Array.isArray(model.languages) ? model.languages.join('、') : model.languages }}</span>
+                                            </div>
+                                            <div v-if="model.dialect_support" class="feature-item">
+                                                <span class="feature-label">方言支持:</span>
+                                                <span class="feature-value">{{ model.dialect_support }}</span>
+                                            </div>
+                                            <div v-if="model.features" class="feature-item">
+                                                <span class="feature-label">特色功能:</span>
+                                                <span class="feature-value">{{ Array.isArray(model.features) ? model.features.join('、') : model.features }}</span>
+                                            </div>
+                                        </div>
+                                        <div v-if="model.status === 'installed' && model.localPath" class="model-path">
+                                            <small style="color: var(--text-tertiary); font-size: 0.8em;">
+                                                {{ model.localPath }}
+                                            </small>
+                                        </div>
+                                        <div v-if="model.status === 'downloading'" class="download-progress">
+                                            <div class="progress-info">
+                                                <span class="progress-text">{{ model.currentStep || '下载中...' }}</span>
+                                                <span class="progress-percent">{{ Math.round(model.progress || 0) }}%</span>
+                                            </div>
+                                            <div class="progress-bar">
+                                                <div class="progress-fill" :style="{width: (model.progress || 0) + '%'}"></div>
+                                            </div>
+                                        </div>
+                                        <div class="model-actions">
+                                            <button v-if="model.status === 'not-installed'"
+                                                    class="btn btn-primary"
+                                                    @click="downloadModel(model)">
+                                                下载
+                                            </button>
+                                            <button v-else-if="model.status === 'installed'"
+                                                    class="btn btn-secondary"
+                                                    @click="deleteModel(model)">
+                                                删除
+                                            </button>
+                                            <button v-else-if="model.status === 'downloading'"
+                                                    class="btn btn-secondary"
+                                                    @click="cancelDownload(model)">
+                                                取消
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else class="empty-meetings">
+                                    <p>暂无可用本地模型</p>
+                                </div>
+                            </template>
+                            <template v-else-if="activeModelTab === 'gpu'">
+                                <div class="model-grid" v-if="filteredGpuModels.length">
+                                    <div v-for="model in filteredGpuModels" :key="model.name" class="model-card">
+                                        <div class="model-header">
+                                            <div>
+                                                <div class="model-name">
+                                                    {{ model.name }}
+                                                    <span class="model-pill is-local">GPU</span>
+                                                </div>
+                                                <div class="model-size">{{ model.size }}</div>
+                                            </div>
+                                            <div class="model-status" :class="model.status">
+                                                {{ getModelStatusText(model.status) }}
+                                            </div>
+                                        </div>
+                                        <div class="model-desc">{{ model.description }}</div>
+                                        <div class="model-actions">
+                                            <button v-if="model.status === 'not-installed'"
+                                                    class="btn btn-primary"
+                                                    @click="downloadModel(model)">
+                                                下载
+                                            </button>
+                                            <button v-else-if="model.status === 'installed'"
+                                                    class="btn btn-secondary"
+                                                    @click="deleteModel(model)">
+                                                删除
+                                            </button>
+                                            <button v-else-if="model.status === 'downloading'"
+                                                    class="btn btn-secondary"
+                                                    @click="cancelDownload(model)">
+                                                取消
+                                            </button>
+                                            <button class="btn btn-primary"
+                                                    v-if="model.status === 'installed'"
+                                                    @click="activateParakeetModel(model)">
+                                                设为默认
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else class="empty-meetings">
+                                    <p>暂无 GPU 模型，请先下载 Parakeet</p>
+                                </div>
+                                <div class="form-row" style="margin-top: var(--spacing-xl);">
+                                    <div class="form-group">
+                                        <label class="form-label">默认模型</label>
+                                        <select class="form-select"
+                                                v-model="asrConfig.parakeet.selected_model"
+                                                @change="onParakeetSelectionChange">
+                                            <option value="" disabled>请选择模型</option>
+                                            <option v-for="model in filteredGpuModels"
+                                                    :key="model.modelName"
+                                                    :value="model.modelName">
+                                                {{ model.name }} {{ model.status === 'installed' ? '(已下载)' : '(未下载)' }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">运行设备</label>
+                                        <select class="form-select" v-model="asrConfig.parakeet.device">
+                                            <option value="auto">自动</option>
+                                            <option value="cuda">CUDA</option>
+                                            <option value="cpu">CPU</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Batch Size</label>
+                                        <input type="number" class="form-input" min="1" max="16"
+                                               v-model.number="asrConfig.parakeet.batch_size"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">分段时长 (秒)</label>
+                                        <input type="number" class="form-input" min="5" max="60"
+                                               v-model.number="asrConfig.parakeet.segment_duration"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">每段最大词数</label>
+                                        <input type="number" class="form-input" min="10" max="100"
+                                               v-model.number="asrConfig.parakeet.words_per_segment"/>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">说话人分离</label>
+                                        <label class="toggle">
+                                            <input type="checkbox" v-model="asrConfig.parakeet.diarization.enabled">
+                                            <span>启用</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group" v-if="asrConfig.parakeet.diarization.enabled">
+                                        <label class="form-label">最大说话人数量</label>
+                                        <input type="number" class="form-input" min="2" max="16"
+                                               v-model.number="asrConfig.parakeet.diarization.max_speakers"/>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" @click="saveParakeetConfig">保存 Parakeet 配置</button>
+                            </template>
+                            <template v-else>
+                                <div class="model-grid" v-if="filteredCloudModels.length">
+                                    <div v-for="model in filteredCloudModels" :key="model.name" class="model-card">
+                                        <div class="model-header">
+                                            <div>
+                                                <div class="model-name">
+                                                    {{ model.name }}
+                                                    <span class="model-pill is-cloud">云端</span>
+                                                </div>
+                                                <div class="model-size">{{ model.size }}</div>
+                                            </div>
+                                            <div class="model-status" :class="model.status">
+                                                {{ model.enabled ? '已启用' : getModelStatusText(model.status) }}
+                                            </div>
+                                        </div>
+                                        <div class="model-desc">{{ model.description }}</div>
+                                        <div class="model-desc" v-if="model.pricing">价格：{{ model.pricing }}</div>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-top: var(--spacing-xl);">
+                                    <label class="form-label">
+                                        <input type="checkbox" v-model="asrConfig.remote_api.enabled">
+                                        启用远程 API
+                                    </label>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Base URL</label>
+                                        <input type="text" class="form-input" v-model="asrConfig.remote_api.base_url"
+                                               placeholder="https://asr.example.com"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">接口路径</label>
+                                        <input type="text" class="form-input" v-model="asrConfig.remote_api.endpoint"
+                                               placeholder="/api/v1/asr/transcribe"/>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">认证方式</label>
+                                        <select class="form-select" v-model="asrConfig.remote_api.auth_type">
+                                            <option value="header">Header</option>
+                                            <option value="query">Query 参数</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" v-if="asrConfig.remote_api.auth_type === 'header'">
+                                        <label class="form-label">Header 名称</label>
+                                        <input type="text" class="form-input" v-model="asrConfig.remote_api.auth_header"
+                                               placeholder="X-API-Key"/>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">API Key</label>
+                                        <input type="password" class="form-input" v-model="asrConfig.remote_api.api_key"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">备注</label>
+                                        <input type="text" class="form-input" v-model="asrConfig.remote_api.notes"
+                                               placeholder="例如：自研v2集群"/>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" @click="saveRemoteConfig">保存远程配置</button>
+
+                                <div class="section-title" style="margin-top: var(--spacing-xl); gap: 8px;">🐲 Qwen3-ASR (DashScope)</div>
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        <input type="checkbox" v-model="asrConfig.qwen3_asr.enabled">
+                                        启用 Qwen3-ASR 云端识别
+                                    </label>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">模型</label>
+                                        <select class="form-select" v-model="asrConfig.qwen3_asr.model_name">
+                                            <option value="qwen3-asr-flash-filetrans">qwen3-asr-flash-filetrans</option>
+                                            <option value="qwen3-asr-flash">qwen3-asr-flash</option>
+                                            <option value="qwen3-asr-flash-us">qwen3-asr-flash-us</option>
+                                            <option value="qwen3-asr-plus">qwen3-asr-plus</option>
+                                            <option value="qwen3-asr-flash-realtime">qwen3-asr-flash-realtime</option>
+                                            <option value="qwen3-asr-flash-realtime-2026-02-10">qwen3-asr-flash-realtime-2026-02-10</option>
+                                            <option value="qwen3-asr-flash-realtime-2025-10-27">qwen3-asr-flash-realtime-2025-10-27</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">线程数</label>
+                                        <input type="number" class="form-input" min="1" max="16"
+                                               v-model.number="asrConfig.qwen3_asr.num_threads"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">最小时长触发VAD (秒)</label>
+                                        <input type="number" class="form-input" min="60" max="600"
+                                               v-model.number="asrConfig.qwen3_asr.min_duration_for_vad"/>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">DashScope API Key</label>
+                                        <input type="password" class="form-input" placeholder="sk-..."
+                                               v-model="asrConfig.qwen3_asr.dashscope_api_key"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">DashScope API URL</label>
+                                        <input type="text" class="form-input"
+                                               placeholder="https://dashscope.aliyuncs.com/api/v1"
+                                               v-model="asrConfig.qwen3_asr.base_http_api_url"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">临时目录</label>
+                                        <input type="text" class="form-input" v-model="asrConfig.qwen3_asr.tmp_dir"/>
+                                    </div>
+                                </div>
+                                <div class="section-title" style="margin: 16px 0 8px;">☁️ OSS 配置（FileTrans 必填）</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">OSS AccessKey ID</label>
+                                        <input type="text" class="form-input"
+                                               placeholder="LTAI..."
+                                               v-model="asrConfig.qwen3_asr.oss_access_key_id"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">OSS AccessKey Secret</label>
+                                        <input type="password" class="form-input"
+                                               placeholder="********"
+                                               v-model="asrConfig.qwen3_asr.oss_access_key_secret"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">OSS Endpoint</label>
+                                        <input type="text" class="form-input"
+                                               placeholder="https://oss-cn-beijing.aliyuncs.com"
+                                               v-model="asrConfig.qwen3_asr.oss_endpoint"/>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">OSS Bucket</label>
+                                        <input type="text" class="form-input"
+                                               placeholder="your-bucket"
+                                               v-model="asrConfig.qwen3_asr.oss_bucket"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">OSS 前缀</label>
+                                        <input type="text" class="form-input"
+                                               placeholder="qwen3/asr"
+                                               v-model="asrConfig.qwen3_asr.oss_prefix"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">OSS 访问域名</label>
+                                        <input type="text" class="form-input"
+                                               placeholder="https://your-bucket.oss-cn-beijing.aliyuncs.com"
+                                               v-model="asrConfig.qwen3_asr.oss_public_base_url"/>
+                                    </div>
+                                </div>
+                                <div class="form-hint" style="margin: 4px 0 16px; color: #666; font-size: 13px;">
+                                    ⚠️ FileTrans 必须使用公网可访问的 URL。请配置 OSS 并确保 Bucket 可公开访问或绑定 CDN 域名。
+                                    另外需单独安装 OSS 依赖：pip install oss2。
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">VAD 分段阈值 (秒)</label>
+                                        <input type="number" class="form-input" min="60" max="300"
+                                               v-model.number="asrConfig.qwen3_asr.vad_segment_threshold"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">最大分段时长 (秒)</label>
+                                        <input type="number" class="form-input" min="60" max="600"
+                                               v-model.number="asrConfig.qwen3_asr.max_segment_duration"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">静默模式</label>
+                                        <label class="form-checkbox">
+                                            <input type="checkbox" v-model="asrConfig.qwen3_asr.silence">
+                                            <span class="checkmark"></span>
+                                            减少控制台日志输出
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-hint" style="margin: 8px 0 16px; color: #666; font-size: 13px;">
+                                    💡 filetrans 最长 12 小时录音，支持情感识别与句/字级别时间戳；实时模型价格（中国内地）：约 0.00033 元/秒，仅支持 PCM/OPUS。
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Realtime URL</label>
+                                        <input type="text" class="form-input" v-model="asrConfig.qwen3_asr.realtime_url"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Realtime 采样率</label>
+                                        <input type="number" class="form-input" min="8000" max="16000"
+                                               v-model.number="asrConfig.qwen3_asr.realtime_sample_rate"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Realtime 格式</label>
+                                        <select class="form-select" v-model="asrConfig.qwen3_asr.realtime_format">
+                                            <option value="pcm">pcm</option>
+                                            <option value="opus">opus</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Realtime 分片(ms)</label>
+                                        <input type="number" class="form-input" min="40" max="1000"
+                                               v-model.number="asrConfig.qwen3_asr.realtime_chunk_ms"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">发送延迟(秒)</label>
+                                        <input type="number" step="0.05" class="form-input" min="0" max="1"
+                                               v-model.number="asrConfig.qwen3_asr.realtime_send_delay"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">结束等待(秒)</label>
+                                        <input type="number" class="form-input" min="1" max="30"
+                                               v-model.number="asrConfig.qwen3_asr.realtime_finish_timeout"/>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" @click="saveQwenConfig">保存 Qwen3-ASR 配置</button>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -1141,6 +2019,415 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 模板配置 -->
+            <div v-if="currentTab === 'templates'">
+                <div class="setting-section">
+                    <div class="section-title">
+                        <svg class="icon icon-md" viewBox="0 0 24 24">
+                            <path d="M5 4h14v2H5V4zm0 4h14v12H5V8zm2 3v2h10v-2H7zm0 4v2h6v-2H7z"/>
+                        </svg>
+                        模板与角色
+                    </div>
+                    <div class="section-tip">
+                        角色会拼接系统提示词，内容类型模板决定输出形态。角色内的修改只影响该角色，不会改动内置模板。
+                    </div>
+                    <div class="template-tab-nav">
+                        <button class="template-tab-btn"
+                                :class="{active: templateTab === 'roles'}"
+                                @click="templateTab = 'roles'">
+                            <strong>角色列表</strong>
+                            <small>创建角色与内容类型</small>
+                        </button>
+                        <button class="template-tab-btn"
+                                :class="{active: templateTab === 'templates'}"
+                                @click="templateTab = 'templates'">
+                            <strong>模板列表</strong>
+                            <small>管理系统模板库</small>
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="templateTab === 'roles'">
+                    <div class="setting-section">
+                        <div class="section-title">
+                            <svg class="icon icon-md" viewBox="0 0 24 24">
+                                <path d="M5 13h14v-2H5v2zm0 6h14v-2H5v2zm0-12h14V5H5v2z"/>
+                            </svg>
+                            角色与内容类型
+                        </div>
+                        <div class="section-tip">
+                            先创建角色，再为角色挑选内容类型模板。创建时可多选，后续也可以随时启用或停用。
+                        </div>
+                        <div class="role-layout">
+                            <div class="role-list-panel">
+                                <div class="role-list-header">
+                                    <span>角色列表</span>
+                                    <button class="btn btn-sm btn-primary" @click="startCreateRole">+ 新建</button>
+                                </div>
+                                <div v-if="roleLoading" class="empty-meetings">
+                                    <p>正在加载角色...</p>
+                                </div>
+                                <div v-else>
+                                    <div class="role-card"
+                                         v-for="role in roleList"
+                                         :key="role.role_key"
+                                         :class="{active: role.role_key === selectedRoleKey}"
+                                         @click="selectRole(role.role_key)">
+                                        <div class="role-card-title">
+                                            {{ formatRoleLabel(role) }}
+                                        </div>
+                                        <div class="role-card-desc">
+                                            {{ role.description || '默认角色配置' }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="role-detail-panel" v-if="roleEditorVisible">
+                                <div class="section-title" style="margin-bottom: var(--spacing-md);">
+                                    角色配置
+                                </div>
+                                <div class="role-form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">角色标识</label>
+                                        <input type="text"
+                                               class="form-input"
+                                               v-model="roleForm.role_key"
+                                               disabled>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">角色名称</label>
+                                        <input type="text" class="form-input" v-model="roleForm.name">
+                                    </div>
+                                    <div class="form-group full">
+                                        <label class="form-label">角色描述</label>
+                                        <input type="text" class="form-input" v-model="roleForm.description">
+                                    </div>
+                                    <div class="form-group full">
+                                        <label class="form-label">角色系统提示词</label>
+                                        <textarea class="form-input" rows="3"
+                                                  placeholder="例如：你是一名教育专家"
+                                                  v-model="roleForm.system_prompt"></textarea>
+                                    </div>
+                                </div>
+                                <div class="role-toolbar">
+                                    <button class="btn btn-primary" @click="saveRole" :disabled="roleSaving">
+                                        保存角色
+                                    </button>
+                                    <button class="btn btn-danger"
+                                            v-if="roleForm.role_key !== 'general'"
+                                            @click="deleteRole">
+                                        删除角色
+                                    </button>
+                                </div>
+
+                                <div class="section-title" style="margin-top: var(--spacing-lg); display: flex; align-items: center; justify-content: space-between;">
+                                    <span>内容类型模板</span>
+                                    <button class="btn btn-sm btn-primary" @click="openRoleTemplateAdd">+ 追加模板</button>
+                                </div>
+                                <div class="section-tip">
+                                    这里的模板只影响当前角色，内置模板不会被改动。
+                                </div>
+                                <div v-if="roleTemplateLoading" class="empty-meetings">
+                                    <p>正在加载角色模板...</p>
+                                </div>
+                                <div v-else class="content-type-grid">
+                                    <div class="content-type-card"
+                                         v-for="tpl in roleTemplates"
+                                         :key="tpl.category">
+                                        <div class="content-type-title">
+                                            {{ getCategoryLabel(tpl.category) }}
+                                        </div>
+                                        <div class="role-card-desc">
+                                            {{ tpl.description || '来自默认模板' }}
+                                        </div>
+                                        <div class="content-type-actions">
+                                            <button class="btn btn-sm" @click="openRoleTemplateEditor(tpl)">编辑模板</button>
+                                            <button class="btn btn-sm" @click="resetRoleTemplate(tpl)">恢复默认</button>
+                                            <button class="btn btn-sm" v-if="tpl.old_content" @click="restoreRoleTemplate(tpl)">
+                                                回退上一次
+                                            </button>
+                                            <button class="btn btn-sm"
+                                                    :class="tpl.is_active ? 'btn-secondary' : 'btn-primary'"
+                                                    @click="toggleRoleTemplate(tpl)">
+                                                {{ tpl.is_active ? '停用' : '启用' }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="role-detail-panel" v-else>
+                                <div class="empty-meetings">
+                                    <p>请选择一个角色进行配置</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else>
+                    <div class="setting-section">
+                        <div class="section-title">
+                            <svg class="icon icon-md" viewBox="0 0 24 24">
+                                <path d="M5 4h14v2H5V4zm0 4h14v12H5V8zm2 3v2h10v-2H7zm0 4v2h6v-2H7z"/>
+                            </svg>
+                            模板列表
+                            <span class="spacer"></span>
+                            <button class="btn btn-primary" @click="startCreateTemplate">
+                                + 新建模板
+                            </button>
+                        </div>
+                        <div class="section-tip">
+                            这里维护系统模板库，新增模板可用于新角色的内容类型选择。
+                        </div>
+
+                        <div v-if="templateLoading" class="empty-meetings">
+                            <p>正在加载模板...</p>
+                        </div>
+                        <div v-else-if="!visiblePromptTemplates.length" class="empty-meetings">
+                            <p>暂无自定义模板，内置模板默认隐藏。</p>
+                        </div>
+                        <div v-else class="template-grid">
+                            <div v-for="template in visiblePromptTemplates" :key="template.id || template.skill_key"
+                                 class="template-card">
+                                <div class="template-card-header">
+                                    <div>
+                                        <div class="template-name">{{ template.name }}</div>
+                                        <div class="template-meta">
+                                            <span>类别：{{ getCategoryLabel(template.category) }}</span>
+                                            <span v-if="template.scenario">场景：{{ template.scenario }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="badge badge-success">自定义</span>
+                                </div>
+                                <p class="template-description">{{ template.description || '暂无描述' }}</p>
+                                <div class="template-actions">
+                                    <button class="btn btn-sm" @click="openTemplateEditor(template)">编辑</button>
+                                    <button class="btn btn-sm btn-danger"
+                                            @click="deleteTemplate(template)">删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <teleport to="body">
+                    <div v-if="roleCreateDrawerVisible" class="drawer-overlay" @click="closeRoleDrawer">
+                        <div class="drawer-panel" @click.stop>
+                            <div class="drawer-header">
+                                <div class="drawer-title">新建角色</div>
+                                <button class="drawer-close" @click="closeRoleDrawer">×</button>
+                            </div>
+                            <div class="drawer-body">
+                                <div class="form-group">
+                                    <label class="form-label">角色标识</label>
+                                    <input type="text"
+                                           class="form-input"
+                                           v-model="roleCreateForm.role_key"
+                                           placeholder="例如: education">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">角色名称</label>
+                                    <input type="text" class="form-input" v-model="roleCreateForm.name"
+                                           placeholder="例如：教育专家">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">角色描述</label>
+                                    <input type="text" class="form-input" v-model="roleCreateForm.description">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">角色系统提示词</label>
+                                    <textarea class="form-input" rows="3"
+                                              v-model="roleCreateForm.system_prompt"
+                                              placeholder="例如：你是一名教育专家"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">内容类型</label>
+                                    <div class="content-type-selector">
+                                    <label class="content-type-option"
+                                           v-for="option in contentTypeOptions"
+                                           :key="option.value">
+                                        <input type="checkbox"
+                                               v-model="roleCreateForm.content_categories"
+                                               :value="option.value"
+                                               @change="onRoleCreateCategoryToggle(option.value)">
+                                        <span>{{ option.label }}</span>
+                                    </label>
+                                </div>
+                                <div class="form-hint">
+                                    角色创建后可在详情里继续启用或停用内容类型。
+                                </div>
+                            </div>
+                            <div class="form-row" v-if="roleCreateForm.content_categories.length">
+                                <div class="form-group" v-for="category in roleCreateForm.content_categories"
+                                     :key="category">
+                                    <label class="form-label">{{ getCategoryLabel(category) }} 模板</label>
+                                    <select class="form-select" v-model="roleCreateForm.template_keys[category]">
+                                        <option value="">使用默认模板</option>
+                                        <option v-for="template in getTemplatesByCategory(category)"
+                                                :key="getTemplateKey(template)"
+                                                :value="getTemplateKey(template)">
+                                            {{ template.name }}{{ template.is_default ? ' · 系统默认' : ' · 自定义' }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            </div>
+                            <div class="drawer-footer">
+                                <button class="btn btn-secondary" @click="closeRoleDrawer">取消</button>
+                                <button class="btn btn-primary" @click="createRole" :disabled="roleSaving">
+                                    创建角色
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </teleport>
+
+                <teleport to="body">
+                    <div v-if="roleTemplateAddVisible" class="drawer-overlay" @click="closeRoleTemplateAdd">
+                        <div class="drawer-panel is-wide" @click.stop>
+                            <div class="drawer-header">
+                                <div class="drawer-title">追加模板到角色</div>
+                                <button class="drawer-close" @click="closeRoleTemplateAdd">×</button>
+                            </div>
+                            <div class="drawer-body">
+                                <div class="form-group">
+                                    <label class="form-label">选择模板</label>
+                                    <select v-model="roleTemplateAddForm.template_key" class="form-select">
+                                        <option value="" disabled>请选择模板</option>
+                                        <option v-for="template in roleTemplateLibrary"
+                                                :key="getTemplateKey(template)"
+                                                :value="getTemplateKey(template)">
+                                            {{ template.name }}（{{ getCategoryLabel(template.category) }}）{{ template.is_default ? ' · 系统' : ' · 自定义' }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div v-if="selectedRoleTemplate" class="template-editor-wrapper">
+                                    <div class="template-editor-pane">
+                                        <div class="section-tip" style="margin-bottom: var(--spacing-sm);">
+                                            类别：{{ getCategoryLabel(selectedRoleTemplate.category) }}
+                                        </div>
+                                        <div class="template-preview" style="min-height: 520px;">
+                                            <div style="font-weight:600;color:var(--text-secondary);margin-bottom:var(--spacing-md);">
+                                                模板预览
+                                            </div>
+                                            <div v-if="roleTemplatePreviewHtml" v-html="roleTemplatePreviewHtml"></div>
+                                            <div v-else style="color:var(--text-tertiary);font-size:14px;">
+                                                暂无模板内容。
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="drawer-footer">
+                                <button class="btn btn-secondary" @click="closeRoleTemplateAdd">取消</button>
+                                <button class="btn btn-primary" @click="applyRoleTemplateAdd">追加模板</button>
+                            </div>
+                        </div>
+                    </div>
+                </teleport>
+
+                <teleport to="body">
+                    <div v-if="templateEditorVisible" class="drawer-overlay" @click="closeTemplateEditor">
+                        <div class="drawer-panel is-wide" @click.stop>
+                            <div class="drawer-header">
+                                <div class="drawer-title">
+                                    {{ templateEditorMode === 'role' ? '角色模板编辑' : (templateForm.id ? '编辑模板' : '新建模板') }}
+                                </div>
+                                <button class="drawer-close" @click="closeTemplateEditor">×</button>
+                            </div>
+                        <div class="drawer-body">
+                            <div v-if="templateEditorMode === 'base'" class="template-form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">模板标题</label>
+                                    <input type="text"
+                                           class="form-input"
+                                           v-model="templateForm.name"
+                                           @change="syncTemplateName">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">模板类别</label>
+                                    <select class="form-select" v-model="templateForm.category">
+                                        <option v-for="option in templateCategoryOptions"
+                                                :key="option.value"
+                                                :value="option.value">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">自定义类别</label>
+                                    <div class="template-inline">
+                                        <input type="text"
+                                               class="form-input"
+                                               v-model="templateForm.category_custom"
+                                               placeholder="新增类别">
+                                        <button class="btn btn-sm" @click="applyCustomCategory">添加</button>
+                                    </div>
+                                    <div class="form-hint">
+                                        可输入自定义类别并加入下拉选项。
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">模板标识</label>
+                                    <input type="text"
+                                           class="form-input"
+                                           v-model="templateForm.slug"
+                                           placeholder="自动生成">
+                                    <div class="form-hint">
+                                        系统内部标识，可留空自动生成。
+                                    </div>
+                                </div>
+                                <div class="form-group full">
+                                    <label class="form-label">模板描述</label>
+                                    <input type="text"
+                                           class="form-input"
+                                           v-model="templateForm.description"
+                                           placeholder="描述模板用途或输出风格">
+                                </div>
+                                <div class="form-group full">
+                                    <label class="form-label">使用场景</label>
+                                    <input type="text"
+                                           class="form-input"
+                                           v-model="templateForm.scenario"
+                                           placeholder="例如：课程复盘、会议纪要">
+                                </div>
+                            </div>
+                            <div class="template-editor-wrapper">
+                                <div class="template-editor-pane">
+                                    <textarea class="template-editor"
+                                              v-model="templateForm.body_markdown"
+                                              spellcheck="false"></textarea>
+                                </div>
+                                <div class="template-preview-pane">
+                                    <div class="template-preview">
+                                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--spacing-md);">
+                                            <div style="font-weight:600;color:var(--text-secondary);">实时预览</div>
+                                            <span style="font-size:12px;color:var(--text-tertiary);">Powered by Marked.js</span>
+                                        </div>
+                                        <div v-if="templatePreviewHtml" v-html="templatePreviewHtml"></div>
+                                        <div v-else style="color:var(--text-tertiary);font-size:14px;">
+                                            输入 Markdown 以查看渲染效果。
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                                <div class="editor-actions" style="margin-top: var(--spacing-md);">
+                                    <label class="toggle">
+                                        <input type="checkbox" v-model="templateForm.is_active">
+                                        <span>启用该模板</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="drawer-footer">
+                                <button class="btn btn-secondary" @click="closeTemplateEditor">取消</button>
+                                <button class="btn btn-primary" @click="saveTemplate">保存</button>
+                            </div>
+                        </div>
+                    </div>
+                </teleport>
+            </div>
         </div>
     </main>
 </div>
@@ -1148,6 +2435,7 @@
 <script src="/assets/js/vue.global.js"></script>
 <script src="/assets/js/axios/axios.min.js"></script>
 <script src="/assets/js/http.js"></script>
+<script src="/assets/js/marked.min.js"></script>
 <script type="module">
     const {createApp} = Vue;
 
@@ -1204,19 +2492,281 @@
                         status: 'not-installed',
                         progress: 0
                     }
-                ]
+                ],
+                    asrConfig: {
+                    remote_api: {
+                        enabled: false,
+                        base_url: '',
+                        endpoint: '/api/v1/asr/transcribe',
+                        api_key: '',
+                        auth_type: 'header',
+                        auth_header: 'X-API-Key',
+                        notes: ''
+                    },
+                    parakeet: {
+                        selected_model: 'tdt-0.6b-v2',
+                        model_name: 'parakeet-tdt-0.6b-v2',
+                        device: 'auto',
+                        batch_size: 2,
+                        segment_duration: 18,
+                        words_per_segment: 32,
+                        diarization: {
+                            enabled: true,
+                            max_speakers: 8
+                        }
+                    },
+                        qwen3_asr: {
+                            enabled: false,
+                            model_name: 'qwen3-asr-flash-filetrans',
+                            dashscope_api_key: '',
+                            base_http_api_url: '',
+                            oss_access_key_id: '',
+                            oss_access_key_secret: '',
+                            oss_endpoint: '',
+                            oss_bucket: '',
+                            oss_prefix: 'qwen3/asr',
+                            oss_public_base_url: '',
+                            filetrans_use_http: true,
+                            filetrans_poll_interval: 5,
+                            filetrans_poll_timeout: 3600,
+                            num_threads: 4,
+                            vad_segment_threshold: 120,
+                            max_segment_duration: 180,
+                            min_duration_for_vad: 180,
+                            tmp_dir: './data/qwen3/cache',
+                            silence: true,
+                            realtime_url: 'wss://dashscope.aliyuncs.com/api-ws/v1/realtime',
+                            realtime_chunk_ms: 200,
+                            realtime_send_delay: 0.1,
+                            realtime_sample_rate: 16000,
+                            realtime_format: 'pcm',
+                            realtime_finish_timeout: 10
+                        }
+                },
+                promptTemplates: [],
+                templateLoading: false,
+                templateEditorVisible: false,
+                templatesLoaded: false,
+                templateTab: 'roles',
+                templateLookup: {},
+                templateForm: {
+                    id: '',
+                    original_skill_key: '',
+                    name: '',
+                    category: '',
+                    category_custom: '',
+                    slug: '',
+                    scenario: '',
+                    description: '',
+                    is_default: false,
+                    is_active: true,
+                    skill_markdown: '',
+                    body_markdown: '',
+                    frontmatter_raw: '',
+                    role_key: '',
+                    role_category: ''
+                },
+                templateEditorMode: 'base',
+                roles: [],
+                roleLoading: false,
+                rolesLoaded: false,
+                roleSaving: false,
+                roleTemplates: [],
+                roleTemplateLoading: false,
+                roleEditorVisible: false,
+                roleCreateDrawerVisible: false,
+                selectedRoleKey: '',
+                roleForm: {
+                    role_key: '',
+                    name: '',
+                    description: '',
+                    system_prompt: '',
+                    icon: ''
+                },
+                roleCreateForm: {
+                    role_key: '',
+                    name: '',
+                    description: '',
+                    system_prompt: '',
+                    icon: '',
+                    content_categories: [],
+                    template_keys: {}
+                },
+                roleTemplateAddVisible: false,
+                roleTemplateAddForm: {
+                    template_key: ''
+                },
+                modelTabs: [
+                    {key: 'local', label: '本地模型', desc: 'Whisper · Faster-Whisper · SenseVoice'},
+                    {key: 'gpu', label: 'GPU 引擎', desc: 'Parakeet / NeMo Streaming'},
+                    {key: 'cloud', label: '云端 / 远程', desc: 'Remote API · Qwen3-ASR'}
+                ],
+                activeModelTab: 'local'
+            }
+        },
+
+        computed: {
+            templatePreviewHtml() {
+                if (!this.templateForm || !this.templateForm.body_markdown) {
+                    return '';
+                }
+                return this.renderMarkdown(this.templateForm.body_markdown);
+            },
+            templateCategoryOptions() {
+                const options = new Map();
+                ['content_card', 'mind_map', 'flashcards'].forEach((category) => {
+                    options.set(category, {value: category, label: this.getCategoryLabel(category)});
+                });
+                if (Array.isArray(this.promptTemplates)) {
+                    this.promptTemplates.forEach((template) => {
+                        if (template && template.category) {
+                            const value = template.category;
+                            const label = this.getCategoryLabel(value);
+                            options.set(value, {value, label});
+                        }
+                    });
+                }
+                const current = (this.templateForm && this.templateForm.category || '').trim();
+                if (current && !options.has(current)) {
+                    options.set(current, {value: current, label: this.getCategoryLabel(current)});
+                }
+                return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label, 'zh-CN'));
+            },
+            visiblePromptTemplates() {
+                if (!Array.isArray(this.promptTemplates)) {
+                    return [];
+                }
+                return this.promptTemplates.filter(template => !template.is_default);
+            },
+            contentTypeOptions() {
+                const options = new Map();
+                if (Array.isArray(this.promptTemplates)) {
+                    this.promptTemplates.forEach(template => {
+                        if (template && template.category && template.is_active !== false) {
+                            const value = template.category;
+                            const label = this.getCategoryLabel(value);
+                            options.set(value, {value, label});
+                        }
+                    });
+                }
+                if (!options.size) {
+                    ['content_card', 'mind_map', 'flashcards'].forEach((category) => {
+                        options.set(category, {value: category, label: this.getCategoryLabel(category)});
+                    });
+                }
+                return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label, 'zh-CN'));
+            },
+            roleTemplateLibrary() {
+                if (!Array.isArray(this.promptTemplates)) {
+                    return [];
+                }
+                const list = this.promptTemplates.filter(template => template && template.is_active !== false);
+                list.sort((a, b) => {
+                    const cat = (a.category || '').localeCompare(b.category || '', 'zh-CN');
+                    if (cat !== 0) return cat;
+                    return (a.name || '').localeCompare(b.name || '', 'zh-CN');
+                });
+                return list;
+            },
+            selectedRoleTemplate() {
+                const key = this.roleTemplateAddForm.template_key;
+                if (!key) {
+                    return null;
+                }
+                return this.roleTemplateLibrary.find((template) => this.getTemplateKey(template) === key) || null;
+            },
+            roleTemplatePreviewHtml() {
+                if (!this.selectedRoleTemplate || !this.selectedRoleTemplate.skill_markdown) {
+                    return '';
+                }
+                return this.renderMarkdown(this.selectedRoleTemplate.skill_markdown);
+            },
+            localVoiceModels() {
+                if (!Array.isArray(this.whisperModels)) {
+                    return [];
+                }
+                return this.whisperModels.filter(model => !model.isCloud);
+            },
+            filteredLocalModels() {
+                if (!Array.isArray(this.whisperModels)) {
+                    return [];
+                }
+                return this.whisperModels.filter(model => !model.isCloud && model.type !== 'parakeet');
+            },
+            filteredGpuModels() {
+                if (!Array.isArray(this.whisperModels)) {
+                    return [];
+                }
+                return this.whisperModels.filter(model => model.type === 'parakeet');
+            },
+            filteredCloudModels() {
+                if (!Array.isArray(this.whisperModels)) {
+                    return [];
+                }
+                return this.whisperModels.filter(model => model.isCloud);
+            },
+            roleList() {
+                const roles = Array.isArray(this.roles) ? [...this.roles] : [];
+                roles.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-CN'));
+                const generalIndex = roles.findIndex(role => role.role_key === 'general');
+                if (generalIndex > 0) {
+                    const [general] = roles.splice(generalIndex, 1);
+                    roles.unshift(general);
+                }
+                return roles;
+            },
+            roleSaveLabel() {
+                if (this.roleSaving) {
+                    return '保存中...';
+                }
+                return '保存角色';
             }
         },
 
         async created() {
             await this.loadSettings();
             await this.checkOllama();
+            await this.loadAsrSettings();
             await this.loadModels();
         },
 
         methods: {
+            renderMarkdown(content) {
+                const raw = content || '';
+                if (window.marked && typeof window.marked.parse === 'function') {
+                    return window.marked.parse(raw);
+                }
+                const escapeHtml = (str) =>
+                    str
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+                return escapeHtml(raw).replace(/\n/g, '<br>');
+            },
+
+            formatInputSpecs(specs) {
+                if (!specs) return '—';
+                const parts = [];
+                if (specs.format) parts.push(`格式: ${specs.format}`);
+                if (specs.sample_rate) parts.push(`采样率: ${specs.sample_rate}`);
+                if (specs.channels) parts.push(`声道: ${specs.channels}`);
+                if (specs.input) parts.push(`输入: ${specs.input}`);
+                return parts.join(' / ');
+            },
+
             setTab(tab) {
                 this.currentTab = tab;
+                if (tab === 'templates') {
+                    this.templateTab = 'roles';
+                    if (!this.templatesLoaded) {
+                        this.loadTemplates();
+                    }
+                    if (!this.rolesLoaded) {
+                        this.loadRoles();
+                    }
+                }
             },
 
             async loadSettings() {
@@ -1246,6 +2796,23 @@
                 } catch (error) {
                     console.error('加载设置失败:', error);
                     this.showMessage('加载设置失败: ' + error.message, 'error');
+                }
+            },
+
+            async loadAsrSettings() {
+                try {
+                    const data = await http.get('/api/settings/asr');
+                    if (data?.remote_api) {
+                        Object.assign(this.asrConfig.remote_api, data.remote_api);
+                    }
+                    if (data?.parakeet) {
+                        Object.assign(this.asrConfig.parakeet, data.parakeet);
+                    }
+                    if (data?.qwen3_asr) {
+                        Object.assign(this.asrConfig.qwen3_asr, data.qwen3_asr);
+                    }
+                } catch (error) {
+                    console.error('加载ASR配置失败:', error);
                 }
             },
 
@@ -1282,7 +2849,8 @@
                                 localPath: model.local_path,
                                 currentStep: '',
                                 taskId: null,
-                                eventSource: null
+                                eventSource: null,
+                                canDownload: model.can_download !== false
                             });
                         });
                     }
@@ -1306,7 +2874,8 @@
                                 compute_types: model.compute_types,
                                 currentStep: '',
                                 taskId: null,
-                                eventSource: null
+                                eventSource: null,
+                                canDownload: model.can_download !== false
                             });
                         });
                     }
@@ -1331,15 +2900,696 @@
                                     performance: model.performance,
                                     currentStep: '',
                                     taskId: null,
-                                    eventSource: null
+                                    eventSource: null,
+                                    canDownload: model.can_download !== false
                                 });
                             });
                         }
                     });
+
+                    if (data.parakeet) {
+                        data.parakeet.forEach(model => {
+                            this.whisperModels.push({
+                                name: model.name,
+                                size: model.size,
+                                description: model.description,
+                                status: model.installed ? 'installed' : 'not-installed',
+                                progress: model.installed ? 100 : 0,
+                                type: 'parakeet',
+                                modelName: model.config_key || model.name,
+                                localPath: model.local_path,
+                                features: model.features,
+                                requiresGpu: model.requires_gpu,
+                                active: model.active,
+                                configType: 'parakeet',
+                                currentStep: '',
+                                taskId: null,
+                                eventSource: null,
+                                nemoName: model.nemo_name || model.nemoName || ''
+                            });
+                        });
+                    }
+
+                    if (data.remote_api) {
+                        data.remote_api.forEach(model => {
+                            this.whisperModels.push({
+                                name: model.name,
+                                size: model.size,
+                                description: model.description,
+                                status: model.enabled ? 'installed' : 'not-installed',
+                                progress: model.enabled ? 100 : 0,
+                                type: 'remote_api',
+                                modelName: model.config_key || model.name,
+                                isCloud: true,
+                                configType: 'remote_api',
+                                notes: model.notes,
+                                baseUrl: model.base_url,
+                                currentStep: '',
+                                taskId: null,
+                                eventSource: null,
+                                canDownload: model.can_download !== false
+                            });
+                        });
+                    }
+
+                    if (data.qwen3_asr) {
+                        data.qwen3_asr.forEach(model => {
+                            this.whisperModels.push({
+                                name: model.name,
+                                size: model.size,
+                                description: model.description,
+                                status: model.enabled ? 'installed' : 'not-installed',
+                                progress: model.enabled ? 100 : 0,
+                                type: 'qwen3_asr',
+                                modelName: model.config_key || model.name,
+                                isCloud: true,
+                                configType: 'qwen3_asr',
+                                manual: false,
+                                notes: model.notes,
+                                apiKeyConfigured: model.api_key_configured,
+                                currentStep: '',
+                                taskId: null,
+                                eventSource: null,
+                                canDownload: false
+                            });
+                        });
+                    }
                 } catch (error) {
                     console.error('加载模型失败:', error);
                     this.showMessage('加载模型失败: ' + error.message, 'error');
                 }
+            },
+
+            async loadTemplates() {
+                try {
+                    this.templateLoading = true;
+                    const data = await http.get('/api/settings/prompt-templates');
+                    this.promptTemplates = Array.isArray(data) ? data : [];
+                    this.templatesLoaded = true;
+                    this.templateLookup = {};
+                    this.promptTemplates.forEach(tpl => {
+                        if (tpl && tpl.skill_key) {
+                            this.templateLookup[tpl.skill_key] = tpl.name || tpl.skill_key;
+                        }
+                    });
+                } catch (error) {
+                    console.error('加载模板失败:', error);
+                    this.showMessage('加载模板失败: ' + error.message, 'error');
+                } finally {
+                    this.templateLoading = false;
+                }
+            },
+
+            openTemplateEditor(template) {
+                const parsed = this.parseSkillMarkdown(template.skill_markdown || '');
+                this.templateEditorMode = 'base';
+                this.templateEditorVisible = true;
+                this.templateForm = {
+                    id: template.id || '',
+                    original_skill_key: template.skill_key || '',
+                    name: template.name,
+                    category: parsed.frontmatter.category || template.category,
+                    category_custom: '',
+                    slug: parsed.frontmatter.slug || template.skill_key || '',
+                    scenario: template.scenario || '',
+                    description: parsed.frontmatter.description || template.description || '',
+                    is_default: template.is_default,
+                    is_active: template.is_active,
+                    skill_markdown: template.skill_markdown,
+                    body_markdown: parsed.body,
+                    frontmatter_raw: parsed.frontmatter_raw,
+                    role_key: '',
+                    role_category: ''
+                };
+            },
+
+            startCreateTemplate() {
+                this.templateEditorMode = 'base';
+                this.templateEditorVisible = true;
+                const now = Date.now();
+                this.templateForm = {
+                    id: '',
+                    original_skill_key: '',
+                    name: '新模板',
+                    category: 'content_card',
+                    category_custom: '',
+                    slug: `custom_${now}`,
+                    scenario: '',
+                    description: '',
+                    is_default: false,
+                    is_active: true,
+                    skill_markdown: '',
+                    body_markdown: this.generateTemplateScaffold(),
+                    frontmatter_raw: '',
+                    role_key: '',
+                    role_category: ''
+                };
+            },
+
+            closeTemplateEditor() {
+                this.templateEditorVisible = false;
+                this.templateEditorMode = 'base';
+            },
+
+            generateTemplateScaffold() {
+                return `# 模板标题
+
+## 使用场景
+描述何时使用该模板。
+
+## system_prompt
+# 角色
+请在此编写系统提示词
+
+## user_prompt
+请在此编写用户提示词，其中包含 {transcript} 等变量。`;
+            },
+
+            parseSkillMarkdown(markdown) {
+                const raw = markdown || '';
+                if (!raw.startsWith('---')) {
+                    return {
+                        frontmatter: {},
+                        frontmatter_raw: '',
+                        body: raw
+                    };
+                }
+                const endIndex = raw.indexOf('\n---', 3);
+                if (endIndex === -1) {
+                    return {
+                        frontmatter: {},
+                        frontmatter_raw: '',
+                        body: raw
+                    };
+                }
+                const frontmatterRaw = raw.slice(0, endIndex + 4);
+                const body = raw.slice(endIndex + 4).replace(/^\s+/, '');
+                return {
+                    frontmatter: this.extractFrontmatterFields(frontmatterRaw),
+                    frontmatter_raw: frontmatterRaw,
+                    body
+                };
+            },
+
+            extractFrontmatterFields(frontmatterRaw) {
+                const extract = (key) => {
+                    const match = frontmatterRaw.match(new RegExp(`^${key}:\\s*(.*)$`, 'm'));
+                    return match ? match[1].trim() : '';
+                };
+                return {
+                    name: extract('name'),
+                    slug: extract('slug'),
+                    category: extract('category'),
+                    description: extract('description'),
+                    scenario: extract('scenario')
+                };
+            },
+
+            slugify(value) {
+                return String(value || '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9_]+/g, '_')
+                    .replace(/^_+|_+$/g, '') || 'template';
+            },
+
+            syncTemplateName() {
+                if (!this.templateForm) {
+                    return;
+                }
+                const name = (this.templateForm.name || '').trim();
+                if (!this.templateForm.slug) {
+                    this.templateForm.slug = this.slugify(name || this.templateForm.category);
+                }
+            },
+
+            buildFrontmatterRaw() {
+                const name = (this.templateForm.name || '').trim();
+                const category = (this.templateForm.category || '').trim();
+                const slug = (this.templateForm.slug || this.slugify(name || category)).trim();
+                const description = (this.templateForm.description || '').trim();
+                const scenario = (this.templateForm.scenario || '').trim();
+                let raw = this.templateForm.frontmatter_raw || '';
+                if (!raw) {
+                    const lines = ['---'];
+                    if (name) lines.push(`name: ${name}`);
+                    if (slug) lines.push(`slug: ${slug}`);
+                    if (category) lines.push(`category: ${category}`);
+                    if (description) lines.push(`description: ${description}`);
+                    if (scenario) lines.push(`scenario: ${scenario}`);
+                    lines.push('metadata:');
+                    lines.push('  variables:');
+                    lines.push('    - name: transcript');
+                    lines.push('      description: 转录文本');
+                    lines.push('---');
+                    return lines.join('\n');
+                }
+
+                const replaceOrAppend = (key, value) => {
+                    if (!value) return;
+                    const regex = new RegExp(`^${key}:.*$`, 'm');
+                    if (regex.test(raw)) {
+                        raw = raw.replace(regex, `${key}: ${value}`);
+                    } else {
+                        raw = raw.replace(/^---\s*\n?/, `---\n${key}: ${value}\n`);
+                    }
+                };
+
+                replaceOrAppend('name', name);
+                replaceOrAppend('slug', slug);
+                replaceOrAppend('category', category);
+                if (description) replaceOrAppend('description', description);
+                if (scenario) replaceOrAppend('scenario', scenario);
+                return raw;
+            },
+
+            buildSkillMarkdown() {
+                const frontmatter = this.buildFrontmatterRaw();
+                const body = this.templateForm.body_markdown || '';
+                if (!frontmatter) {
+                    return body;
+                }
+                return `${frontmatter}\n\n${body}`.trim() + '\n';
+            },
+
+            applyCustomCategory() {
+                const value = (this.templateForm.category_custom || '').trim();
+                if (!value) {
+                    return;
+                }
+                this.templateForm.category = value;
+                this.templateForm.category_custom = '';
+                if (!this.templateForm.slug) {
+                    this.templateForm.slug = this.slugify(this.templateForm.name || value);
+                }
+            },
+
+            async saveTemplate() {
+                try {
+                    if (this.templateEditorMode === 'role') {
+                        const fullMarkdown = this.buildSkillMarkdown();
+                        const payload = {
+                            skill_markdown: fullMarkdown,
+                            is_active: this.templateForm.is_active
+                        };
+                        await http.put(
+                            `/api/settings/roles/${this.templateForm.role_key}/templates/${this.templateForm.role_category}`,
+                            payload
+                        );
+                        await this.loadRoleTemplates(this.templateForm.role_key);
+                    } else {
+                        if (!this.templateForm.name || !this.templateForm.category) {
+                            this.showMessage('请填写模板标题和类别', 'warning');
+                            return;
+                        }
+                        const slug = (this.templateForm.slug || this.slugify(this.templateForm.name || this.templateForm.category)).trim();
+                        this.templateForm.slug = slug;
+                        const duplicate = (this.promptTemplates || []).find((tpl) => {
+                            if (!tpl || !tpl.name) return false;
+                            if (this.templateForm.id && tpl.id === this.templateForm.id) return false;
+                            if (this.templateForm.original_skill_key && tpl.skill_key === this.templateForm.original_skill_key) return false;
+                            return tpl.name.trim().toLowerCase() === this.templateForm.name.trim().toLowerCase();
+                        });
+                        if (duplicate) {
+                            this.showMessage('模板标题已存在，请修改后再保存', 'warning');
+                            return;
+                        }
+                        const duplicateSlug = (this.promptTemplates || []).find((tpl) => {
+                            if (!tpl || !tpl.skill_key) return false;
+                            if (this.templateForm.id && tpl.id === this.templateForm.id) return false;
+                            if (this.templateForm.original_skill_key && tpl.skill_key === this.templateForm.original_skill_key) return false;
+                            return tpl.skill_key.trim().toLowerCase() === slug.toLowerCase();
+                        });
+                        if (duplicateSlug) {
+                            this.showMessage('模板标识已存在，请修改后再保存', 'warning');
+                            return;
+                        }
+                        const fullMarkdown = this.buildSkillMarkdown();
+                        const payload = {
+                            skill_markdown: fullMarkdown,
+                            is_active: this.templateForm.is_active
+                        };
+                        if (this.templateForm.id) {
+                            await http.put(`/api/settings/prompt-templates/${this.templateForm.id}`, payload);
+                        } else {
+                            await http.post('/api/settings/prompt-templates', payload);
+                        }
+                        await this.loadTemplates();
+                    }
+                    this.showMessage('模板已保存', 'success');
+                    this.templateEditorVisible = false;
+                } catch (error) {
+                    console.error('保存模板失败:', error);
+                    this.showMessage('保存模板失败: ' + error.message, 'error');
+                }
+            },
+
+            async deleteTemplate(template) {
+                if (template.is_default) {
+                    this.showMessage('默认模板不可删除', 'warning');
+                    return;
+                }
+                const confirmFn = window.appConfirm || window.confirm;
+                if (!(await confirmFn(`确定删除模板「${template.name}」吗？`))) {
+                    return;
+                }
+                try {
+                    await http.delete(`/api/settings/prompt-templates/${template.id}`);
+                    await this.loadTemplates();
+                    this.showMessage('模板已删除', 'success');
+                } catch (error) {
+                    console.error('删除模板失败:', error);
+                    this.showMessage('删除模板失败: ' + error.message, 'error');
+                }
+            },
+
+            async loadRoles() {
+                this.roleLoading = true;
+                try {
+                    const data = await http.get('/api/settings/roles');
+                    this.roles = Array.isArray(data) ? data : [];
+                    this.rolesLoaded = true;
+                    const hasSelected = this.roles.some(role => role.role_key === this.selectedRoleKey);
+                    if (!hasSelected) {
+                        this.selectedRoleKey = '';
+                    }
+                    if (!this.selectedRoleKey) {
+                        const general = this.roles.find(role => role.role_key === 'general');
+                        this.selectRole(general ? general.role_key : (this.roles[0] || {}).role_key);
+                    }
+                } catch (error) {
+                    console.error('加载角色失败:', error);
+                    this.showMessage('加载角色失败: ' + error.message, 'error');
+                } finally {
+                    this.roleLoading = false;
+                }
+            },
+
+            selectRole(roleKey) {
+                if (!roleKey) {
+                    this.roleEditorVisible = false;
+                    return;
+                }
+                const role = this.roles.find(item => item.role_key === roleKey);
+                if (!role) {
+                    return;
+                }
+                this.selectedRoleKey = roleKey;
+                this.roleEditorVisible = true;
+                this.roleForm = {
+                    role_key: role.role_key,
+                    name: role.name || '',
+                    description: role.description || '',
+                    system_prompt: role.system_prompt || '',
+                    icon: role.icon || ''
+                };
+                this.loadRoleTemplates(roleKey);
+            },
+
+            async startCreateRole() {
+                await this.loadTemplates();
+                const defaultCategories = this.contentTypeOptions.map(option => option.value);
+                this.roleCreateForm = {
+                    role_key: '',
+                    name: '',
+                    description: '',
+                    system_prompt: '',
+                    icon: '',
+                    content_categories: defaultCategories,
+                    template_keys: {}
+                };
+                this.setDefaultRoleCreateTemplates(defaultCategories);
+                this.roleCreateDrawerVisible = true;
+            },
+
+            closeRoleDrawer() {
+                this.roleCreateDrawerVisible = false;
+            },
+
+            async createRole() {
+                if (this.roleSaving) {
+                    return;
+                }
+                this.roleSaving = true;
+                try {
+                    if (!this.roleCreateForm.content_categories.length) {
+                        this.showMessage('请至少选择一个内容类型', 'warning');
+                        return;
+                    }
+                    if (!this.roleCreateForm.role_key || !this.roleCreateForm.name) {
+                        this.showMessage('请填写角色标识和名称', 'warning');
+                        return;
+                    }
+                    const payload = {
+                        role_key: this.roleCreateForm.role_key,
+                        name: this.roleCreateForm.name,
+                        description: this.roleCreateForm.description,
+                        system_prompt: this.roleCreateForm.system_prompt,
+                        icon: this.roleCreateForm.icon,
+                        content_categories: this.roleCreateForm.content_categories
+                    };
+                    const data = await http.post('/api/settings/roles', payload);
+                    const roleKey = data.role_key || payload.role_key;
+                    await this.applyRoleCreateTemplates(roleKey);
+                    await this.loadRoles();
+                    this.selectRole(roleKey);
+                    this.roleCreateDrawerVisible = false;
+                    this.showMessage('角色已创建', 'success');
+                } catch (error) {
+                    console.error('创建角色失败:', error);
+                    this.showMessage('创建角色失败: ' + error.message, 'error');
+                } finally {
+                    this.roleSaving = false;
+                }
+            },
+
+            async saveRole() {
+                if (this.roleSaving) {
+                    return;
+                }
+                this.roleSaving = true;
+                try {
+                    const payload = {
+                        name: this.roleForm.name,
+                        description: this.roleForm.description,
+                        system_prompt: this.roleForm.system_prompt,
+                        icon: this.roleForm.icon
+                    };
+                    await http.put(`/api/settings/roles/${this.roleForm.role_key}`, payload);
+                    await this.loadRoles();
+                    this.selectRole(this.roleForm.role_key);
+                    this.showMessage('角色已保存', 'success');
+                } catch (error) {
+                    console.error('保存角色失败:', error);
+                    this.showMessage('保存角色失败: ' + error.message, 'error');
+                } finally {
+                    this.roleSaving = false;
+                }
+            },
+
+            async deleteRole() {
+                const confirmFn = window.appConfirm || window.confirm;
+                if (!(await confirmFn(`确定删除角色「${this.roleForm.name}」吗？`))) {
+                    return;
+                }
+                try {
+                    await http.delete(`/api/settings/roles/${this.roleForm.role_key}`);
+                    this.showMessage('角色已删除', 'success');
+                    this.selectedRoleKey = '';
+                    this.roleEditorVisible = false;
+                    await this.loadRoles();
+                } catch (error) {
+                    console.error('删除角色失败:', error);
+                    this.showMessage('删除角色失败: ' + error.message, 'error');
+                }
+            },
+
+            async loadRoleTemplates(roleKey) {
+                if (!roleKey) {
+                    return;
+                }
+                this.roleTemplateLoading = true;
+                try {
+                    const data = await http.get(`/api/settings/roles/${roleKey}/templates`);
+                    this.roleTemplates = Array.isArray(data) ? data : [];
+                    this.roleTemplates.sort((a, b) => this.getCategoryLabel(a.category).localeCompare(this.getCategoryLabel(b.category), 'zh-CN'));
+                } catch (error) {
+                    console.error('加载角色模板失败:', error);
+                    this.showMessage('加载角色模板失败: ' + error.message, 'error');
+                } finally {
+                    this.roleTemplateLoading = false;
+                }
+            },
+
+            openRoleTemplateEditor(template) {
+                const parsed = this.parseSkillMarkdown(template.skill_markdown || '');
+                this.templateEditorMode = 'role';
+                this.templateEditorVisible = true;
+                this.templateForm = {
+                    id: template.id || '',
+                    name: template.name,
+                    category: parsed.frontmatter.category || template.category,
+                    category_custom: '',
+                    slug: parsed.frontmatter.slug || template.skill_key || '',
+                    scenario: parsed.frontmatter.scenario || template.scenario || '',
+                    description: parsed.frontmatter.description || template.description || '',
+                    is_default: false,
+                    is_active: template.is_active,
+                    skill_markdown: template.skill_markdown,
+                    body_markdown: parsed.body,
+                    frontmatter_raw: parsed.frontmatter_raw,
+                    role_key: this.roleForm.role_key,
+                    role_category: template.category
+                };
+            },
+
+            getTemplateKey(template) {
+                if (!template) return '';
+                return String(template.id || template.skill_key || '');
+            },
+
+            getTemplatesByCategory(category) {
+                return this.roleTemplateLibrary.filter(
+                    (template) => template.category === category
+                );
+            },
+
+            setDefaultRoleCreateTemplates(categories) {
+                const mapping = {...this.roleCreateForm.template_keys};
+                (categories || []).forEach((category) => {
+                    if (!mapping[category]) {
+                        const options = this.getTemplatesByCategory(category);
+                        const defaultTemplate = options.find((tpl) => tpl.is_default) || options[0];
+                        if (defaultTemplate) {
+                            mapping[category] = this.getTemplateKey(defaultTemplate);
+                        }
+                    }
+                });
+                this.roleCreateForm.template_keys = mapping;
+            },
+
+            onRoleCreateCategoryToggle(category) {
+                const selected = this.roleCreateForm.content_categories || [];
+                const mapping = {...this.roleCreateForm.template_keys};
+                if (!selected.includes(category)) {
+                    delete mapping[category];
+                    this.roleCreateForm.template_keys = mapping;
+                    return;
+                }
+                this.roleCreateForm.template_keys = mapping;
+                this.setDefaultRoleCreateTemplates([category]);
+            },
+
+            async applyRoleCreateTemplates(roleKey) {
+                const mapping = this.roleCreateForm.template_keys || {};
+                for (const category of this.roleCreateForm.content_categories || []) {
+                    const templateKey = mapping[category];
+                    if (!templateKey) {
+                        continue;
+                    }
+                    const template = this.roleTemplateLibrary.find(
+                        (tpl) => this.getTemplateKey(tpl) === templateKey
+                    );
+                    if (!template || !template.skill_markdown) {
+                        continue;
+                    }
+                    await http.put(
+                        `/api/settings/roles/${roleKey}/templates/${category}`,
+                        {
+                            skill_markdown: template.skill_markdown,
+                            is_active: true
+                        }
+                    );
+                }
+            },
+
+            async openRoleTemplateAdd() {
+                await this.loadTemplates();
+                this.roleTemplateAddForm = {template_key: ''};
+                this.roleTemplateAddVisible = true;
+            },
+
+            closeRoleTemplateAdd() {
+                this.roleTemplateAddVisible = false;
+            },
+
+            async applyRoleTemplateAdd() {
+                const selected = this.selectedRoleTemplate;
+                if (!selected) {
+                    this.showMessage('请选择要追加的模板', 'warning');
+                    return;
+                }
+                const category = selected.category;
+                const existing = this.roleTemplates.find((tpl) => tpl.category === category);
+                if (existing) {
+                    const confirmFn = window.appConfirm || window.confirm;
+                    const ok = await confirmFn(`该角色已存在「${this.getCategoryLabel(category)}」模板，是否覆盖为「${selected.name}」？`);
+                    if (!ok) return;
+                }
+                try {
+                    await http.put(
+                        `/api/settings/roles/${this.roleForm.role_key}/templates/${category}`,
+                        {
+                            skill_markdown: selected.skill_markdown,
+                            is_active: true
+                        }
+                    );
+                    await this.loadRoleTemplates(this.roleForm.role_key);
+                    this.showMessage('模板已追加', 'success');
+                    this.roleTemplateAddVisible = false;
+                } catch (error) {
+                    console.error('追加模板失败:', error);
+                    this.showMessage('追加模板失败: ' + error.message, 'error');
+                }
+            },
+
+            async resetRoleTemplate(template) {
+                try {
+                    await http.post(`/api/settings/roles/${this.roleForm.role_key}/templates/${template.category}/reset`);
+                    await this.loadRoleTemplates(this.roleForm.role_key);
+                    this.showMessage('模板已恢复默认', 'success');
+                } catch (error) {
+                    console.error('重置角色模板失败:', error);
+                    this.showMessage('重置角色模板失败: ' + error.message, 'error');
+                }
+            },
+
+            async restoreRoleTemplate(template) {
+                try {
+                    await http.post(`/api/settings/roles/${this.roleForm.role_key}/templates/${template.category}/restore`);
+                    await this.loadRoleTemplates(this.roleForm.role_key);
+                    this.showMessage('模板已回退', 'success');
+                } catch (error) {
+                    console.error('回退角色模板失败:', error);
+                    this.showMessage('回退角色模板失败: ' + error.message, 'error');
+                }
+            },
+
+            async toggleRoleTemplate(template) {
+                try {
+                    await http.post(`/api/settings/roles/${this.roleForm.role_key}/templates/${template.category}/toggle`, {
+                        is_active: !template.is_active
+                    });
+                    await this.loadRoleTemplates(this.roleForm.role_key);
+                    this.showMessage('模板状态已更新', 'success');
+                } catch (error) {
+                    console.error('更新角色模板失败:', error);
+                    this.showMessage('更新角色模板失败: ' + error.message, 'error');
+                }
+            },
+
+            formatRoleLabel(role) {
+                if (!role) return '';
+                return `${role.icon ? role.icon + ' ' : ''}${role.name || ''}`.trim();
+            },
+
+            getCategoryLabel(category) {
+                const labels = {
+                    content_card: '内容卡片',
+                    mind_map: '思维导图',
+                    flashcards: '学习闪卡'
+                };
+                return labels[category] || category;
             },
 
             getOllamaStatusText() {
@@ -1470,6 +3720,10 @@
             },
 
             async downloadModel(model) {
+                if (model.canDownload === false) {
+                    alert('该模型无需下载，请在设置中直接启用/配置');
+                    return;
+                }
                 if (model.status === 'downloading') {
                     return; // 防止重复下载
                 }
@@ -1552,7 +3806,8 @@
             },
 
             async deleteModel(model) {
-                if (!confirm(`确定要删除模型 ${model.name} 吗？`)) return;
+                const confirmFn = window.appConfirm || window.confirm;
+                if (!(await confirmFn(`确定要删除模型 ${model.name} 吗？`))) return;
 
                 try {
                     const response = await http.delete(`/api/models/${model.type}/${model.modelName}`);
@@ -1586,6 +3841,77 @@
 
                 // TODO: 调用后端取消下载API（如果需要的话）
                 // await http.post(`/api/models/download/${model.taskId}/cancel`);
+            },
+
+            onParakeetSelectionChange() {
+                const current = this.whisperModels.find(
+                    model => model.type === 'parakeet' && model.modelName === this.asrConfig.parakeet.selected_model
+                );
+                if (current && (current.nemoName || current.nemo_name)) {
+                    this.asrConfig.parakeet.model_name = current.nemoName || current.nemo_name;
+                }
+            },
+
+            async saveRemoteConfig() {
+                try {
+                    await http.post('/api/settings/asr', { remote_api: this.asrConfig.remote_api });
+                    await this.loadModels();
+                    alert('远程API配置已保存');
+                } catch (error) {
+                    console.error('保存远程API失败:', error);
+                    alert(`保存失败: ${error.message}`);
+                }
+            },
+
+            async saveParakeetConfig(extra = {}) {
+                try {
+                    const payload = Object.assign({}, this.asrConfig.parakeet, extra);
+                    await http.post('/api/settings/asr', { parakeet: payload });
+                    await this.loadModels();
+                    alert('Parakeet 配置已保存');
+                } catch (error) {
+                    console.error('保存Parakeet配置失败:', error);
+                    alert(`保存失败: ${error.message}`);
+                }
+            },
+
+            async saveQwenConfig() {
+                try {
+                    if (this.asrConfig.qwen3_asr.enabled
+                        && (this.asrConfig.qwen3_asr.model_name || '').includes('filetrans')) {
+                        const required = [
+                            { key: 'oss_access_key_id', label: 'OSS AccessKey ID' },
+                            { key: 'oss_access_key_secret', label: 'OSS AccessKey Secret' },
+                            { key: 'oss_endpoint', label: 'OSS Endpoint' },
+                            { key: 'oss_bucket', label: 'OSS Bucket' }
+                        ];
+                        const missing = required
+                            .filter(item => !String(this.asrConfig.qwen3_asr[item.key] || '').trim())
+                            .map(item => item.label);
+                        if (missing.length) {
+                            alert(`FileTrans 需要先配置 OSS：${missing.join('、')}`);
+                            return;
+                        }
+                    }
+                    await http.post('/api/settings/asr', { qwen3_asr: this.asrConfig.qwen3_asr });
+                    await this.loadModels();
+                    alert('Qwen3-ASR 配置已保存');
+                } catch (error) {
+                    console.error('保存Qwen3-ASR配置失败:', error);
+                    alert(`保存失败: ${error.message}`);
+                }
+            },
+
+            async activateParakeetModel(model) {
+                try {
+                    this.asrConfig.parakeet.selected_model = model.modelName;
+                    if (model.nemoName || model.nemo_name) {
+                        this.asrConfig.parakeet.model_name = model.nemoName || model.nemo_name;
+                    }
+                    await this.saveParakeetConfig();
+                } catch (error) {
+                    console.error('激活Parakeet模型失败:', error);
+                }
             }
         }
     }).mount('#app');

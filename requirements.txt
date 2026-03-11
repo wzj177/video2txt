@@ -9,6 +9,7 @@ torchaudio>=0.12.0
 # 音频处理
 librosa>=0.9.0
 soundfile>=0.10.0
+pydub>=0.25.1
 pyaudio>=0.2.11
 sounddevice>=0.4.5  # 备用音频库
 wave  # 内置音频格式支持
@@ -17,6 +18,8 @@ wave  # 内置音频格式支持
 openai-whisper>=20231117
 faster-whisper>=0.9.0
 whisperx>=3.1.0  # 集成转录和说话人分离
+dashscope>=1.14.0
+silero-vad>=5.1.2
 
 # SenseVoice和FunASR (阿里达摩院)
 funasr>=1.0.0
@@ -133,6 +136,7 @@ GPUtil>=1.4.0
 pyannote.audio>=3.1.0
 pyannote.core>=5.0.0
 pyannote.database>=5.0.0
+packaging>=23.0
 torch>=2.0.0
 torchaudio>=2.0.0
 

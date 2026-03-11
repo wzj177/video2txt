@@ -32,11 +32,10 @@ class BaseVoiceEngine(ABC):
 
     @abstractmethod
     def recognize_file(
-            self, audio_path: str, language: str = "auto"
+        self, audio_path: str, language: str = "auto"
     ) -> Optional[Dict[str, Any]]:
         """识别音频文件"""
         pass
-
 
     def _detect_device(self):
         """检测并设置最佳设备"""
@@ -86,7 +85,9 @@ class BaseVoiceEngine(ABC):
             "config": vars(self.config) if self.config else {},
         }
 
-    def align_timestamps(self, detected_language: str, whisperx: Any, result: Dict[str, Any], audio: Any):
+    def align_timestamps(
+        self, detected_language: str, whisperx: Any, result: Dict[str, Any], audio: Any
+    ):
         align_model, align_metadata = self._load_align_model(detected_language)
         if align_model and align_metadata:
             try:
@@ -115,6 +116,7 @@ class BaseVoiceEngine(ABC):
             return (self.align_model, self.align_metadata)
 
         import whisperx
+
         try:
             os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
             os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "120")
@@ -122,7 +124,7 @@ class BaseVoiceEngine(ABC):
             model, metadata = whisperx.load_align_model(
                 language_code=language,
                 device=self.device,
-                model_name=self.project_root / "data" / "models" / "zh-align"
+                model_name=self.project_root / "data" / "models" / "zh-align",
             )
 
             self.align_model = model
@@ -148,7 +150,7 @@ class BaseVoiceEngine(ABC):
             self.diarize_model = DiarizationPipeline(
                 model_name="pyannote/speaker-diarization-3.1",
                 use_auth_token=self.hf_token,
-                device=self.device
+                device=self.device,
             )
 
             return True
@@ -156,7 +158,9 @@ class BaseVoiceEngine(ABC):
         except Exception as e:
             return False
 
-    def speak_digitization(self, whisperx: Any, result: Dict[str, Any], audio_path: str):
+    def speak_digitization(
+        self, whisperx: Any, result: Dict[str, Any], audio_path: str
+    ):
         speakers_info = {}
         if self._load_diarization_model():
             try:
@@ -178,13 +182,9 @@ class BaseVoiceEngine(ABC):
                             }
 
                         speakers_info[speaker]["segments_count"] += 1
-                        duration = segment.get("end", 0) - segment.get(
-                            "start", 0
-                        )
+                        duration = segment.get("end", 0) - segment.get("start", 0)
                         speakers_info[speaker]["total_duration"] += duration
-                        speakers_info[speaker]["words"].append(
-                            segment.get("text", "")
-                        )
+                        speakers_info[speaker]["words"].append(segment.get("text", ""))
 
             except Exception as e:
                 pass
@@ -194,11 +194,76 @@ class BaseVoiceEngine(ABC):
     def format_result(self, result: Dict[str, Any], audio_path: str) -> Dict[str, Any]:
         """
         所有引擎统一调用此方法来统一格式输出
-        :param result:
-        :param audio_path:
-        :return:
+
+        Args:
+            result: 引擎原始识别结果（必须包含segments）
+            audio_path: 音频文件路径
+
+        Returns:
+            标准化的结果字典
         """
-        pass
+        # 提取基本信息
+        full_text = result.get("text", "")
+        detected_language = result.get("language", "zh")
+        speakers_info = result.get("speakers", {})
+        processing_time = result.get("processing_time", 0.0)
+        model_name = result.get("model", "unknown")
+        device = result.get("device", "cpu")
+
+        # 格式化分段信息
+        formatted_segments = []
+        for segment in result.get("segments", []):
+            formatted_segment = {
+                "start": round(segment.get("start", 0), 2),
+                "end": round(segment.get("end", 0), 2),
+                "duration": round(segment.get("end", 0) - segment.get("start", 0), 2),
+                "text": segment.get("text", "").strip(),
+                "speaker": segment.get("speaker", "Speaker_1"),
+                "confidence": segment.get("confidence", 0.9),
+                "language": detected_language,
+                "emotion": segment.get("emotion", None),  # 情感分析（可选）
+            }
+
+            # 如果有词级信息，保存
+            if "words" in segment:
+                formatted_segment["words"] = segment["words"]
+
+
+            # 如果全局文本为空，则逐段拼接文本
+            if not result.get("text", ""):
+                full_text += formatted_segment["text"] + " "
+
+            formatted_segments.append(formatted_segment)
+
+        # 计算总时长
+        audio_duration = formatted_segments[-1]["end"] if formatted_segments else 0.0
+
+        # 构建标准化返回结果
+        return {
+            "text": full_text,
+            "language": detected_language,
+            "segments": formatted_segments,
+            "speakers": speakers_info,
+            "processing_time": processing_time,
+            "model": model_name,
+            "device": device,
+            "confidence": 0.9,
+            "audio_length": audio_duration,
+            "features": {
+                "word_level_timestamps": any(
+                    "words" in seg for seg in result.get("segments", [])
+                ),
+                "speaker_diarization": len(speakers_info) > 0,
+                "emotion_detection": any(
+                    seg.get("emotion") for seg in result.get("segments", [])
+                ),
+            },
+            "statistics": {
+                "total_segments": len(formatted_segments),
+                "total_speakers": len(speakers_info),
+                "total_duration": audio_duration,
+            },
+        }
 
     def cleanup(self):
         """清理资源"""

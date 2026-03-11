@@ -365,7 +365,7 @@ if __name__ == "__main__":
         meeting_title="团队例会",
         status="completed",
         duration="45分30秒",
-        message_extra="已生成会议纪要和AI总结",
+        message_extra="已生成会议转录和说话人日志",
     )
 
     time.sleep(2)
