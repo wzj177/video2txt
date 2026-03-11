@@ -482,7 +482,7 @@ MODEL_CONFIGS = {
             "size": "400MB",
             "description": "基础方言识别模型，可达到Whisper large-v3的性能",
             "url": "https://github.com/DataoceanAI/Dolphin/releases/download/v1.0/base.pt",
-            "local_path": "data/models/dolphin/base.pt",
+            "local_path": "models/dolphin/base.pt",
             "performance": "基础模型，适合快速处理",
             "languages": [
                 "中文及22个方言",
@@ -501,7 +501,7 @@ MODEL_CONFIGS = {
             "size": "800MB",
             "description": "小型方言识别模型，比base模型平均提升24.5% WER",
             "url": "https://github.com/DataoceanAI/Dolphin/releases/download/v1.0/small.pt",
-            "local_path": "data/models/dolphin/small.pt",
+            "local_path": "models/dolphin/small.pt",
             "performance": "推荐使用，性能与速度平衡",
             "languages": [
                 "中文及22个方言",
@@ -520,7 +520,7 @@ MODEL_CONFIGS = {
             "size": "1.5GB",
             "description": "中型方言识别模型，比small模型额外提升8.3% WER",
             "url": "https://github.com/DataoceanAI/Dolphin/releases/download/v1.0/medium.pt",
-            "local_path": "data/models/dolphin/medium.pt",
+            "local_path": "models/dolphin/medium.pt",
             "performance": "高精度，适合重要内容处理",
             "languages": [
                 "中文及22个方言",
@@ -539,7 +539,7 @@ MODEL_CONFIGS = {
             "size": "3.0GB",
             "description": "大型方言识别模型，比medium模型额外提升6.5% WER，最高精度",
             "url": "https://github.com/DataoceanAI/Dolphin/releases/download/v1.0/large.pt",
-            "local_path": "data/models/dolphin/large.pt",
+            "local_path": "models/dolphin/large.pt",
             "performance": "最高精度，适合专业用途",
             "languages": [
                 "中文及22个方言",
@@ -559,9 +559,9 @@ MODEL_CONFIGS = {
 
 def get_model_storage_path() -> Path:
     """获取模型存储路径"""
-    # 项目根目录下的data/models
+    # 项目根目录下的models
     project_root = Path(__file__).parent.parent.parent
-    models_path = project_root / "data" / "models"
+    models_path = project_root / "models"
     models_path.mkdir(parents=True, exist_ok=True)
     return models_path
 
@@ -671,7 +671,7 @@ def get_model_info(model_type: str, model_name: str) -> Dict[str, Any]:
             / "iic"
             / "SenseVoiceSmall"
         )
-        funasr_cache = Path("./data/models/funasr_cache")
+        funasr_cache = Path("./models/funasr_cache")
 
         # 检查是否存在
         installed = (
@@ -1228,7 +1228,7 @@ async def download_sensevoice_model(
                     trust_remote_code=True,
                     vad_model="fsmn-vad",
                     vad_kwargs={"max_single_segment_time": 30000},
-                    cache_dir="./data/models/funasr_cache",
+                    cache_dir="./models/funasr_cache",
                     device="cpu",  # 默认使用CPU，可根据需要改为cuda:0
                 )
 
@@ -1262,7 +1262,7 @@ async def download_sensevoice_model(
 
             # 直接下载模型文件
             model_dir = snapshot_download(
-                repo_id, cache_dir="./data/models/modelscope_cache", revision="master"
+                repo_id, cache_dir="./models/modelscope_cache", revision="master"
             )
 
             download_manager.update_task(
@@ -1288,7 +1288,7 @@ async def download_sensevoice_model(
             from pathlib import Path
 
             # 创建模型目录
-            model_dir = Path("./data/models/sensevoice")
+            model_dir = Path("./models/sensevoice")
             model_dir.mkdir(parents=True, exist_ok=True)
 
             download_manager.update_task(

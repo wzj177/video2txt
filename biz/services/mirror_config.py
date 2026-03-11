@@ -21,13 +21,13 @@ class MirrorConfig:
 
     # ModelScope配置
     MODELSCOPE_CONFIG = {
-        "cache_dir": "./data/models/modelscope_cache",
+        "cache_dir": "./models/modelscope_cache",
         "trust_remote_code": True,
     }
 
     # HuggingFace配置
     HUGGINGFACE_CONFIG = {
-        "cache_dir": "./data/models/huggingface_cache",
+        "cache_dir": "./models/huggingface_cache",
         "trust_remote_code": True,
     }
 

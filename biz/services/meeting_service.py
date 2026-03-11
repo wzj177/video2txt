@@ -31,7 +31,6 @@ class MeetingService:
 
     diarization_model_path = (
         Path(__file__).parent.parent.parent
-        / "data"
         / "models"
         / "speaker-diarization-community-1"
     )

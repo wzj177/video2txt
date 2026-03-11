@@ -3,7 +3,7 @@ set -euo pipefail
 
 MODE="${1:-pyannote4}"
 VENV="${VENV:-.venv}"
-MODEL_DIR="${MODEL_DIR:-data/models/speaker-diarization-community-1}"
+MODEL_DIR="${MODEL_DIR:-models/speaker-diarization-community-1}"
 
 if [[ ! -d "$VENV" ]]; then
   echo "Missing venv at: $VENV"

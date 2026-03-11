@@ -145,7 +145,7 @@ class SenseVoiceEngine(BaseVoiceEngine):
                 logger.info(f"将使用本地模型: {local_model_path}")
             else:
                 # 需要下载模型
-                cache_dir = "./data/models/funasr_cache"
+                cache_dir = "./models/funasr_cache"
                 Path(cache_dir).mkdir(parents=True, exist_ok=True)
                 model_path_to_use = self.model_name
                 self.offline_mode = False
