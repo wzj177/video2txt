@@ -10,7 +10,6 @@ env/
 .DS_Store
 .promptx
 logs
-docs
 data
 URL_SUPPORT_GUIDE.md
 .vscode
@@ -22,7 +21,6 @@ config/settings.json
 *.log
 /outputs
 /uploads
-/docs
 test.md
 test_optimization.py
 install_deps.sh
