@@ -51,10 +51,10 @@ python app/main.py
 > `models/speaker-diarization-community-1`.
 
 ## API Documentation
-- `docs/API.md`
+- [docs/API.md](docs/API.md)
 
 ## Getting Started (0 → 1)
-- Guide: `docs/用户从0到1使用指南.md`
+- Guide: [docs/用户从0到1使用指南.md](docs/用户从0到1使用指南.md)
 - Start from the Settings page to configure ASR, cloud API, and OSS.
 
 ## Outputs

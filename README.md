@@ -50,10 +50,10 @@ python app/main.py
 > Qwen3-ASR 不提供说话人日志，需在会议详情中手动触发生成（本地模型：`models/speaker-diarization-community-1`）。
 
 ## API 文档
-- `docs/API.md`
+- [docs/API.md](docs/API.md)
 
 ## 0 → 1 使用流程
-- 文档：`docs/用户从0到1使用指南.md`
+- 文档：[docs/用户从0到1使用指南.md](docs/用户从0到1使用指南.md)
 - 建议从“设置”页开始配置 ASR、云端 API 与 OSS。
 
 ## 输出
